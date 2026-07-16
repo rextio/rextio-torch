@@ -1,0 +1,2050 @@
+{
+  "cells": [
+    {
+      "batch": 1,
+      "case_id": "t1",
+      "contexts": {
+        "case_id": "t1",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "99d5d7d2f4b65f4bb096ed04a6db0588b8e12f99cc604df5ed375bb1ac1b0caa",
+          "loops": 8192,
+          "median_ns_per_call": 3051.3203125,
+          "samples_ns_per_call": [
+            3019.994140625,
+            3046.391845703125,
+            3031.158447265625,
+            3064.2242431640625,
+            3051.3203125,
+            3005.121826171875,
+            3257.9244384765625,
+            3139.36865234375,
+            3134.97412109375
+          ],
+          "samples_ns_total": [
+            24739792,
+            24956042,
+            24831250,
+            25102125,
+            24996416,
+            24617958,
+            26688917,
+            25717708,
+            25681708
+          ]
+        },
+        "seed": 20260817,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 3429654041,
+          "correctness_digest": "9b70458dc9a9c8f23c134b07aef2c5889f82a178d2ca632b4d760b8593ca5ae8",
+          "fullgraph": true,
+          "second_call_ns": 66709,
+          "warm_loops": 2048,
+          "warm_median_ns_per_call": 10563.17138671875,
+          "warm_samples_ns_per_call": [
+            10548.095703125,
+            10518.35107421875,
+            10527.38427734375,
+            10539.55078125,
+            10745.015625,
+            10563.17138671875,
+            10907.51171875,
+            11095.29638671875,
+            10917.17529296875
+          ],
+          "warm_samples_ns_total": [
+            21602500,
+            21541583,
+            21560083,
+            21585000,
+            22005792,
+            21633375,
+            22338584,
+            22723167,
+            22358375
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 32,
+      "out_features": 32,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "99d5d7d2f4b65f4bb096ed04a6db0588b8e12f99cc604df5ed375bb1ac1b0caa",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              1
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "99d5d7d2f4b65f4bb096ed04a6db0588b8e12f99cc604df5ed375bb1ac1b0caa",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              1
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 3532.953857421875,
+        "iterations": 8192,
+        "median_speedup_fallback_over_native": 1.1240123079953541,
+        "native_median_ns_per_call": 3143.1629638671875,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.13633117633972003,
+            -0.10359342687938744
+          ],
+          "log_ratio_mean": -0.1202371049926551,
+          "median_fallback_over_native": 1.1299610728379792,
+          "median_native_over_fallback": 0.8849862389404508,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.8725536155209724,
+            0.9015917858998861
+          ],
+          "ratio_geomean_native_over_fallback": 0.8867101683823451,
+          "resamples": 10000,
+          "seed": 20261717,
+          "speedup_ci95_fallback_over_native": [
+            1.1091494128929889,
+            1.1460613791657188
+          ],
+          "speedup_geomean_fallback_over_native": 1.1277642184078405
+        },
+        "samples": [
+          {
+            "fallback_ns": 28825542,
+            "iterations": 8192,
+            "native_ns": 25510208,
+            "round": 0,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 28478167,
+            "iterations": 8192,
+            "native_ns": 26103417,
+            "round": 1,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 28938542,
+            "iterations": 8192,
+            "native_ns": 26055042,
+            "round": 2,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 29775000,
+            "iterations": 8192,
+            "native_ns": 25657500,
+            "round": 3,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 28813500,
+            "iterations": 8192,
+            "native_ns": 26471167,
+            "round": 4,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 29616792,
+            "iterations": 8192,
+            "native_ns": 25433375,
+            "round": 5,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 29319459,
+            "iterations": 8192,
+            "native_ns": 25748791,
+            "round": 6,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 28941958,
+            "iterations": 8192,
+            "native_ns": 26122875,
+            "round": 7,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 29857500,
+            "iterations": 8192,
+            "native_ns": 25707041,
+            "round": 8,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            3518.742919921875,
+            3476.3387451171875,
+            3532.536865234375,
+            3634.6435546875,
+            3517.27294921875,
+            3615.3310546875,
+            3579.0355224609375,
+            3532.953857421875,
+            3644.71435546875
+          ],
+          "native": [
+            3114.0390625,
+            3186.4522705078125,
+            3180.547119140625,
+            3132.01904296875,
+            3231.3436279296875,
+            3104.6600341796875,
+            3143.1629638671875,
+            3188.8275146484375,
+            3138.0665283203125
+          ]
+        },
+        "schedule": [
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 4,
+          "is_counterbalanced": true,
+          "native_first": 5
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 72084,
+          "native_elapsed_ns": 58167
+        }
+      },
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260718
+    },
+    {
+      "batch": 1,
+      "case_id": "t2",
+      "contexts": {
+        "case_id": "t2",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "a1af39c719e9fbd2709d2efa33c7c5982d93a3506f5d77a43a34c4715255ae0f",
+          "loops": 8192,
+          "median_ns_per_call": 4173.365234375,
+          "samples_ns_per_call": [
+            4168.635009765625,
+            4099.7059326171875,
+            4158.1573486328125,
+            4174.74365234375,
+            4319.61572265625,
+            4173.365234375,
+            4748.077392578125,
+            4207.244873046875,
+            4127.81787109375
+          ],
+          "samples_ns_total": [
+            34149458,
+            33584791,
+            34063625,
+            34199500,
+            35386292,
+            34188208,
+            38896250,
+            34465750,
+            33815084
+          ]
+        },
+        "seed": 20260818,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 699997625,
+          "correctness_digest": "a1af39c719e9fbd2709d2efa33c7c5982d93a3506f5d77a43a34c4715255ae0f",
+          "fullgraph": true,
+          "second_call_ns": 74750,
+          "warm_loops": 2048,
+          "warm_median_ns_per_call": 14409.708984375,
+          "warm_samples_ns_per_call": [
+            14742.3095703125,
+            14327.63671875,
+            14894.53125,
+            14342.44775390625,
+            14472.513671875,
+            14364.8681640625,
+            14588.236328125,
+            14266.5205078125,
+            14409.708984375
+          ],
+          "warm_samples_ns_total": [
+            30192250,
+            29343000,
+            30504000,
+            29373333,
+            29639708,
+            29419250,
+            29876708,
+            29217834,
+            29511084
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 128,
+      "out_features": 64,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "a1af39c719e9fbd2709d2efa33c7c5982d93a3506f5d77a43a34c4715255ae0f",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              1
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "a1af39c719e9fbd2709d2efa33c7c5982d93a3506f5d77a43a34c4715255ae0f",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              1
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 4705.296875,
+        "iterations": 8192,
+        "median_speedup_fallback_over_native": 1.1109644650855643,
+        "native_median_ns_per_call": 4235.326171875,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.11242891657952364,
+            -0.09566483907609138
+          ],
+          "log_ratio_mean": -0.1042182071936011,
+          "median_fallback_over_native": 1.1158889268810626,
+          "median_native_over_fallback": 0.8961465392393713,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.8936608693221381,
+            0.9087685487385442
+          ],
+          "ratio_geomean_native_over_fallback": 0.9010286650323333,
+          "resamples": 10000,
+          "seed": 20261718,
+          "speedup_ci95_fallback_over_native": [
+            1.100390194387882,
+            1.1189927122561856
+          ],
+          "speedup_geomean_fallback_over_native": 1.1098426041352583
+        },
+        "samples": [
+          {
+            "fallback_ns": 38261375,
+            "iterations": 8192,
+            "native_ns": 34582416,
+            "round": 0,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 39303542,
+            "iterations": 8192,
+            "native_ns": 35167750,
+            "round": 1,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 37741000,
+            "iterations": 8192,
+            "native_ns": 34692334,
+            "round": 2,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 38754125,
+            "iterations": 8192,
+            "native_ns": 34729375,
+            "round": 3,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 38736708,
+            "iterations": 8192,
+            "native_ns": 34695792,
+            "round": 4,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 38904583,
+            "iterations": 8192,
+            "native_ns": 34398750,
+            "round": 5,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 38545792,
+            "iterations": 8192,
+            "native_ns": 34262416,
+            "round": 6,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 38236083,
+            "iterations": 8192,
+            "native_ns": 35160417,
+            "round": 7,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 38368042,
+            "iterations": 8192,
+            "native_ns": 34825125,
+            "round": 8,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            4670.5780029296875,
+            4797.795654296875,
+            4607.0556640625,
+            4730.7281494140625,
+            4728.60205078125,
+            4749.0946044921875,
+            4705.296875,
+            4667.4906005859375,
+            4683.598876953125
+          ],
+          "native": [
+            4221.486328125,
+            4292.938232421875,
+            4234.904052734375,
+            4239.4256591796875,
+            4235.326171875,
+            4199.066162109375,
+            4182.423828125,
+            4292.0430908203125,
+            4251.1138916015625
+          ]
+        },
+        "schedule": [
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 5,
+          "is_counterbalanced": true,
+          "native_first": 4
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 59917,
+          "native_elapsed_ns": 51917
+        }
+      },
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260719
+    },
+    {
+      "batch": 8,
+      "case_id": "t3",
+      "contexts": {
+        "case_id": "t3",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "15dbaaa0736ed225b38fe93acd7cc60b21abc92421b18ce38faf3efd7b901c48",
+          "loops": 8192,
+          "median_ns_per_call": 4981.2265625,
+          "samples_ns_per_call": [
+            4898.3154296875,
+            5106.5164794921875,
+            4962.4481201171875,
+            4796.2493896484375,
+            5035.8480224609375,
+            4744.4051513671875,
+            5053.38037109375,
+            4981.2265625,
+            5101.32861328125
+          ],
+          "samples_ns_total": [
+            40127000,
+            41832583,
+            40652375,
+            39290875,
+            41253667,
+            38866167,
+            41397292,
+            40806208,
+            41790084
+          ]
+        },
+        "seed": 20260819,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 742590458,
+          "correctness_digest": "3e48226f1cf5f6269571dd764d7bed251c9712427483f74f64dae4674609c54b",
+          "fullgraph": true,
+          "second_call_ns": 82208,
+          "warm_loops": 2048,
+          "warm_median_ns_per_call": 16058.8583984375,
+          "warm_samples_ns_per_call": [
+            15739.3798828125,
+            16056.13232421875,
+            15756.63232421875,
+            16387.53271484375,
+            16311.13671875,
+            16196.8994140625,
+            15272.05419921875,
+            16129.21142578125,
+            16058.8583984375
+          ],
+          "warm_samples_ns_total": [
+            32234250,
+            32882959,
+            32269583,
+            33561667,
+            33405208,
+            33171250,
+            31277167,
+            33032625,
+            32888542
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 64,
+      "out_features": 64,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "15dbaaa0736ed225b38fe93acd7cc60b21abc92421b18ce38faf3efd7b901c48",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              8
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "15dbaaa0736ed225b38fe93acd7cc60b21abc92421b18ce38faf3efd7b901c48",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              8
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 5394.4295654296875,
+        "iterations": 8192,
+        "median_speedup_fallback_over_native": 1.0889966460824054,
+        "native_median_ns_per_call": 4953.5777587890625,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.10425469225945908,
+            -0.08162120829164207
+          ],
+          "log_ratio_mean": -0.09207241494665425,
+          "median_fallback_over_native": 1.085431360990347,
+          "median_native_over_fallback": 0.9212927099209668,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.9009957915418491,
+            0.9216209949772967
+          ],
+          "ratio_geomean_native_over_fallback": 0.9120391018907906,
+          "resamples": 10000,
+          "seed": 20261719,
+          "speedup_ci95_fallback_over_native": [
+            1.085044726031479,
+            1.10988309755446
+          ],
+          "speedup_geomean_fallback_over_native": 1.0964442181556182
+        },
+        "samples": [
+          {
+            "fallback_ns": 43642833,
+            "iterations": 8192,
+            "native_ns": 40318542,
+            "round": 0,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 44760166,
+            "iterations": 8192,
+            "native_ns": 41025958,
+            "round": 1,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 43672417,
+            "iterations": 8192,
+            "native_ns": 40331333,
+            "round": 2,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 43759792,
+            "iterations": 8192,
+            "native_ns": 40579709,
+            "round": 3,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 43602500,
+            "iterations": 8192,
+            "native_ns": 39278208,
+            "round": 4,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 44191167,
+            "iterations": 8192,
+            "native_ns": 40713000,
+            "round": 5,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 45173208,
+            "iterations": 8192,
+            "native_ns": 40072167,
+            "round": 6,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 44762625,
+            "iterations": 8192,
+            "native_ns": 41386417,
+            "round": 7,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 46253750,
+            "iterations": 8192,
+            "native_ns": 40916458,
+            "round": 8,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            5327.4942626953125,
+            5463.887451171875,
+            5331.1055908203125,
+            5341.771484375,
+            5322.57080078125,
+            5394.4295654296875,
+            5514.3076171875,
+            5464.1876220703125,
+            5646.209716796875
+          ],
+          "native": [
+            4921.697021484375,
+            5008.051513671875,
+            4923.2584228515625,
+            4953.5777587890625,
+            4794.703125,
+            4969.8486328125,
+            4891.6219482421875,
+            5052.0528564453125,
+            4994.684814453125
+          ]
+        },
+        "schedule": [
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 5,
+          "is_counterbalanced": true,
+          "native_first": 4
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 60625,
+          "native_elapsed_ns": 64000
+        }
+      },
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260720
+    },
+    {
+      "batch": 16,
+      "case_id": "t4",
+      "contexts": {
+        "case_id": "t4",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "7901d204ca220c9eaa75f990be2ec22339ff0deaa3feeecd4816bda309d7072a",
+          "loops": 4096,
+          "median_ns_per_call": 5468.332763671875,
+          "samples_ns_per_call": [
+            5536.967041015625,
+            5468.332763671875,
+            5584.065673828125,
+            5467.987060546875,
+            5534.43408203125,
+            5400.57373046875,
+            5427.032470703125,
+            5417.5009765625,
+            5586.26318359375
+          ],
+          "samples_ns_total": [
+            22679417,
+            22398291,
+            22872333,
+            22396875,
+            22669042,
+            22120750,
+            22229125,
+            22190084,
+            22881334
+          ]
+        },
+        "seed": 20260820,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 91084,
+          "correctness_digest": "682fcdee32044fe631aaeed73e4f510d1ea55d4667b1c3b2aaec028651e43a2e",
+          "fullgraph": true,
+          "second_call_ns": 28292,
+          "warm_loops": 2048,
+          "warm_median_ns_per_call": 16988.912109375,
+          "warm_samples_ns_per_call": [
+            17749.4912109375,
+            16988.912109375,
+            16578.79638671875,
+            17093.05810546875,
+            16395.3447265625,
+            18549.88623046875,
+            16821.146484375,
+            17169.5966796875,
+            16568.54248046875
+          ],
+          "warm_samples_ns_total": [
+            36350958,
+            34793292,
+            33953375,
+            35006583,
+            33577666,
+            37990167,
+            34449708,
+            35163334,
+            33932375
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 128,
+      "out_features": 64,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "7901d204ca220c9eaa75f990be2ec22339ff0deaa3feeecd4816bda309d7072a",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              16
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "7901d204ca220c9eaa75f990be2ec22339ff0deaa3feeecd4816bda309d7072a",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              16
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 5949.137451171875,
+        "iterations": 4096,
+        "median_speedup_fallback_over_native": 1.0645609467067862,
+        "native_median_ns_per_call": 5588.348388671875,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.07126458683237223,
+            -0.043896548945633336
+          ],
+          "log_ratio_mean": -0.05931775956316951,
+          "median_fallback_over_native": 1.068823175010138,
+          "median_native_over_fallback": 0.9356084555244741,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.9312154721772532,
+            0.9570529604898226
+          ],
+          "ratio_geomean_native_over_fallback": 0.9424072626539833,
+          "resamples": 10000,
+          "seed": 20261720,
+          "speedup_ci95_fallback_over_native": [
+            1.0448742559536068,
+            1.0738653189061853
+          ],
+          "speedup_geomean_fallback_over_native": 1.0611123657767931
+        },
+        "samples": [
+          {
+            "fallback_ns": 24367667,
+            "iterations": 4096,
+            "native_ns": 23287125,
+            "round": 0,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24342959,
+            "iterations": 4096,
+            "native_ns": 22889875,
+            "round": 1,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24737167,
+            "iterations": 4096,
+            "native_ns": 22833708,
+            "round": 2,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24194291,
+            "iterations": 4096,
+            "native_ns": 22988333,
+            "round": 3,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24525667,
+            "iterations": 4096,
+            "native_ns": 22821417,
+            "round": 4,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24398250,
+            "iterations": 4096,
+            "native_ns": 22827209,
+            "round": 5,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24158500,
+            "iterations": 4096,
+            "native_ns": 22545042,
+            "round": 6,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24234833,
+            "iterations": 4096,
+            "native_ns": 24047000,
+            "round": 7,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 26099833,
+            "iterations": 4096,
+            "native_ns": 24086541,
+            "round": 8,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            5949.137451171875,
+            5943.105224609375,
+            6039.347412109375,
+            5906.809326171875,
+            5987.711669921875,
+            5956.60400390625,
+            5898.0712890625,
+            5916.707275390625,
+            6372.029541015625
+          ],
+          "native": [
+            5685.333251953125,
+            5588.348388671875,
+            5574.6357421875,
+            5612.385986328125,
+            5571.635009765625,
+            5573.049072265625,
+            5504.16064453125,
+            5870.849609375,
+            5880.503173828125
+          ]
+        },
+        "schedule": [
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 4,
+          "is_counterbalanced": true,
+          "native_first": 5
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 66750,
+          "native_elapsed_ns": 62750
+        }
+      },
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260721
+    },
+    {
+      "batch": 64,
+      "case_id": "c1",
+      "contexts": {
+        "case_id": "c1",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "370ae4d279bab9adbe926c51ae5e96d0b2d7546bd25e0795b0d342a6f8ce3524",
+          "loops": 4096,
+          "median_ns_per_call": 7018.768310546875,
+          "samples_ns_per_call": [
+            6891.225341796875,
+            7091.00341796875,
+            7267.578125,
+            6966.36962890625,
+            6883.85009765625,
+            7183.756591796875,
+            6980.2451171875,
+            7018.768310546875,
+            7219.635009765625
+          ],
+          "samples_ns_total": [
+            28226459,
+            29044750,
+            29768000,
+            28534250,
+            28196250,
+            29424667,
+            28591084,
+            28748875,
+            29571625
+          ]
+        },
+        "seed": 20260821,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 93000,
+          "correctness_digest": "4ec997da35d337733ce06ea387227ea615c60a4afadd6aa78dd24265191385ff",
+          "fullgraph": true,
+          "second_call_ns": 33917,
+          "warm_loops": 2048,
+          "warm_median_ns_per_call": 18056.0712890625,
+          "warm_samples_ns_per_call": [
+            19367.81787109375,
+            17994.099609375,
+            17932.0068359375,
+            18056.0712890625,
+            18712.1787109375,
+            18602.74267578125,
+            18571.87890625,
+            17874.0029296875,
+            17543.25341796875
+          ],
+          "warm_samples_ns_total": [
+            39665291,
+            36851916,
+            36724750,
+            36978834,
+            38322542,
+            38098417,
+            38035208,
+            36605958,
+            35928583
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 128,
+      "out_features": 64,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "370ae4d279bab9adbe926c51ae5e96d0b2d7546bd25e0795b0d342a6f8ce3524",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              64
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "370ae4d279bab9adbe926c51ae5e96d0b2d7546bd25e0795b0d342a6f8ce3524",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              64
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 7398.13232421875,
+        "iterations": 4096,
+        "median_speedup_fallback_over_native": 1.0573508437539527,
+        "native_median_ns_per_call": 6996.856689453125,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.0686510926733135,
+            -0.02647281654091414
+          ],
+          "log_ratio_mean": -0.046934695728296616,
+          "median_fallback_over_native": 1.051751728610098,
+          "median_native_over_fallback": 0.950794729210012,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.9336523814115598,
+            0.9738745167538017
+          ],
+          "ratio_geomean_native_over_fallback": 0.9541497056074798,
+          "resamples": 10000,
+          "seed": 20261721,
+          "speedup_ci95_fallback_over_native": [
+            1.0268263341906532,
+            1.071062442413665
+          ],
+          "speedup_geomean_fallback_over_native": 1.0480535644700835
+        },
+        "samples": [
+          {
+            "fallback_ns": 29727167,
+            "iterations": 4096,
+            "native_ns": 27696250,
+            "round": 0,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 29908375,
+            "iterations": 4096,
+            "native_ns": 29308833,
+            "round": 1,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 30302750,
+            "iterations": 4096,
+            "native_ns": 29925458,
+            "round": 2,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 30504375,
+            "iterations": 4096,
+            "native_ns": 28662667,
+            "round": 3,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 29620708,
+            "iterations": 4096,
+            "native_ns": 28659125,
+            "round": 4,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 29739375,
+            "iterations": 4096,
+            "native_ns": 28276041,
+            "round": 5,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 30456958,
+            "iterations": 4096,
+            "native_ns": 28582584,
+            "round": 6,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 30929042,
+            "iterations": 4096,
+            "native_ns": 27683625,
+            "round": 7,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 30939000,
+            "iterations": 4096,
+            "native_ns": 30977250,
+            "round": 8,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            7257.609130859375,
+            7301.849365234375,
+            7398.13232421875,
+            7447.357177734375,
+            7231.6181640625,
+            7260.589599609375,
+            7435.78076171875,
+            7551.03564453125,
+            7553.466796875
+          ],
+          "native": [
+            6761.77978515625,
+            7155.476806640625,
+            7306.02001953125,
+            6997.721435546875,
+            6996.856689453125,
+            6903.330322265625,
+            6978.169921875,
+            6758.697509765625,
+            7562.80517578125
+          ]
+        },
+        "schedule": [
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 5,
+          "is_counterbalanced": true,
+          "native_first": 4
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 68833,
+          "native_elapsed_ns": 62000
+        }
+      },
+      "role": "context",
+      "route_verified": true,
+      "seed": 20260722
+    },
+    {
+      "batch": 256,
+      "case_id": "c2",
+      "contexts": {
+        "case_id": "c2",
+        "eager": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_ns": null,
+          "correctness_digest": "ff38d28d983b281d302981d0026f2df7c89ae07c39af3317c7146e45839b1550",
+          "loops": 1024,
+          "median_ns_per_call": 23854.4111328125,
+          "samples_ns_per_call": [
+            22925.4560546875,
+            24012.0439453125,
+            23795.8984375,
+            23854.4111328125,
+            23407.185546875,
+            23989.1357421875,
+            23960.8564453125,
+            22783.447265625,
+            25067.7490234375
+          ],
+          "samples_ns_total": [
+            23475667,
+            24588333,
+            24367000,
+            24426917,
+            23968958,
+            24564875,
+            24535917,
+            23330250,
+            25669375
+          ]
+        },
+        "seed": 20260822,
+        "torch_compile_fullgraph": {
+          "available": true,
+          "classification": "context-only; not a Rextio target claim",
+          "compile_and_first_call_ns": 113333,
+          "correctness_digest": "9274021dadd575a65293000c71cd5b9a6b05b21507f825d1d7798f262f194002",
+          "fullgraph": true,
+          "second_call_ns": 50500,
+          "warm_loops": 1024,
+          "warm_median_ns_per_call": 35678.140625,
+          "warm_samples_ns_per_call": [
+            36179.40234375,
+            35150.7568359375,
+            37459.3505859375,
+            36800.08984375,
+            36815.0224609375,
+            34225.4638671875,
+            35448.1611328125,
+            35231.6083984375,
+            35678.140625
+          ],
+          "warm_samples_ns_total": [
+            37047708,
+            35994375,
+            38358375,
+            37683292,
+            37698583,
+            35046875,
+            36298917,
+            36077167,
+            36534416
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "in_features": 256,
+      "out_features": 128,
+      "primary_eligible": true,
+      "primary_ineligible_reasons": [],
+      "product": {
+        "correctness": {
+          "device_ok": true,
+          "digest_match": true,
+          "dtype_ok": true,
+          "fallback": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "ff38d28d983b281d302981d0026f2df7c89ae07c39af3317c7146e45839b1550",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              256
+            ],
+            "shape_ok": true
+          },
+          "native": {
+            "device": "cpu",
+            "device_ok": true,
+            "digest": "ff38d28d983b281d302981d0026f2df7c89ae07c39af3317c7146e45839b1550",
+            "dtype": "torch.float32",
+            "dtype_ok": true,
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "requires_grad": false,
+            "shape": [
+              256
+            ],
+            "shape_ok": true
+          },
+          "no_grad_ok": true,
+          "non_mutation_ok": true,
+          "shape_ok": true
+        },
+        "correctness_ok": true,
+        "fallback_median_ns_per_call": 24299.966796875,
+        "iterations": 1024,
+        "median_speedup_fallback_over_native": 1.0189857778659404,
+        "native_median_ns_per_call": 23847.208984375,
+        "paired_bootstrap": {
+          "log_ratio_ci95": [
+            -0.04013084099139991,
+            -0.0021412265165689395
+          ],
+          "log_ratio_mean": -0.020697688623580235,
+          "median_fallback_over_native": 1.019004127100699,
+          "median_native_over_fallback": 0.9813502942772467,
+          "method": "paired bootstrap mean log(native/fallback), 10000 resamples",
+          "ratio_ci95_native_over_fallback": [
+            0.9606637367332719,
+            0.9978610642736034
+          ],
+          "ratio_geomean_native_over_fallback": 0.9795150383534366,
+          "resamples": 10000,
+          "seed": 20261722,
+          "speedup_ci95_fallback_over_native": [
+            1.0021435205791436,
+            1.0409469638153417
+          ],
+          "speedup_geomean_fallback_over_native": 1.0209133712546146
+        },
+        "samples": [
+          {
+            "fallback_ns": 23957000,
+            "iterations": 1024,
+            "native_ns": 23510209,
+            "round": 0,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24939417,
+            "iterations": 1024,
+            "native_ns": 25630625,
+            "round": 1,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24883166,
+            "iterations": 1024,
+            "native_ns": 24036667,
+            "round": 2,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24590542,
+            "iterations": 1024,
+            "native_ns": 23610459,
+            "round": 3,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 26743209,
+            "iterations": 1024,
+            "native_ns": 24692375,
+            "round": 4,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 26052750,
+            "iterations": 1024,
+            "native_ns": 25599333,
+            "round": 5,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          },
+          {
+            "fallback_ns": 24925875,
+            "iterations": 1024,
+            "native_ns": 24204625,
+            "round": 6,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24508250,
+            "iterations": 1024,
+            "native_ns": 24419542,
+            "round": 7,
+            "schedule": [
+              "native",
+              "fallback"
+            ]
+          },
+          {
+            "fallback_ns": 24738667,
+            "iterations": 1024,
+            "native_ns": 25007875,
+            "round": 8,
+            "schedule": [
+              "fallback",
+              "native"
+            ]
+          }
+        ],
+        "samples_ns_per_call": {
+          "fallback": [
+            23395.5078125,
+            24354.8994140625,
+            24299.966796875,
+            24014.201171875,
+            26116.4150390625,
+            25442.138671875,
+            24341.6748046875,
+            23933.837890625,
+            24158.8544921875
+          ],
+          "native": [
+            22959.1884765625,
+            25029.9072265625,
+            23473.3076171875,
+            23057.0888671875,
+            24113.6474609375,
+            24999.3486328125,
+            23637.3291015625,
+            23847.208984375,
+            24421.7529296875
+          ]
+        },
+        "schedule": [
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "native",
+            "fallback"
+          ],
+          [
+            "fallback",
+            "native"
+          ]
+        ],
+        "schedule_balance": {
+          "all_pairs_valid": true,
+          "fallback_first": 5,
+          "is_counterbalanced": true,
+          "native_first": 4
+        },
+        "warmups": {
+          "fallback_elapsed_ns": 112208,
+          "native_elapsed_ns": 86333
+        }
+      },
+      "role": "context",
+      "route_verified": true,
+      "seed": 20260723
+    }
+  ],
+  "configuration": {
+    "bootstrap_resamples": 10000,
+    "calibration_target_ms": 20.0,
+    "cases": [
+      "t1",
+      "t2",
+      "t3",
+      "t4",
+      "c1",
+      "c2"
+    ],
+    "context_case_ids": [
+      "c1",
+      "c2"
+    ],
+    "context_lanes": [
+      "eager",
+      "torch_compile_fullgraph"
+    ],
+    "counterbalanced_pairs": true,
+    "gc_disabled_during_samples": true,
+    "minimum_sample_ms": 20.0,
+    "modes": [
+      "native",
+      "fallback"
+    ],
+    "persistent_processes": 2,
+    "repetitions": 9,
+    "seed": 20260717,
+    "target_case_ids": [
+      "t1",
+      "t2",
+      "t3",
+      "t4"
+    ],
+    "torch_num_interop_threads": 1,
+    "torch_num_threads": 1
+  },
+  "elapsed_ns": 58474568125,
+  "expansion_go_gate": {
+    "aggregate_geomean_fallback_over_native": 1.098517311212796,
+    "aggregate_speedup_ci95": [
+      1.0915072173110354,
+      1.1055328595091287
+    ],
+    "note": "Context sizes (c1, c2) and context lanes (eager, torch.compile) never contribute to this gate.",
+    "per_cell": {
+      "t1": {
+        "ci_upper_below_one": true,
+        "median_native_over_fallback": 0.8849862389404508,
+        "primary_eligible": true,
+        "ratio_ci95_native_over_fallback": [
+          0.8725536155209724,
+          0.9015917858998861
+        ],
+        "speedup_geomean_fallback_over_native": 1.1277642184078405
+      },
+      "t2": {
+        "ci_upper_below_one": true,
+        "median_native_over_fallback": 0.8961465392393713,
+        "primary_eligible": true,
+        "ratio_ci95_native_over_fallback": [
+          0.8936608693221381,
+          0.9087685487385442
+        ],
+        "speedup_geomean_fallback_over_native": 1.1098426041352583
+      },
+      "t3": {
+        "ci_upper_below_one": true,
+        "median_native_over_fallback": 0.9212927099209668,
+        "primary_eligible": true,
+        "ratio_ci95_native_over_fallback": [
+          0.9009957915418491,
+          0.9216209949772967
+        ],
+        "speedup_geomean_fallback_over_native": 1.0964442181556182
+      },
+      "t4": {
+        "ci_upper_below_one": true,
+        "median_native_over_fallback": 0.9356084555244741,
+        "primary_eligible": true,
+        "ratio_ci95_native_over_fallback": [
+          0.9312154721772532,
+          0.9570529604898226
+        ],
+        "speedup_geomean_fallback_over_native": 1.0611123657767931
+      }
+    },
+    "primary_eligible": {
+      "c1": true,
+      "c2": true,
+      "t1": true,
+      "t2": true,
+      "t3": true,
+      "t4": true
+    },
+    "primary_ineligible_reasons": {
+      "c1": [],
+      "c2": [],
+      "t1": [],
+      "t2": [],
+      "t3": [],
+      "t4": []
+    },
+    "reasons": [
+      "aggregate-geomean-speedup-below-1.2:1.098517",
+      "aggregate-bootstrap-ci-low-below-1.1:1.091507"
+    ],
+    "target_cells_ci_upper_below_one": 4,
+    "thresholds": {
+      "aggregate_bootstrap_ci95_low_min": 1.1,
+      "aggregate_geomean_fallback_over_native_min": 1.2,
+      "max_target_median_native_over_fallback": 1.1,
+      "min_target_cells_ci_upper_native_over_fallback_below_one": 3
+    },
+    "verdict": "NO-GO"
+  },
+  "generated_at_unix_ns": 1784235017769636000,
+  "non_claims": [
+    "Results apply only to this Mac / recorded machine; no cross-machine claim.",
+    "Timed scope is boundary-inclusive product latency through the generated Rextio wrapper (not internal-only native kernel timing).",
+    "No CUDA, MPS, or training/autograd performance claim.",
+    "No extrapolation beyond the six frozen cells and recorded pins.",
+    "Direct eager and torch.compile are context-only; they never rescue the Rextio expansion GO gate.",
+    "Compilation and first-call warm-up are excluded from steady-state samples.",
+    "Smoke runs are not performance evidence."
+  ],
+  "provenance": {
+    "cargo": "cargo 1.93.1 (083ac5135 2025-12-15)",
+    "cases_sha256": "2810db2b9e4f9485e1f163af6a73705968adbd73d8a2c911748ea753f7047853",
+    "compile_ns": 25471821708,
+    "core_direct_url": {
+      "dir_info": {
+        "editable": true
+      },
+      "url": "file:///Volumes/Data/workspace/rextio/rextio"
+    },
+    "core_dirty": false,
+    "core_import_file": "/Volumes/Data/workspace/rextio/rextio/src/rextio/__init__.py",
+    "core_install_mode": "editable",
+    "core_sha": null,
+    "core_version": "0.1.3",
+    "harness_manifest_sha256": "e7632afc7201dd0ab222e298aaea1c107ee615658a6671160bf097e46bc5f8a8",
+    "harness_sha256": "ee55c97a013cf9dcab9241d3d7330c6022cb9e7e95960e5b43d410b1bbe0c395",
+    "libtorch_bypass_version_check": false,
+    "libtorch_use_pytorch": "1",
+    "machine": "arm64",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "plugin_api_version": "1.3",
+    "plugin_direct_url": {
+      "dir_info": {
+        "editable": true
+      },
+      "url": "file:///Volumes/Data/workspace/rextio/rextio-torch"
+    },
+    "plugin_dirty": false,
+    "plugin_import_file": "/Volumes/Data/workspace/rextio/rextio-torch/src/rextio_torch/__init__.py",
+    "plugin_install_mode": "editable",
+    "plugin_sha": "83701cfbe78dffdeadb509bb3dd08b57edfb75a9",
+    "processor": "arm",
+    "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "python_executable": "/Volumes/Data/workspace/rextio/rextio-torch/.venv/bin/python",
+    "required_rextio_spec": ">=0.1.3,<0.2",
+    "required_tch": "=0.24.0",
+    "required_tch_feature": "python-extension",
+    "required_torch": "2.11.0",
+    "rextio_torch_version": "0.1.0",
+    "route_evidence": {
+      "accepted_native_count": 1,
+      "build_json_sha256": "ba24f7872f7961ea100b520388efa27946e79e599af31f40e8c2f8fead826484",
+      "build_status": "built",
+      "check_json_sha256": "dea112293bcc922518564607972f24d536466d80fff1bed205146ac3faf1ebce",
+      "function": {
+        "native_status": "accepted",
+        "qualname": "torch_bench_app.kernels.inference",
+        "route": "native-plugin:rextio-torch",
+        "rule_ids": [
+          "rextio-torch/functional-linear-f32-cpu-2d",
+          "rextio-torch/tensor-mean-dim1-f32-cpu-2d",
+          "rextio-torch/tensor-relu-f32-cpu-2d"
+        ]
+      },
+      "installed_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/python/_rextio_native.cpython-311-darwin.so",
+      "native_artifact": {
+        "path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/python/_rextio_native.cpython-311-darwin.so",
+        "sha256": "17602bc7f4c8042403a2fcb5a27b89cdf08480ab3d02048ac37e0d93fc4b96e7",
+        "timing_matches_build": true,
+        "timing_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/build/python/_rextio_native.cpython-311-darwin.so"
+      },
+      "native_build_status": "built",
+      "rejected_native_count": 0
+    },
+    "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+    "selected_entry_points": [
+      {
+        "dist": "rextio-torch",
+        "name": "rextio-torch",
+        "value": "rextio_torch.plugin:plugin"
+      }
+    ],
+    "torch": "2.11.0"
+  },
+  "schema": "rextio-torch-phase-a-product-benchmark-v1",
+  "smoke": false
+}

@@ -1,0 +1,282 @@
+{
+  "accepted_native_count": 1,
+  "boundary_fallback_threshold": 1000,
+  "build_python": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/build/python",
+  "embedding_candidate_count": 0,
+  "executable_build": {
+    "backend": null,
+    "command": null,
+    "entrypoint": null,
+    "message": "No executable entrypoint was requested.",
+    "path": null,
+    "status": "skipped",
+    "stderr": "",
+    "stdout": ""
+  },
+  "fallback": "cpython",
+  "fallback_build": {
+    "backend": "cpython",
+    "command": [],
+    "compiled_artifacts": [],
+    "message": "CPython fallback package tree was copied.",
+    "status": "built",
+    "stderr": "",
+    "stdout": ""
+  },
+  "generated_native": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/rust",
+  "generated_python": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/python",
+  "generated_rust": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/rust",
+  "native_build": {
+    "artifact_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/rust/target/release/lib_rextio_native.dylib",
+    "command": [
+      "/Users/songsiyoung/.cargo/bin/cargo",
+      "build",
+      "--release",
+      "--manifest-path",
+      "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/rust/Cargo.toml"
+    ],
+    "installed_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/python/_rextio_native.cpython-311-darwin.so",
+    "message": "Generated Rust native module built with Cargo.",
+    "status": "built",
+    "stderr": "iling matrixmultiply v0.3.11\n   Compiling syn v2.0.119\n   Compiling serde_json v1.0.150\n   Compiling jobserver v0.1.35\n   Compiling cpufeatures v0.2.17\n   Compiling getrandom v0.2.17\n   Compiling cc v1.2.67\n   Compiling serde v1.0.228\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling digest v0.10.7\n   Compiling inout v0.1.4\n   Compiling pyo3-build-config v0.29.0\n   Compiling cipher v0.4.4\n   Compiling sha2 v0.10.9\n   Compiling hmac v0.12.1\n   Compiling sha1 v0.10.7\n   Compiling aes v0.8.4\n   Compiling pbkdf2 v0.11.0\n   Compiling pyo3-ffi v0.29.0\n   Compiling zstd-sys v2.0.16+zstd.1.5.7\n   Compiling bzip2-sys v0.1.13+1.0.8\n   Compiling rawpointer v0.2.1\n   Compiling memchr v2.8.3\n   Compiling heck v0.5.0\n   Compiling itoa v1.0.18\n   Compiling thiserror v1.0.69\n   Compiling pyo3-macros-backend v0.29.0\n   Compiling zerocopy-derive v0.8.54\n   Compiling serde_derive v1.0.228\n   Compiling thiserror-impl v1.0.69\n   Compiling bzip2 v0.4.4\n   Compiling pyo3 v0.29.0\n   Compiling num-integer v0.1.46\n   Compiling num-complex v0.4.6\n   Compiling core-foundation-sys v0.8.7\n   Compiling tch v0.24.0\n   Compiling iana-time-zone v0.1.65\n   Compiling ndarray v0.16.1\n   Compiling lazy_static v1.5.0\n   Compiling once_cell v1.21.4\n   Compiling chrono v0.4.45\n   Compiling base64 v0.22.1\n   Compiling log v0.4.33\n   Compiling pyo3-macros v0.29.0\n   Compiling safetensors v0.3.3\n   Compiling ppv-lite86 v0.2.21\n   Compiling half v2.7.1\n   Compiling rand_chacha v0.3.1\n   Compiling rand v0.8.7\n   Compiling zstd v0.11.2+zstd.1.5.2\n   Compiling zip v0.6.6\n   Compiling torch-sys v0.24.0\n   Compiling rextio_generated_native v0.1.0 (/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/.rextio/generated/rust)\nwarning: unnecessary parentheses around block return value\n   --> src/lib.rs:123:137\n    |\n123 | ...recv_1 = __rxttorch_linear(&x, &weight, &bias)?; (__rxttorch_relu(&__rextio_recv_1)?) }; (__rxttorch_mean_dim1_keepdim_false(&__rextio...\n    |                                                     ^                                  ^\n    |\n    = note: `#[warn(unused_parens)]` (part of `#[warn(unused)]`) on by default\nhelp: remove these parentheses\n    |\n123 -     return Ok(__rxttorch_materialize_tensor(py, { let __rextio_recv_2 = { let __rextio_recv_1 = __rxttorch_linear(&x, &weight, &bias)?; (__rxttorch_relu(&__rextio_recv_1)?) }; (__rxttorch_mean_dim1_keepdim_false(&__rextio_recv_2)?) })?);\n123 +     return Ok(__rxttorch_materialize_tensor(py, { let __rextio_recv_2 = { let __rextio_recv_1 = __rxttorch_linear(&x, &weight, &bias)?; __rxttorch_relu(&__rextio_recv_1)? }; (__rxttorch_mean_dim1_keepdim_false(&__rextio_recv_2)?) })?);\n    |\n\nwarning: unnecessary parentheses around block return value\n   --> src/lib.rs:123:177\n    |\n123 | ...__rxttorch_relu(&__rextio_recv_1)?) }; (__rxttorch_mean_dim1_keepdim_false(&__rextio_recv_2)?) })?);\n    |                                           ^                                                     ^\n    |\nhelp: remove these parentheses\n    |\n123 -     return Ok(__rxttorch_materialize_tensor(py, { let __rextio_recv_2 = { let __rextio_recv_1 = __rxttorch_linear(&x, &weight, &bias)?; (__rxttorch_relu(&__rextio_recv_1)?) }; (__rxttorch_mean_dim1_keepdim_false(&__rextio_recv_2)?) })?);\n123 +     return Ok(__rxttorch_materialize_tensor(py, { let __rextio_recv_2 = { let __rextio_recv_1 = __rxttorch_linear(&x, &weight, &bias)?; (__rxttorch_relu(&__rextio_recv_1)?) }; __rxttorch_mean_dim1_keepdim_false(&__rextio_recv_2)? })?);\n    |\n\nwarning: function `rextio_call_python_runtime` is never used\n   --> src/lib.rs:104:4\n    |\n104 | fn rextio_call_python_runtime(\n    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |\n    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default\n\nwarning: `rextio_generated_native` (lib) generated 3 warnings (run `cargo fix --lib -p rextio_generated_native` to apply 2 suggestions)\n    Finished `release` profile [optimized] target(s) in 25.34s\n",
+    "stdout": "",
+    "tool": "cargo"
+  },
+  "plan": {
+    "fallback": {
+      "backend": "cpython",
+      "modules": [
+        {
+          "accepted_native": [],
+          "accepted_native_top_level": null,
+          "module": "torch_bench_app",
+          "needs_wrapper": false
+        },
+        {
+          "accepted_native": [
+            "torch_bench_app.kernels.inference"
+          ],
+          "accepted_native_top_level": null,
+          "module": "torch_bench_app.kernels",
+          "needs_wrapper": true
+        }
+      ]
+    },
+    "native": {
+      "accepted": [
+        "torch_bench_app.kernels.inference"
+      ],
+      "accepted_top_levels": [],
+      "embedding": [],
+      "rejected": [],
+      "rejected_top_levels": []
+    }
+  },
+  "plugin_crate_dependencies": [
+    {
+      "features": [
+        "python-extension"
+      ],
+      "name": "tch",
+      "plugin_id": "rextio-torch",
+      "version": "=0.24.0"
+    }
+  ],
+  "rejected_native_count": 0,
+  "rust_crate_build": {
+    "artifact_path": null,
+    "command": [],
+    "crate_path": null,
+    "message": "Rust-importable crate was not requested.",
+    "status": "skipped",
+    "stderr": "",
+    "stdout": ""
+  },
+  "status": "built",
+  "target": {
+    "plugins": {
+      "active": [
+        {
+          "api_version": "1.3",
+          "entry_point": "rextio.plugins:rextio-torch",
+          "id": "rextio-torch",
+          "lowering_provided": true,
+          "name": "PyTorch to tch (rextio-torch 0.1.0)",
+          "package": "rextio-torch",
+          "packages": [
+            "torch"
+          ],
+          "rules_provided": true,
+          "source": "entry-point",
+          "source_language": "python",
+          "target_build_options": {},
+          "target_language": "rust",
+          "target_versions": [],
+          "version": "0.1.0"
+        }
+      ],
+      "coverages": [
+        {
+          "coverage": {
+            "modules": [
+              "torch",
+              "torch.nn",
+              "torch.nn.functional"
+            ],
+            "packages": [
+              "torch"
+            ],
+            "symbols": [
+              "torch.nn.functional.linear",
+              "torch.Tensor.relu",
+              "torch.Tensor.mean"
+            ]
+          },
+          "plugin_id": "rextio-torch"
+        }
+      ],
+      "crate_dependencies": [
+        {
+          "features": [
+            "python-extension"
+          ],
+          "name": "tch",
+          "plugin_id": "rextio-torch",
+          "version": "=0.24.0"
+        }
+      ],
+      "discovered": [
+        {
+          "api_version": "1.3",
+          "entry_point": "rextio.plugins:rextio-torch",
+          "id": "rextio-torch",
+          "lowering_provided": true,
+          "name": "PyTorch to tch (rextio-torch 0.1.0)",
+          "package": "rextio-torch",
+          "packages": [
+            "torch"
+          ],
+          "rules_provided": true,
+          "source": "entry-point",
+          "source_language": "python",
+          "target_build_options": {},
+          "target_language": "rust",
+          "target_versions": [],
+          "version": "0.1.0"
+        }
+      ],
+      "enabled": [
+        "rextio-torch"
+      ],
+      "rule_records": [
+        {
+          "constraint": "Exactly three positional tensor operands: rank-2 float32 CPU input, rank-2 float32 CPU weight, and rank-1 float32 CPU bias. No keywords. Result is rank-2 float32 CPU. Executed under no-grad via fallible tch f_linear. Optional bias omission, other dtypes/devices/ranks, module forms, and in-place variants stay outside the Phase A surface.",
+          "diagnostic_code": "RXTP-TORCH-001",
+          "guidance": "Annotate input and weight as rextio_torch.types.TensorF32Cpu2D and bias as TensorF32Cpu1D; call torch.nn.functional.linear with three positional arguments on CPU float32 tensors.",
+          "id": "rextio-torch/functional-linear-f32-cpu-2d",
+          "outcome": "native",
+          "provider": "rextio-torch",
+          "scope": {
+            "kind": "call",
+            "pattern": "torch.nn.functional.linear(x, weight, bias) on float32 CPU rank-2 input/weight and float32 CPU rank-1 bias"
+          },
+          "stability": "experimental",
+          "verified": true
+        },
+        {
+          "constraint": "Method call with no positional arguments and no keywords on a float32 CPU rank-2 receiver. Result preserves the receiver type. In-place relu_ and other ranks/dtypes stay unclaimed.",
+          "diagnostic_code": "RXTP-TORCH-002",
+          "guidance": "Call .relu() with no arguments on a TensorF32Cpu2D receiver; do not use in-place relu_.",
+          "id": "rextio-torch/tensor-relu-f32-cpu-2d",
+          "outcome": "native",
+          "provider": "rextio-torch",
+          "scope": {
+            "kind": "call",
+            "pattern": "tensor.relu() on float32 CPU rank-2 tensors (method form)"
+          },
+          "stability": "experimental",
+          "verified": true
+        },
+        {
+          "constraint": "Method call with no positional arguments and exactly the static keywords dim=<int 1> and keepdim=<bool False> on a float32 CPU rank-2 receiver. Result is float32 CPU rank-1. Dynamic dim/keepdim, other dimensions, keepdim=True, and whole-tensor mean stay unclaimed.",
+          "diagnostic_code": "RXTP-TORCH-003",
+          "guidance": "Write .mean(dim=1, keepdim=False) with literal keywords on a TensorF32Cpu2D receiver.",
+          "id": "rextio-torch/tensor-mean-dim1-f32-cpu-2d",
+          "outcome": "native",
+          "provider": "rextio-torch",
+          "scope": {
+            "kind": "call",
+            "pattern": "tensor.mean(dim=1, keepdim=False) on float32 CPU rank-2 tensors (method form with literal keywords)"
+          },
+          "stability": "experimental",
+          "verified": true
+        },
+        {
+          "constraint": "Covered torch call sites whose operand or receiver types fall outside the registered float32 CPU rank-1/2 vocabulary, or whose shape is recognized but not lowerable, are rejected with guidance and stay on the Python fallback.",
+          "diagnostic_code": "RXTP-TORCH-010",
+          "guidance": "Keep the Phase A slice on float32 CPU rank-2 input/weight, rank-1 bias, .relu(), and .mean(dim=1, keepdim=False); other dtypes, devices, ranks, and dynamic literals remain on the fallback.",
+          "id": "rextio-torch/unsupported-tensor-surface",
+          "outcome": "fallback",
+          "provider": "rextio-torch",
+          "scope": {
+            "kind": "type",
+            "pattern": "tensor dtype/device/rank or call shape outside the Phase A float32 CPU rank-1/2 linear\u2192ReLU\u2192mean slice"
+          },
+          "stability": "experimental",
+          "verified": false
+        }
+      ],
+      "types": [
+        {
+          "plugin_id": "rextio-torch",
+          "type": {
+            "annotations": [
+              "rextio_torch.types.TensorF32Cpu2D"
+            ],
+            "conversion": {
+              "param_expr": "__rxttorch_extract_f32_cpu_2d(py, &{param})?",
+              "param_rust": "pyo3::Bound<'py, pyo3::types::PyAny>",
+              "return_expr": "__rxttorch_materialize_tensor(py, {value})?",
+              "return_rust": "pyo3::Bound<'py, pyo3::types::PyAny>"
+            },
+            "helpers": [
+              "struct RxtTorchTensor(tch::Tensor);\n\nimpl Clone for RxtTorchTensor {\n    fn clone(&self) -> Self {\n        Self(self.0.shallow_clone())\n    }\n}\n\nfn __rxttorch_map_err(err: tch::TchError) -> pyo3::PyErr {\n    pyo3::exceptions::PyRuntimeError::new_err(err.to_string())\n}\n\nfn __rxttorch_extract_f32_cpu(\n    _py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n    expected_rank: i64,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    let ptr = value.as_ptr();\n    let tensor = unsafe { tch::Tensor::pyobject_unpack(ptr as *mut _) }\n        .map_err(__rxttorch_map_err)?\n        .ok_or_else(|| {\n            pyo3::exceptions::PyTypeError::new_err(\"rextio-torch: expected a torch.Tensor\")\n        })?;\n    if tensor.device() != tch::Device::Cpu {\n        return Err(pyo3::exceptions::PyValueError::new_err(\n            \"rextio-torch: expected a CPU tensor\",\n        ));\n    }\n    if tensor.kind() != tch::Kind::Float {\n        return Err(pyo3::exceptions::PyValueError::new_err(\n            \"rextio-torch: expected a float32 tensor\",\n        ));\n    }\n    let rank = tensor.dim() as i64;\n    if rank != expected_rank {\n        return Err(pyo3::exceptions::PyValueError::new_err(format!(\n            \"rextio-torch: expected rank-{} tensor, got rank {}\",\n            expected_rank, rank\n        )));\n    }\n    Ok(RxtTorchTensor(tensor))\n}\n\nfn __rxttorch_extract_f32_cpu_2d(\n    py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    __rxttorch_extract_f32_cpu(py, value, 2)\n}\n\nfn __rxttorch_extract_f32_cpu_1d(\n    py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    __rxttorch_extract_f32_cpu(py, value, 1)\n}\n\nfn __rxttorch_materialize_tensor(\n    py: pyo3::Python<'_>,\n    value: RxtTorchTensor,\n) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {\n    let ptr = value.0.pyobject_wrap().map_err(__rxttorch_map_err)?;\n    Ok(unsafe { pyo3::Bound::from_owned_ptr(py, ptr as *mut _) })\n}"
+            ],
+            "key": "rextio-torch/tensor-f32-cpu-2d",
+            "rust_type": "RxtTorchTensor"
+          }
+        },
+        {
+          "plugin_id": "rextio-torch",
+          "type": {
+            "annotations": [
+              "rextio_torch.types.TensorF32Cpu1D"
+            ],
+            "conversion": {
+              "param_expr": "__rxttorch_extract_f32_cpu_1d(py, &{param})?",
+              "param_rust": "pyo3::Bound<'py, pyo3::types::PyAny>",
+              "return_expr": "__rxttorch_materialize_tensor(py, {value})?",
+              "return_rust": "pyo3::Bound<'py, pyo3::types::PyAny>"
+            },
+            "helpers": [
+              "struct RxtTorchTensor(tch::Tensor);\n\nimpl Clone for RxtTorchTensor {\n    fn clone(&self) -> Self {\n        Self(self.0.shallow_clone())\n    }\n}\n\nfn __rxttorch_map_err(err: tch::TchError) -> pyo3::PyErr {\n    pyo3::exceptions::PyRuntimeError::new_err(err.to_string())\n}\n\nfn __rxttorch_extract_f32_cpu(\n    _py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n    expected_rank: i64,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    let ptr = value.as_ptr();\n    let tensor = unsafe { tch::Tensor::pyobject_unpack(ptr as *mut _) }\n        .map_err(__rxttorch_map_err)?\n        .ok_or_else(|| {\n            pyo3::exceptions::PyTypeError::new_err(\"rextio-torch: expected a torch.Tensor\")\n        })?;\n    if tensor.device() != tch::Device::Cpu {\n        return Err(pyo3::exceptions::PyValueError::new_err(\n            \"rextio-torch: expected a CPU tensor\",\n        ));\n    }\n    if tensor.kind() != tch::Kind::Float {\n        return Err(pyo3::exceptions::PyValueError::new_err(\n            \"rextio-torch: expected a float32 tensor\",\n        ));\n    }\n    let rank = tensor.dim() as i64;\n    if rank != expected_rank {\n        return Err(pyo3::exceptions::PyValueError::new_err(format!(\n            \"rextio-torch: expected rank-{} tensor, got rank {}\",\n            expected_rank, rank\n        )));\n    }\n    Ok(RxtTorchTensor(tensor))\n}\n\nfn __rxttorch_extract_f32_cpu_2d(\n    py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    __rxttorch_extract_f32_cpu(py, value, 2)\n}\n\nfn __rxttorch_extract_f32_cpu_1d(\n    py: pyo3::Python<'_>,\n    value: &pyo3::Bound<'_, pyo3::types::PyAny>,\n) -> pyo3::PyResult<RxtTorchTensor> {\n    __rxttorch_extract_f32_cpu(py, value, 1)\n}\n\nfn __rxttorch_materialize_tensor(\n    py: pyo3::Python<'_>,\n    value: RxtTorchTensor,\n) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {\n    let ptr = value.0.pyobject_wrap().map_err(__rxttorch_map_err)?;\n    Ok(unsafe { pyo3::Bound::from_owned_ptr(py, ptr as *mut _) })\n}"
+            ],
+            "key": "rextio-torch/tensor-f32-cpu-1d",
+            "rust_type": "RxtTorchTensor"
+          }
+        }
+      ]
+    },
+    "spec": {
+      "build_options": {},
+      "implemented": true,
+      "language": "rust",
+      "version": null
+    }
+  },
+  "wheel_build": {
+    "message": "Generated hybrid artifact wheel.",
+    "path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-bench-sphq8ccl/dist/rextio_torch_bench_sphq8ccl-0.1.0-cp311-cp311-macosx_26_0_arm64.whl",
+    "status": "built"
+  }
+}

@@ -1,0 +1,146 @@
+"""Plugin facade, coverage, crate pin, and loader contract tests."""
+
+from __future__ import annotations
+
+import tomllib
+from pathlib import Path
+from typing import Any
+
+from rextio.config.schema import PluginConfig, RextioConfig
+from rextio.plugins.api import (
+    PLUGIN_DIAGNOSTIC_CODE_PATTERN,
+    CoverageDecl,
+    CrateDependency,
+    PluginType,
+    RuleRecord,
+)
+from rextio.plugins.loader import load_plugin_registry
+from rextio.targets.models import TargetSpec
+
+from rextio_torch import __version__
+from rextio_torch.plugin import PLUGIN_ID, REQUIRED_PLUGIN_API, RextioTorchPlugin, plugin
+from rextio_torch.rules import COVERAGE, torch_rule_records
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class FakeEntryPoint:
+    name = PLUGIN_ID
+
+    def load(self) -> Any:
+        return plugin
+
+
+def load_registry(enabled: tuple[str, ...] = (PLUGIN_ID,)):
+    return load_plugin_registry(
+        PluginConfig(enabled=enabled),
+        TargetSpec(),
+        entry_points=(FakeEntryPoint(),),
+        full_config=RextioConfig(),
+    )
+
+
+def test_entry_point_factory_returns_plugin() -> None:
+    obj = plugin()
+    assert isinstance(obj, RextioTorchPlugin)
+    assert obj.plugin_id == PLUGIN_ID
+    assert obj.api_version == REQUIRED_PLUGIN_API == "1.3"
+    assert __version__ == "0.1.0"
+
+
+def test_core_loader_accepts_the_plugin() -> None:
+    registry = load_registry()
+    active = registry.active[0]
+    assert active.id == PLUGIN_ID
+    assert active.rules_provided is True
+    assert active.lowering_provided is True
+    assert active.api_version == "1.3"
+    assert active.packages == ("torch",)
+    assert __version__ in active.name
+    assert registry.coverages[0].coverage == COVERAGE
+    assert [record.id for record in registry.rule_records] == [
+        record.id for record in torch_rule_records()
+    ]
+
+
+def test_covers_phase_a_surface() -> None:
+    coverage = plugin().covers()
+    assert isinstance(coverage, CoverageDecl)
+    assert coverage.packages == ("torch",)
+    assert "torch.nn.functional" in coverage.modules
+    assert "torch.nn.functional.linear" in coverage.symbols
+    assert "torch.Tensor.relu" in coverage.symbols
+    assert "torch.Tensor.mean" in coverage.symbols
+
+
+def test_rule_records_are_namespaced_and_well_formed() -> None:
+    records = plugin().describe(RextioConfig())
+    assert records
+    codes: set[str] = set()
+    for record in records:
+        assert isinstance(record, RuleRecord)
+        assert record.id.startswith("rextio-torch/")
+        assert record.provider == "rextio-torch"
+        if record.diagnostic_code is not None:
+            match = PLUGIN_DIAGNOSTIC_CODE_PATTERN.match(record.diagnostic_code)
+            assert match is not None
+            assert match.group(1) == "TORCH"
+            assert record.diagnostic_code not in codes
+            codes.add(record.diagnostic_code)
+    assert "RXTP-TORCH-001" in codes
+    assert "RXTP-TORCH-002" in codes
+    assert "RXTP-TORCH-003" in codes
+    assert "RXTP-TORCH-010" in codes
+
+
+def test_type_vocabulary_keys_and_boundary() -> None:
+    types = plugin().type_vocabulary()
+    assert {t.key for t in types} == {
+        "rextio-torch/tensor-f32-cpu-2d",
+        "rextio-torch/tensor-f32-cpu-1d",
+    }
+    for plugin_type in types:
+        assert isinstance(plugin_type, PluginType)
+        assert plugin_type.rust_type == "RxtTorchTensor"
+        assert plugin_type.conversion is not None
+        assert plugin_type.conversion.param_rust == "pyo3::Bound<'py, pyo3::types::PyAny>"
+        assert plugin_type.conversion.return_expr == (
+            "__rxttorch_materialize_tensor(py, {value})?"
+        )
+        assert plugin_type.helpers
+        assert "struct RxtTorchTensor" in plugin_type.helpers[0]
+        assert "shallow_clone" in plugin_type.helpers[0]
+        assert "pyobject_unpack" in plugin_type.helpers[0]
+        assert "pyobject_wrap" in plugin_type.helpers[0]
+        assert "from_owned_ptr" in plugin_type.helpers[0]
+    spellings = {a for t in types for a in t.annotations}
+    assert spellings == {
+        "rextio_torch.types.TensorF32Cpu2D",
+        "rextio_torch.types.TensorF32Cpu1D",
+    }
+
+
+def test_crate_dependency_is_exact_tch_python_extension() -> None:
+    deps = plugin().crate_dependencies()
+    assert deps == (
+        CrateDependency(name="tch", version="=0.24.0", features=("python-extension",)),
+    )
+    registry = load_registry()
+    assert [(b.dependency.name, b.dependency.version, b.dependency.features) for b in registry.crate_dependencies] == [
+        ("tch", "=0.24.0", ("python-extension",))
+    ]
+
+
+def test_private_incubator_metadata() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+    assert project["name"] == "rextio-torch"
+    assert project["requires-python"] == ">=3.11,<3.12"
+    assert "Private :: Do Not Upload" in project["classifiers"]
+    assert "Programming Language :: Python :: 3.11" in project["classifiers"]
+    assert "Programming Language :: Python :: 3.12" not in project["classifiers"]
+    dependencies = project["dependencies"]
+    assert "rextio>=0.1.3,<0.2" in dependencies
+    assert "torch==2.11.0" in dependencies
+    assert all("git+" not in dep for dep in dependencies)
+    assert "rextio-core-next" not in " ".join(dependencies)

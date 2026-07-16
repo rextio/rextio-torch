@@ -1,0 +1,3428 @@
+{
+  "cells": [
+    {
+      "batch": 1,
+      "case_id": "t1",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 7519.34814453125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "df9c2e03c969efcbfdddce892f2e041c7b1e2ba28ddec946ae4be60a1448864a",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "df9c2e03c969efcbfdddce892f2e041c7b1e2ba28ddec946ae4be60a1448864a",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 4096,
+          "native_median_ns_per_call": 6781.19921875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.11301802645599797,
+              -0.09211447176334031
+            ],
+            "log_ratio_mean": -0.10223933323897254,
+            "median_comparator_over_native": 1.1021515544508087,
+            "median_native_over_comparator": 0.9073162361035639,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8931345599200565,
+              0.9120007452360569
+            ],
+            "ratio_geomean_native_over_comparator": 0.9028134525422714,
+            "resamples": 10000,
+            "seed": 20262717,
+            "speedup_ci95_comparator_over_native": [
+              1.096490332078803,
+              1.1196521161262742
+            ],
+            "speedup_geomean_comparator_over_native": 1.1076485371192208
+          },
+          "samples": [
+            {
+              "comparator_ns": 30259625,
+              "iterations": 4096,
+              "native_ns": 27804750,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 30799250,
+              "iterations": 4096,
+              "native_ns": 27615917,
+              "round": 1,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 30594625,
+              "iterations": 4096,
+              "native_ns": 27759000,
+              "round": 2,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 31681208,
+              "iterations": 4096,
+              "native_ns": 28276667,
+              "round": 3,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 31511708,
+              "iterations": 4096,
+              "native_ns": 28953583,
+              "round": 4,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 31712709,
+              "iterations": 4096,
+              "native_ns": 27696834,
+              "round": 5,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 30589500,
+              "iterations": 4096,
+              "native_ns": 27775792,
+              "round": 6,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 30810625,
+              "iterations": 4096,
+              "native_ns": 27515708,
+              "round": 7,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 30709459,
+              "iterations": 4096,
+              "native_ns": 28183375,
+              "round": 8,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              7387.603759765625,
+              7519.34814453125,
+              7469.390869140625,
+              7734.669921875,
+              7693.2880859375,
+              7742.360595703125,
+              7468.1396484375,
+              7522.125244140625,
+              7497.426513671875
+            ],
+            "native": [
+              6788.26904296875,
+              6742.167236328125,
+              6777.099609375,
+              6903.483154296875,
+              7068.745849609375,
+              6761.92236328125,
+              6781.19921875,
+              6717.7021484375,
+              6880.706787109375
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 7925.30322265625,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "df9c2e03c969efcbfdddce892f2e041c7b1e2ba28ddec946ae4be60a1448864a",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "df9c2e03c969efcbfdddce892f2e041c7b1e2ba28ddec946ae4be60a1448864a",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 4096,
+          "native_median_ns_per_call": 6874.481201171875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.14804937604191423,
+              -0.1371005474052901
+            ],
+            "log_ratio_mean": -0.14305475528215153,
+            "median_comparator_over_native": 1.1575833788810257,
+            "median_native_over_comparator": 0.8638686579679875,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8623885325584494,
+              0.8718825561959478
+            ],
+            "ratio_geomean_native_over_comparator": 0.8667066108311923,
+            "resamples": 10000,
+            "seed": 20261717,
+            "speedup_ci95_comparator_over_native": [
+              1.1469434649123305,
+              1.1595701499338105
+            ],
+            "speedup_geomean_comparator_over_native": 1.153792976196381
+          },
+          "samples": [
+            {
+              "comparator_ns": 32912083,
+              "iterations": 4096,
+              "native_ns": 28311125,
+              "round": 0,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 32945041,
+              "iterations": 4096,
+              "native_ns": 28295916,
+              "round": 1,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 33102417,
+              "iterations": 4096,
+              "native_ns": 28646125,
+              "round": 2,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 32373958,
+              "iterations": 4096,
+              "native_ns": 27909375,
+              "round": 3,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 32198375,
+              "iterations": 4096,
+              "native_ns": 27815167,
+              "round": 4,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 32278916,
+              "iterations": 4096,
+              "native_ns": 28157875,
+              "round": 5,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 32536500,
+              "iterations": 4096,
+              "native_ns": 28092583,
+              "round": 6,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 32322666,
+              "iterations": 4096,
+              "native_ns": 28147750,
+              "round": 7,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 32462042,
+              "iterations": 4096,
+              "native_ns": 28684208,
+              "round": 8,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              8035.176513671875,
+              8043.222900390625,
+              8081.644775390625,
+              7903.79833984375,
+              7860.931396484375,
+              7880.5947265625,
+              7943.4814453125,
+              7891.27587890625,
+              7925.30322265625
+            ],
+            "native": [
+              6911.895751953125,
+              6908.1826171875,
+              6993.682861328125,
+              6813.812255859375,
+              6790.812255859375,
+              6874.481201171875,
+              6858.540771484375,
+              6872.00927734375,
+              7002.98046875
+            ]
+          },
+          "schedule": [
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": true,
+          "compile_and_first_call_ns": 3389743000,
+          "correctness_ok": false,
+          "fullgraph": true,
+          "second_call_ns": 51416,
+          "warm_loops": 1,
+          "warm_median_ns_per_call": 81208.0,
+          "warm_samples_ns_per_call": [
+            90459.0,
+            81208.0,
+            78375.0,
+            76958.0,
+            135875.0,
+            81791.0,
+            77542.0,
+            120666.0,
+            80750.0
+          ],
+          "warm_samples_ns_total": [
+            90459,
+            81208,
+            78375,
+            76958,
+            135875,
+            81791,
+            77542,
+            120666,
+            80750
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "depth": 4,
+      "phase": 0,
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260818,
+      "width": 16
+    },
+    {
+      "batch": 1,
+      "case_id": "t2",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 13557.92236328125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "94a89293c0ffeeca6715494e94877d582018a5a4b08be6c9eddf9cabb6ff7779",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "94a89293c0ffeeca6715494e94877d582018a5a4b08be6c9eddf9cabb6ff7779",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 2048,
+          "native_median_ns_per_call": 11616.98388671875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.16031494257932463,
+              -0.13530673489002815
+            ],
+            "log_ratio_mean": -0.14753839121989318,
+            "median_comparator_over_native": 1.1546049580334485,
+            "median_native_over_comparator": 0.86609709497803,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8518754548604945,
+              0.8734479536320903
+            ],
+            "ratio_geomean_native_over_comparator": 0.8628293126156404,
+            "resamples": 10000,
+            "seed": 20272717,
+            "speedup_ci95_comparator_over_native": [
+              1.1448879075641127,
+              1.1738805177380804
+            ],
+            "speedup_geomean_comparator_over_native": 1.158977778546409
+          },
+          "samples": [
+            {
+              "comparator_ns": 28573542,
+              "iterations": 2048,
+              "native_ns": 23787500,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28106500,
+              "iterations": 2048,
+              "native_ns": 24342958,
+              "round": 1,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27351083,
+              "iterations": 2048,
+              "native_ns": 23906500,
+              "round": 2,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 27916584,
+              "iterations": 2048,
+              "native_ns": 23499208,
+              "round": 3,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 27766625,
+              "iterations": 2048,
+              "native_ns": 23791583,
+              "round": 4,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27357834,
+              "iterations": 2048,
+              "native_ns": 23451250,
+              "round": 5,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 27979917,
+              "iterations": 2048,
+              "native_ns": 24442542,
+              "round": 6,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 26779208,
+              "iterations": 2048,
+              "native_ns": 23462750,
+              "round": 7,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 26885166,
+              "iterations": 2048,
+              "native_ns": 23893917,
+              "round": 8,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              13951.9248046875,
+              13723.876953125,
+              13355.02099609375,
+              13631.14453125,
+              13557.92236328125,
+              13358.3173828125,
+              13662.06884765625,
+              13075.78515625,
+              13127.5224609375
+            ],
+            "native": [
+              11614.990234375,
+              11886.2099609375,
+              11673.095703125,
+              11474.22265625,
+              11616.98388671875,
+              11450.8056640625,
+              11934.8349609375,
+              11456.4208984375,
+              11666.95166015625
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 5,
+            "is_counterbalanced": true,
+            "native_first": 4
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 13622.15185546875,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "94a89293c0ffeeca6715494e94877d582018a5a4b08be6c9eddf9cabb6ff7779",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "94a89293c0ffeeca6715494e94877d582018a5a4b08be6c9eddf9cabb6ff7779",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                1
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 2048,
+          "native_median_ns_per_call": 11542.8671875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.17735911473099594,
+              -0.15162800213772623
+            ],
+            "log_ratio_mean": -0.16365786954792724,
+            "median_comparator_over_native": 1.1814701669117902,
+            "median_native_over_comparator": 0.8464030899856493,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8374789794760356,
+              0.859307881987082
+            ],
+            "ratio_geomean_native_over_comparator": 0.8490324520515157,
+            "resamples": 10000,
+            "seed": 20271717,
+            "speedup_ci95_comparator_over_native": [
+              1.1637272518524775,
+              1.1940598206126258
+            ],
+            "speedup_geomean_comparator_over_native": 1.1778112810455026
+          },
+          "samples": [
+            {
+              "comparator_ns": 27898167,
+              "iterations": 2048,
+              "native_ns": 23955917,
+              "round": 0,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 27929709,
+              "iterations": 2048,
+              "native_ns": 23639792,
+              "round": 1,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27849208,
+              "iterations": 2048,
+              "native_ns": 23447125,
+              "round": 2,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 29086917,
+              "iterations": 2048,
+              "native_ns": 23637500,
+              "round": 3,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 28452541,
+              "iterations": 2048,
+              "native_ns": 24793750,
+              "round": 4,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27636333,
+              "iterations": 2048,
+              "native_ns": 23685583,
+              "round": 5,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27996209,
+              "iterations": 2048,
+              "native_ns": 23635042,
+              "round": 6,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 27729166,
+              "iterations": 2048,
+              "native_ns": 23323709,
+              "round": 7,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 27490041,
+              "iterations": 2048,
+              "native_ns": 23897708,
+              "round": 8,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              13622.15185546875,
+              13637.55322265625,
+              13598.24609375,
+              14202.59619140625,
+              13892.84228515625,
+              13494.30322265625,
+              13670.02392578125,
+              13539.6318359375,
+              13422.87158203125
+            ],
+            "native": [
+              11697.22509765625,
+              11542.8671875,
+              11448.79150390625,
+              11541.748046875,
+              12106.3232421875,
+              11565.22607421875,
+              11540.5478515625,
+              11388.52978515625,
+              11668.802734375
+            ]
+          },
+          "schedule": [
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": true,
+          "compile_and_first_call_ns": 841327000,
+          "correctness_ok": true,
+          "fullgraph": true,
+          "second_call_ns": 82250,
+          "warm_loops": 1,
+          "warm_median_ns_per_call": 124375.0,
+          "warm_samples_ns_per_call": [
+            158541.0,
+            126000.0,
+            163375.0,
+            113375.0,
+            106084.0,
+            150375.0,
+            124375.0,
+            120375.0,
+            100291.0
+          ],
+          "warm_samples_ns_total": [
+            158541,
+            126000,
+            163375,
+            113375,
+            106084,
+            150375,
+            124375,
+            120375,
+            100291
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "depth": 8,
+      "phase": 1,
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260819,
+      "width": 32
+    },
+    {
+      "batch": 4,
+      "case_id": "t3",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 27559.8955078125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "1c32c2eb35c7c9a2e704fea93d7da02688c30a2b6e91be621b7d17b99655f8ae",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                4
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "1c32c2eb35c7c9a2e704fea93d7da02688c30a2b6e91be621b7d17b99655f8ae",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                4
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 23609.29296875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.17317606820491493,
+              -0.152578554782823
+            ],
+            "log_ratio_mean": -0.16207638560869694,
+            "median_comparator_over_native": 1.173659063786699,
+            "median_native_over_comparator": 0.8520361924983524,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8409895302915643,
+              0.8584914526978905
+            ],
+            "ratio_geomean_native_over_comparator": 0.8503762455521607,
+            "resamples": 10000,
+            "seed": 20282717,
+            "speedup_ci95_comparator_over_native": [
+              1.1648339617795909,
+              1.1890754450335523
+            ],
+            "speedup_geomean_comparator_over_native": 1.1759500635517948
+          },
+          "samples": [
+            {
+              "comparator_ns": 28137375,
+              "iterations": 1024,
+              "native_ns": 23827250,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27707584,
+              "iterations": 1024,
+              "native_ns": 23368166,
+              "round": 1,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28652333,
+              "iterations": 1024,
+              "native_ns": 24385792,
+              "round": 2,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28678833,
+              "iterations": 1024,
+              "native_ns": 23505458,
+              "round": 3,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 28397708,
+              "iterations": 1024,
+              "native_ns": 24195875,
+              "round": 4,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28740542,
+              "iterations": 1024,
+              "native_ns": 24550875,
+              "round": 5,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 27885542,
+              "iterations": 1024,
+              "native_ns": 24371959,
+              "round": 6,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 28202375,
+              "iterations": 1024,
+              "native_ns": 24175916,
+              "round": 7,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 28221333,
+              "iterations": 1024,
+              "native_ns": 24156750,
+              "round": 8,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              27477.9052734375,
+              27058.1875,
+              27980.7939453125,
+              28006.6728515625,
+              27732.13671875,
+              28066.935546875,
+              27231.974609375,
+              27541.3818359375,
+              27559.8955078125
+            ],
+            "native": [
+              23268.798828125,
+              22820.474609375,
+              23814.25,
+              22954.548828125,
+              23628.7841796875,
+              23975.4638671875,
+              23800.7412109375,
+              23609.29296875,
+              23590.576171875
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 5,
+            "is_counterbalanced": true,
+            "native_first": 4
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 28074.9912109375,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "1c32c2eb35c7c9a2e704fea93d7da02688c30a2b6e91be621b7d17b99655f8ae",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                4
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "1c32c2eb35c7c9a2e704fea93d7da02688c30a2b6e91be621b7d17b99655f8ae",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                4
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 24160.197265625,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.15499361812359447,
+              -0.13208662981875163
+            ],
+            "log_ratio_mean": -0.14478705043797951,
+            "median_comparator_over_native": 1.1652291361169738,
+            "median_native_over_comparator": 0.8582003049910117,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8564206430368683,
+              0.8762650811060593
+            ],
+            "ratio_geomean_native_over_comparator": 0.8652065188438955,
+            "resamples": 10000,
+            "seed": 20281717,
+            "speedup_ci95_comparator_over_native": [
+              1.1412071775560853,
+              1.1676505092801117
+            ],
+            "speedup_geomean_comparator_over_native": 1.1557934183577556
+          },
+          "samples": [
+            {
+              "comparator_ns": 28524208,
+              "iterations": 1024,
+              "native_ns": 24299500,
+              "round": 0,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 28758667,
+              "iterations": 1024,
+              "native_ns": 24948833,
+              "round": 1,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28386458,
+              "iterations": 1024,
+              "native_ns": 24247583,
+              "round": 2,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 28543792,
+              "iterations": 1024,
+              "native_ns": 24496291,
+              "round": 3,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28576208,
+              "iterations": 1024,
+              "native_ns": 24398458,
+              "round": 4,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 28836625,
+              "iterations": 1024,
+              "native_ns": 25937917,
+              "round": 5,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 29273709,
+              "iterations": 1024,
+              "native_ns": 25087042,
+              "round": 6,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 29088333,
+              "iterations": 1024,
+              "native_ns": 25756375,
+              "round": 7,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28748791,
+              "iterations": 1024,
+              "native_ns": 24740042,
+              "round": 8,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              27855.671875,
+              28084.6357421875,
+              27721.150390625,
+              27874.796875,
+              27906.453125,
+              28160.7666015625,
+              28587.6064453125,
+              28406.5751953125,
+              28074.9912109375
+            ],
+            "native": [
+              23729.98046875,
+              24364.0947265625,
+              23679.2802734375,
+              23922.1591796875,
+              23826.619140625,
+              25329.9970703125,
+              24499.064453125,
+              25152.7099609375,
+              24160.197265625
+            ]
+          },
+          "schedule": [
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 5,
+            "is_counterbalanced": true,
+            "native_first": 4
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": true,
+          "compile_and_first_call_ns": 949655334,
+          "correctness_ok": false,
+          "fullgraph": true,
+          "second_call_ns": 101792,
+          "warm_loops": 1,
+          "warm_median_ns_per_call": 152666.0,
+          "warm_samples_ns_per_call": [
+            179250.0,
+            138292.0,
+            162500.0,
+            133166.0,
+            126417.0,
+            202917.0,
+            172375.0,
+            152666.0,
+            134209.0
+          ],
+          "warm_samples_ns_total": [
+            179250,
+            138292,
+            162500,
+            133166,
+            126417,
+            202917,
+            172375,
+            152666,
+            134209
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "depth": 16,
+      "phase": 0,
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260820,
+      "width": 32
+    },
+    {
+      "batch": 8,
+      "case_id": "t4",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 42686.2392578125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "577502cbf551eeef1d8ac08da4ba4d3ba3a8dad973d4fc6edd40834e1c12820b",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                8
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "577502cbf551eeef1d8ac08da4ba4d3ba3a8dad973d4fc6edd40834e1c12820b",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                8
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 38617.0654296875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.10419498218400097,
+              -0.07701441889782111
+            ],
+            "log_ratio_mean": -0.09212012898714718,
+            "median_comparator_over_native": 1.1069481274493964,
+            "median_native_over_comparator": 0.903384698164833,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.9010495916747384,
+              0.9258765033915506
+            ],
+            "ratio_geomean_native_over_comparator": 0.911995585858323,
+            "resamples": 10000,
+            "seed": 20292717,
+            "speedup_ci95_comparator_over_native": [
+              1.0800576495212157,
+              1.1098168283294454
+            ],
+            "speedup_geomean_comparator_over_native": 1.09649653518756
+          },
+          "samples": [
+            {
+              "comparator_ns": 44199625,
+              "iterations": 1024,
+              "native_ns": 39455417,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 44112250,
+              "iterations": 1024,
+              "native_ns": 39727250,
+              "round": 1,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 43874209,
+              "iterations": 1024,
+              "native_ns": 39350584,
+              "round": 2,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43710709,
+              "iterations": 1024,
+              "native_ns": 39470458,
+              "round": 3,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 43518542,
+              "iterations": 1024,
+              "native_ns": 39660625,
+              "round": 4,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43414041,
+              "iterations": 1024,
+              "native_ns": 40495917,
+              "round": 5,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 43411500,
+              "iterations": 1024,
+              "native_ns": 39543875,
+              "round": 6,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43674500,
+              "iterations": 1024,
+              "native_ns": 39454875,
+              "round": 7,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43811709,
+              "iterations": 1024,
+              "native_ns": 41982459,
+              "round": 8,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              43163.6962890625,
+              43078.369140625,
+              42845.9072265625,
+              42686.2392578125,
+              42498.576171875,
+              42396.5244140625,
+              42394.04296875,
+              42650.87890625,
+              42784.8720703125
+            ],
+            "native": [
+              38530.6806640625,
+              38796.142578125,
+              38428.3046875,
+              38545.369140625,
+              38731.0791015625,
+              39546.7939453125,
+              38617.0654296875,
+              38530.1513671875,
+              40998.4951171875
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 5,
+            "is_counterbalanced": true,
+            "native_first": 4
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 43031.1689453125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "577502cbf551eeef1d8ac08da4ba4d3ba3a8dad973d4fc6edd40834e1c12820b",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                8
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "577502cbf551eeef1d8ac08da4ba4d3ba3a8dad973d4fc6edd40834e1c12820b",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                8
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 38496.337890625,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.12612891179637895,
+              -0.09982891724888297
+            ],
+            "log_ratio_mean": -0.11118460746210156,
+            "median_comparator_over_native": 1.1077046061361857,
+            "median_native_over_comparator": 0.9027677545624072,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.8815012035549366,
+              0.9049922333534884
+            ],
+            "ratio_geomean_native_over_comparator": 0.8947735518066348,
+            "resamples": 10000,
+            "seed": 20291717,
+            "speedup_ci95_comparator_over_native": [
+              1.1049818585674003,
+              1.134428400060237
+            ],
+            "speedup_geomean_comparator_over_native": 1.1176012053339113
+          },
+          "samples": [
+            {
+              "comparator_ns": 45016666,
+              "iterations": 1024,
+              "native_ns": 39961084,
+              "round": 0,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 44004167,
+              "iterations": 1024,
+              "native_ns": 39826000,
+              "round": 1,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43273708,
+              "iterations": 1024,
+              "native_ns": 39294167,
+              "round": 2,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 46379541,
+              "iterations": 1024,
+              "native_ns": 39398583,
+              "round": 3,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 44116542,
+              "iterations": 1024,
+              "native_ns": 39913708,
+              "round": 4,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 44631500,
+              "iterations": 1024,
+              "native_ns": 39659333,
+              "round": 5,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 43302250,
+              "iterations": 1024,
+              "native_ns": 39091875,
+              "round": 6,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 44063917,
+              "iterations": 1024,
+              "native_ns": 39420250,
+              "round": 7,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 43104292,
+              "iterations": 1024,
+              "native_ns": 39382834,
+              "round": 8,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              43961.587890625,
+              42972.8193359375,
+              42259.48046875,
+              45292.5205078125,
+              43082.560546875,
+              43585.44921875,
+              42287.353515625,
+              43031.1689453125,
+              42094.03515625
+            ],
+            "native": [
+              39024.49609375,
+              38892.578125,
+              38373.2099609375,
+              38475.1787109375,
+              38978.23046875,
+              38729.8173828125,
+              38175.6591796875,
+              38496.337890625,
+              38459.798828125
+            ]
+          },
+          "schedule": [
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": true,
+          "compile_and_first_call_ns": 329636667,
+          "correctness_ok": false,
+          "fullgraph": true,
+          "second_call_ns": 78709,
+          "warm_loops": 1,
+          "warm_median_ns_per_call": 158250.0,
+          "warm_samples_ns_per_call": [
+            191208.0,
+            158167.0,
+            204792.0,
+            158250.0,
+            148166.0,
+            142209.0,
+            195208.0,
+            160375.0,
+            147125.0
+          ],
+          "warm_samples_ns_total": [
+            191208,
+            158167,
+            204792,
+            158250,
+            148166,
+            142209,
+            195208,
+            160375,
+            147125
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "depth": 16,
+      "phase": 1,
+      "role": "target",
+      "route_verified": true,
+      "seed": 20260821,
+      "width": 64
+    },
+    {
+      "batch": 32,
+      "case_id": "c1",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 39563.2734375,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "291d43549e19eeb7e2ed75a0fd9ff65466ca3f918e7287fd237519de339fd50d",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                32
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "291d43549e19eeb7e2ed75a0fd9ff65466ca3f918e7287fd237519de339fd50d",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                32
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 37990.884765625,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.05616937855830733,
+              -0.03814992074268879
+            ],
+            "log_ratio_mean": -0.0471521240260546,
+            "median_comparator_over_native": 1.0455812296445333,
+            "median_native_over_comparator": 0.9564058455218927,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.9453789953973017,
+              0.9625686210706427
+            ],
+            "ratio_geomean_native_over_comparator": 0.9539422690132934,
+            "resamples": 10000,
+            "seed": 20302717,
+            "speedup_ci95_comparator_over_native": [
+              1.0388869719103488,
+              1.057776833279169
+            ],
+            "speedup_geomean_comparator_over_native": 1.0482814657477608
+          },
+          "samples": [
+            {
+              "comparator_ns": 40612542,
+              "iterations": 1024,
+              "native_ns": 38579917,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 40512792,
+              "iterations": 1024,
+              "native_ns": 38903500,
+              "round": 1,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 40107625,
+              "iterations": 1024,
+              "native_ns": 38359167,
+              "round": 2,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 43295875,
+              "iterations": 1024,
+              "native_ns": 40271667,
+              "round": 3,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 40437333,
+              "iterations": 1024,
+              "native_ns": 38902666,
+              "round": 4,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 40253208,
+              "iterations": 1024,
+              "native_ns": 39283458,
+              "round": 5,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 40902166,
+              "iterations": 1024,
+              "native_ns": 38692750,
+              "round": 6,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 40358833,
+              "iterations": 1024,
+              "native_ns": 38959750,
+              "round": 7,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 40647709,
+              "iterations": 1024,
+              "native_ns": 38218625,
+              "round": 8,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              39660.685546875,
+              39563.2734375,
+              39167.6025390625,
+              42281.1279296875,
+              39489.5830078125,
+              39309.7734375,
+              39943.521484375,
+              39412.9228515625,
+              39695.0283203125
+            ],
+            "native": [
+              37675.7001953125,
+              37991.69921875,
+              37460.1240234375,
+              39327.7998046875,
+              37990.884765625,
+              38362.751953125,
+              37785.888671875,
+              38046.630859375,
+              37322.8759765625
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 5,
+            "is_counterbalanced": true,
+            "native_first": 4
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 40460.8154296875,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "291d43549e19eeb7e2ed75a0fd9ff65466ca3f918e7287fd237519de339fd50d",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                32
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "291d43549e19eeb7e2ed75a0fd9ff65466ca3f918e7287fd237519de339fd50d",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                32
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 1024,
+          "native_median_ns_per_call": 37979.4921875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.09670369720072322,
+              -0.047105724358710147
+            ],
+            "log_ratio_mean": -0.06818879342838362,
+            "median_comparator_over_native": 1.0506881734129645,
+            "median_native_over_comparator": 0.9517571676396495,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.9078249573619236,
+              0.9539865326441423
+            ],
+            "ratio_geomean_native_over_comparator": 0.9340841079882596,
+            "resamples": 10000,
+            "seed": 20301717,
+            "speedup_ci95_comparator_over_native": [
+              1.0482328269648873,
+              1.1015339376722255
+            ],
+            "speedup_geomean_comparator_over_native": 1.0705674054916787
+          },
+          "samples": [
+            {
+              "comparator_ns": 41356042,
+              "iterations": 1024,
+              "native_ns": 39698125,
+              "round": 0,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 41657750,
+              "iterations": 1024,
+              "native_ns": 38782459,
+              "round": 1,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 40789666,
+              "iterations": 1024,
+              "native_ns": 38705125,
+              "round": 2,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 42432667,
+              "iterations": 1024,
+              "native_ns": 38112167,
+              "round": 3,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 40791167,
+              "iterations": 1024,
+              "native_ns": 38891000,
+              "round": 4,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 45299542,
+              "iterations": 1024,
+              "native_ns": 38632625,
+              "round": 5,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 41431875,
+              "iterations": 1024,
+              "native_ns": 39433084,
+              "round": 6,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 41593625,
+              "iterations": 1024,
+              "native_ns": 39687250,
+              "round": 7,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 41048041,
+              "iterations": 1024,
+              "native_ns": 39511208,
+              "round": 8,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              40386.759765625,
+              40681.396484375,
+              39833.658203125,
+              41438.1513671875,
+              39835.1240234375,
+              44237.833984375,
+              40460.8154296875,
+              40618.7744140625,
+              40085.9775390625
+            ],
+            "native": [
+              38767.7001953125,
+              37873.4951171875,
+              37797.9736328125,
+              37218.9130859375,
+              37979.4921875,
+              37727.1728515625,
+              38508.87109375,
+              38757.080078125,
+              38585.1640625
+            ]
+          },
+          "schedule": [
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": false,
+          "correctness_ok": false,
+          "fullgraph": true,
+          "reason": "FailOnRecompileLimitHit: Hard failure due to fullgraph=True"
+        }
+      },
+      "correctness_ok": true,
+      "depth": 8,
+      "phase": 0,
+      "role": "context",
+      "route_verified": true,
+      "seed": 20260822,
+      "width": 128
+    },
+    {
+      "batch": 64,
+      "case_id": "c2",
+      "comparisons": {
+        "direct_eager": {
+          "comparator": "direct_eager",
+          "comparator_median_ns_per_call": 103526.69140625,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "7eee698110e0dd7ccaa0a687c8e8adf5f2998a603231a3aa6296146bc36c4337",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                64
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "7eee698110e0dd7ccaa0a687c8e8adf5f2998a603231a3aa6296146bc36c4337",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                64
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 256,
+          "native_median_ns_per_call": 100941.24609375,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.08520339753196668,
+              -0.019049698546277725
+            ],
+            "log_ratio_mean": -0.05007127667288647,
+            "median_comparator_over_native": 1.017032022907082,
+            "median_native_over_comparator": 0.9832532088238504,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.9183254802681229,
+              0.9811306002665745
+            ],
+            "ratio_geomean_native_over_comparator": 0.9511616264484224,
+            "resamples": 10000,
+            "seed": 20312717,
+            "speedup_ci95_comparator_over_native": [
+              1.0192323017224196,
+              1.0889385315847173
+            ],
+            "speedup_geomean_comparator_over_native": 1.0513460301525588
+          },
+          "samples": [
+            {
+              "comparator_ns": 26343375,
+              "iterations": 256,
+              "native_ns": 25902208,
+              "round": 0,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 25771000,
+              "iterations": 256,
+              "native_ns": 25933791,
+              "round": 1,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 28570625,
+              "iterations": 256,
+              "native_ns": 25195458,
+              "round": 2,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 28063375,
+              "iterations": 256,
+              "native_ns": 24855250,
+              "round": 3,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 26018417,
+              "iterations": 256,
+              "native_ns": 25840959,
+              "round": 4,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 26471000,
+              "iterations": 256,
+              "native_ns": 26144459,
+              "round": 5,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 26502833,
+              "iterations": 256,
+              "native_ns": 26197458,
+              "round": 6,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 26613833,
+              "iterations": 256,
+              "native_ns": 25367000,
+              "round": 7,
+              "schedule": [
+                "native",
+                "direct_eager"
+              ]
+            },
+            {
+              "comparator_ns": 27621000,
+              "iterations": 256,
+              "native_ns": 24642333,
+              "round": 8,
+              "schedule": [
+                "direct_eager",
+                "native"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              102903.80859375,
+              100667.96875,
+              111604.00390625,
+              109622.55859375,
+              101634.44140625,
+              103402.34375,
+              103526.69140625,
+              103960.28515625,
+              107894.53125
+            ],
+            "native": [
+              101180.5,
+              101303.87109375,
+              98419.7578125,
+              97090.8203125,
+              100941.24609375,
+              102126.79296875,
+              102333.8203125,
+              99089.84375,
+              96259.11328125
+            ]
+          },
+          "schedule": [
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "native",
+              "direct_eager"
+            ],
+            [
+              "direct_eager",
+              "native"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        },
+        "fallback": {
+          "comparator": "fallback",
+          "comparator_median_ns_per_call": 103520.83203125,
+          "correctness": {
+            "comparator": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "7eee698110e0dd7ccaa0a687c8e8adf5f2998a603231a3aa6296146bc36c4337",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                64
+              ],
+              "shape_ok": true
+            },
+            "device_ok": true,
+            "digest_match": true,
+            "dtype_ok": true,
+            "native": {
+              "device": "cpu",
+              "device_ok": true,
+              "digest": "7eee698110e0dd7ccaa0a687c8e8adf5f2998a603231a3aa6296146bc36c4337",
+              "dtype": "torch.float32",
+              "dtype_ok": true,
+              "no_grad_ok": true,
+              "non_mutation_ok": true,
+              "rank_ok": true,
+              "requires_grad": false,
+              "shape": [
+                64
+              ],
+              "shape_ok": true
+            },
+            "no_grad_ok": true,
+            "non_mutation_ok": true,
+            "rank_ok": true,
+            "shape_ok": true
+          },
+          "correctness_ok": true,
+          "iterations": 256,
+          "native_median_ns_per_call": 101226.07421875,
+          "paired_bootstrap": {
+            "log_ratio_ci95": [
+              -0.02889868742688571,
+              0.007784805678525357
+            ],
+            "log_ratio_mean": -0.010708814339304764,
+            "median_comparator_over_native": 1.0158384100791726,
+            "median_native_over_comparator": 0.9844085339538026,
+            "method": "paired bootstrap mean log(native/comparator), 10000 resamples",
+            "ratio_ci95_native_over_comparator": [
+              0.9715148861537786,
+              1.0078151860622098
+            ],
+            "ratio_geomean_native_over_comparator": 0.9893483208809415,
+            "resamples": 10000,
+            "seed": 20311717,
+            "speedup_ci95_comparator_over_native": [
+              0.9922454174433055,
+              1.0293203061035883
+            ],
+            "speedup_geomean_comparator_over_native": 1.0107663589195501
+          },
+          "samples": [
+            {
+              "comparator_ns": 26711041,
+              "iterations": 256,
+              "native_ns": 25775875,
+              "round": 0,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 26014542,
+              "iterations": 256,
+              "native_ns": 25913875,
+              "round": 1,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 26933125,
+              "iterations": 256,
+              "native_ns": 25632292,
+              "round": 2,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 26277041,
+              "iterations": 256,
+              "native_ns": 25128584,
+              "round": 3,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 26646500,
+              "iterations": 256,
+              "native_ns": 26231042,
+              "round": 4,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 25635792,
+              "iterations": 256,
+              "native_ns": 26170666,
+              "round": 5,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 26670875,
+              "iterations": 256,
+              "native_ns": 27433500,
+              "round": 6,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            },
+            {
+              "comparator_ns": 26501333,
+              "iterations": 256,
+              "native_ns": 27195250,
+              "round": 7,
+              "schedule": [
+                "native",
+                "fallback"
+              ]
+            },
+            {
+              "comparator_ns": 25963125,
+              "iterations": 256,
+              "native_ns": 25407166,
+              "round": 8,
+              "schedule": [
+                "fallback",
+                "native"
+              ]
+            }
+          ],
+          "samples_ns_per_call": {
+            "comparator": [
+              104340.00390625,
+              101619.3046875,
+              105207.51953125,
+              102644.69140625,
+              104087.890625,
+              100139.8125,
+              104183.10546875,
+              103520.83203125,
+              101418.45703125
+            ],
+            "native": [
+              100687.01171875,
+              101226.07421875,
+              100126.140625,
+              98158.53125,
+              102465.0078125,
+              102229.1640625,
+              107162.109375,
+              106231.4453125,
+              99246.7421875
+            ]
+          },
+          "schedule": [
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ],
+            [
+              "native",
+              "fallback"
+            ],
+            [
+              "fallback",
+              "native"
+            ]
+          ],
+          "schedule_balance": {
+            "all_pairs_valid": true,
+            "comparator_first": 4,
+            "is_counterbalanced": true,
+            "native_first": 5
+          }
+        }
+      },
+      "contexts": {
+        "torch_compile_fullgraph": {
+          "available": true,
+          "compile_and_first_call_ns": 419000,
+          "correctness_ok": false,
+          "fullgraph": true,
+          "second_call_ns": 120666,
+          "warm_loops": 256,
+          "warm_median_ns_per_call": 113477.21484375,
+          "warm_samples_ns_per_call": [
+            113153.96875,
+            111614.41796875,
+            113895.99609375,
+            113348.14453125,
+            113477.21484375,
+            115541.34375,
+            122717.4453125,
+            118416.83203125,
+            113215.33203125
+          ],
+          "warm_samples_ns_total": [
+            28967416,
+            28573291,
+            29157375,
+            29017125,
+            29050167,
+            29578584,
+            31415666,
+            30314709,
+            28983125
+          ]
+        }
+      },
+      "correctness_ok": true,
+      "depth": 16,
+      "phase": 1,
+      "role": "context",
+      "route_verified": true,
+      "seed": 20260823,
+      "width": 128
+    }
+  ],
+  "configuration": {
+    "bootstrap_resamples": 10000,
+    "cases": [
+      "t1",
+      "t2",
+      "t3",
+      "t4",
+      "c1",
+      "c2"
+    ],
+    "comparators": [
+      "fallback",
+      "direct_eager"
+    ],
+    "context_case_ids": [
+      "c1",
+      "c2"
+    ],
+    "minimum_sample_ms": 20.0,
+    "persistent_processes": 3,
+    "repetitions": 9,
+    "seed": 20260717,
+    "target_case_ids": [
+      "t1",
+      "t2",
+      "t3",
+      "t4"
+    ],
+    "torch_num_interop_threads": 1,
+    "torch_num_threads": 1
+  },
+  "elapsed_ns": 51229855209,
+  "generated_at_unix_ns": 1784238063302649000,
+  "non_claims": [
+    "No CUDA, MPS, training, autograd, or optimizer claim.",
+    "No claim beyond the exact six frozen deep alternating MLP cells.",
+    "torch.compile is context-only and unavailable compilation cannot rescue or fail a comparison.",
+    "A GO verdict would not authorize publication, tagging, visibility changes, or PyPI upload."
+  ],
+  "phase_b_go_gate": {
+    "comparators": {
+      "direct_eager": {
+        "aggregate_geomean_comparator_over_native": 1.134274863261328,
+        "aggregate_speedup_ci95": [
+          1.1275315260928205,
+          1.1410234869930402
+        ],
+        "comparator": "direct_eager",
+        "per_cell": {
+          "t1": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.9073162361035639,
+            "ratio_ci95_native_over_comparator": [
+              0.8931345599200565,
+              0.9120007452360569
+            ],
+            "speedup_geomean_comparator_over_native": 1.1076485371192208
+          },
+          "t2": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.86609709497803,
+            "ratio_ci95_native_over_comparator": [
+              0.8518754548604945,
+              0.8734479536320903
+            ],
+            "speedup_geomean_comparator_over_native": 1.158977778546409
+          },
+          "t3": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8520361924983524,
+            "ratio_ci95_native_over_comparator": [
+              0.8409895302915643,
+              0.8584914526978905
+            ],
+            "speedup_geomean_comparator_over_native": 1.1759500635517948
+          },
+          "t4": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.903384698164833,
+            "ratio_ci95_native_over_comparator": [
+              0.9010495916747384,
+              0.9258765033915506
+            ],
+            "speedup_geomean_comparator_over_native": 1.09649653518756
+          }
+        },
+        "reasons": [
+          "aggregate-geomean-speedup-below-1.2:1.134275"
+        ],
+        "target_cells_ci_upper_below_one": 4,
+        "verdict": "NO-GO"
+      },
+      "fallback": {
+        "aggregate_geomean_comparator_over_native": 1.1510459729432514,
+        "aggregate_speedup_ci95": [
+          1.144691189915756,
+          1.1577218191395733
+        ],
+        "comparator": "fallback",
+        "per_cell": {
+          "t1": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8638686579679875,
+            "ratio_ci95_native_over_comparator": [
+              0.8623885325584494,
+              0.8718825561959478
+            ],
+            "speedup_geomean_comparator_over_native": 1.153792976196381
+          },
+          "t2": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8464030899856493,
+            "ratio_ci95_native_over_comparator": [
+              0.8374789794760356,
+              0.859307881987082
+            ],
+            "speedup_geomean_comparator_over_native": 1.1778112810455026
+          },
+          "t3": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8582003049910117,
+            "ratio_ci95_native_over_comparator": [
+              0.8564206430368683,
+              0.8762650811060593
+            ],
+            "speedup_geomean_comparator_over_native": 1.1557934183577556
+          },
+          "t4": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.9027677545624072,
+            "ratio_ci95_native_over_comparator": [
+              0.8815012035549366,
+              0.9049922333534884
+            ],
+            "speedup_geomean_comparator_over_native": 1.1176012053339113
+          }
+        },
+        "reasons": [
+          "aggregate-geomean-speedup-below-1.2:1.151046"
+        ],
+        "target_cells_ci_upper_below_one": 4,
+        "verdict": "NO-GO"
+      }
+    },
+    "comparisons": {
+      "direct_eager": {
+        "aggregate_geomean_comparator_over_native": 1.134274863261328,
+        "aggregate_speedup_ci95": [
+          1.1275315260928205,
+          1.1410234869930402
+        ],
+        "comparator": "direct_eager",
+        "per_cell": {
+          "t1": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.9073162361035639,
+            "ratio_ci95_native_over_comparator": [
+              0.8931345599200565,
+              0.9120007452360569
+            ],
+            "speedup_geomean_comparator_over_native": 1.1076485371192208
+          },
+          "t2": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.86609709497803,
+            "ratio_ci95_native_over_comparator": [
+              0.8518754548604945,
+              0.8734479536320903
+            ],
+            "speedup_geomean_comparator_over_native": 1.158977778546409
+          },
+          "t3": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8520361924983524,
+            "ratio_ci95_native_over_comparator": [
+              0.8409895302915643,
+              0.8584914526978905
+            ],
+            "speedup_geomean_comparator_over_native": 1.1759500635517948
+          },
+          "t4": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.903384698164833,
+            "ratio_ci95_native_over_comparator": [
+              0.9010495916747384,
+              0.9258765033915506
+            ],
+            "speedup_geomean_comparator_over_native": 1.09649653518756
+          }
+        },
+        "reasons": [
+          "aggregate-geomean-speedup-below-1.2:1.134275"
+        ],
+        "target_cells_ci_upper_below_one": 4,
+        "verdict": "NO-GO"
+      },
+      "fallback": {
+        "aggregate_geomean_comparator_over_native": 1.1510459729432514,
+        "aggregate_speedup_ci95": [
+          1.144691189915756,
+          1.1577218191395733
+        ],
+        "comparator": "fallback",
+        "per_cell": {
+          "t1": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8638686579679875,
+            "ratio_ci95_native_over_comparator": [
+              0.8623885325584494,
+              0.8718825561959478
+            ],
+            "speedup_geomean_comparator_over_native": 1.153792976196381
+          },
+          "t2": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8464030899856493,
+            "ratio_ci95_native_over_comparator": [
+              0.8374789794760356,
+              0.859307881987082
+            ],
+            "speedup_geomean_comparator_over_native": 1.1778112810455026
+          },
+          "t3": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.8582003049910117,
+            "ratio_ci95_native_over_comparator": [
+              0.8564206430368683,
+              0.8762650811060593
+            ],
+            "speedup_geomean_comparator_over_native": 1.1557934183577556
+          },
+          "t4": {
+            "ci_upper_below_one": true,
+            "median_native_over_comparator": 0.9027677545624072,
+            "ratio_ci95_native_over_comparator": [
+              0.8815012035549366,
+              0.9049922333534884
+            ],
+            "speedup_geomean_comparator_over_native": 1.1176012053339113
+          }
+        },
+        "reasons": [
+          "aggregate-geomean-speedup-below-1.2:1.151046"
+        ],
+        "target_cells_ci_upper_below_one": 4,
+        "verdict": "NO-GO"
+      }
+    },
+    "eligibility": {
+      "c1": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "c2": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "t1": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "t2": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "t3": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      },
+      "t4": {
+        "direct_eager": {
+          "eligible": true,
+          "reasons": []
+        },
+        "fallback": {
+          "eligible": true,
+          "reasons": []
+        }
+      }
+    },
+    "reasons": [
+      "fallback:aggregate-geomean-speedup-below-1.2:1.151046",
+      "direct_eager:aggregate-geomean-speedup-below-1.2:1.134275"
+    ],
+    "thresholds": {
+      "aggregate_geomean_comparator_over_native_min": 1.2,
+      "aggregate_speedup_ci95_low_min": 1.1,
+      "maximum_cell_median_native_over_comparator": 1.1,
+      "maximum_native_over_compiled_warm": 1.1,
+      "minimum_target_cells_ci_upper_below_one": 3
+    },
+    "torch_compile_cap": {
+      "t1": {
+        "applicable": false,
+        "compiled_warm_median_ns_per_call": 81208.0,
+        "max_native_over_compiled": 1.1,
+        "native_median_ns_per_call": 6781.19921875,
+        "passed": null
+      },
+      "t2": {
+        "applicable": true,
+        "compiled_warm_median_ns_per_call": 124375.0,
+        "max_native_over_compiled": 1.1,
+        "native_median_ns_per_call": 11616.98388671875,
+        "passed": true
+      },
+      "t3": {
+        "applicable": false,
+        "compiled_warm_median_ns_per_call": 152666.0,
+        "max_native_over_compiled": 1.1,
+        "native_median_ns_per_call": 23609.29296875,
+        "passed": null
+      },
+      "t4": {
+        "applicable": false,
+        "compiled_warm_median_ns_per_call": 158250.0,
+        "max_native_over_compiled": 1.1,
+        "native_median_ns_per_call": 38617.0654296875,
+        "passed": null
+      }
+    },
+    "verdict": "NO-GO"
+  },
+  "provenance": {
+    "cargo": "cargo 1.93.1 (083ac5135 2025-12-15)",
+    "cases_sha256": "ec7385e078bd404317c61fcc1ae79aa948f46e8ea965f72be99b72f9cd853eeb",
+    "compile_ns": 23857993375,
+    "core_direct_url": {
+      "dir_info": {
+        "editable": true
+      },
+      "url": "file:///Volumes/Data/workspace/rextio/rextio"
+    },
+    "core_dirty": false,
+    "core_import_file": "/Volumes/Data/workspace/rextio/rextio/src/rextio/__init__.py",
+    "core_install_mode": "editable",
+    "core_sha": "4ba053d1ff28978ccf69f9543e0124595bdebbc0",
+    "core_version": "0.1.3",
+    "harness_manifest_sha256": "48a47400d706bc2f970251126aca7fd0c1301c3c188d5b67d0c655e8c95b6f62",
+    "harness_sha256": "4f704bd1dc667bdcd25d47e2947d50901d2653f4989fb00bb5ccbfef9cf6aa29",
+    "libtorch_bypass_version_check": false,
+    "libtorch_use_pytorch": "1",
+    "machine": "arm64",
+    "numpy": "2.4.6",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "plugin_api_version": "1.3",
+    "plugin_direct_url": {
+      "dir_info": {
+        "editable": true
+      },
+      "url": "file:///Volumes/Data/workspace/rextio/rextio-torch"
+    },
+    "plugin_dirty": false,
+    "plugin_import_file": "/Volumes/Data/workspace/rextio/rextio-torch/src/rextio_torch/__init__.py",
+    "plugin_install_mode": "editable",
+    "plugin_sha": "8d72a7ea7ba8c28bd798df7a6495fde6264c03df",
+    "preregistration_sha256": "81a0d62738f295c01bbecf11eb0def1956b287a5ccea601e66179ad6995c81a2",
+    "processor": "arm",
+    "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 21.0.0 (clang-2100.0.123.102)]",
+    "python_executable": "/Volumes/Data/workspace/rextio/rextio-torch/.venv/bin/python",
+    "required_rextio_spec": ">=0.1.3,<0.2",
+    "required_tch": "=0.24.0",
+    "required_tch_feature": "python-extension",
+    "required_torch": "2.11.0",
+    "rextio_torch_version": "0.1.0",
+    "route_evidence": {
+      "accepted_native_count": 1,
+      "build_json_sha256": "19f5840c7838cf4f6c2f0cb03d7f5c3164170f5ce0bc6e3d1207caf91cd5ab7c",
+      "build_status": "built",
+      "check_json_sha256": "4461053d5ca387b177f2b2d0595be2bcd5a5310bfbb618bcd49ca08863003ca5",
+      "function": {
+        "native_status": "accepted",
+        "qualname": "torch_bench_app.kernels.inference",
+        "route": "native-plugin:rextio-torch",
+        "rule_id_counts": {
+          "rextio-torch/functional-linear-f32-cpu-2d": 2,
+          "rextio-torch/tensor-mean-dim1-f32-cpu-2d": 1,
+          "rextio-torch/tensor-relu-f32-cpu-2d": 2
+        },
+        "rule_ids": [
+          "rextio-torch/functional-linear-f32-cpu-2d",
+          "rextio-torch/tensor-mean-dim1-f32-cpu-2d",
+          "rextio-torch/tensor-relu-f32-cpu-2d"
+        ]
+      },
+      "installed_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/.rextio/generated/python/_rextio_native.cpython-311-darwin.so",
+      "native_artifact": {
+        "path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/.rextio/generated/python/_rextio_native.cpython-311-darwin.so",
+        "sha256": "cfdc21ca256ea6add7439b45f017a37af054b8987edf206b9eff849277a703af",
+        "timing_matches_build": true,
+        "timing_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/.rextio/build/python/_rextio_native.cpython-311-darwin.so"
+      },
+      "native_build_status": "built",
+      "rejected_native_count": 0
+    },
+    "rustc": "rustc 1.93.1 (01f6ddf75 2026-02-11)",
+    "selected_entry_points": [
+      {
+        "dist": "rextio-torch",
+        "name": "rextio-torch",
+        "value": "rextio_torch.plugin:plugin"
+      }
+    ],
+    "torch": "2.11.0"
+  },
+  "schema": "rextio-torch-phase-b-deep-control-benchmark-v1",
+  "smoke": false
+}

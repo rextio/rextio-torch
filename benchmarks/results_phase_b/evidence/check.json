@@ -1,0 +1,440 @@
+{
+  "accepted_native": [
+    "torch_bench_app.kernels.inference"
+  ],
+  "accepted_native_top_levels": [],
+  "contract_version": "2.1.0",
+  "diagnostics": [],
+  "embedding_candidates": [],
+  "modules": [
+    {
+      "diagnostics": [],
+      "file_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/src/torch_bench_app/__init__.py",
+      "functions": [],
+      "import_policies": [],
+      "imports": {},
+      "logger_group_targets": {},
+      "logger_names": [],
+      "module_name": "torch_bench_app",
+      "top_level": null
+    },
+    {
+      "diagnostics": [],
+      "file_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/src/torch_bench_app/kernels.py",
+      "functions": [
+        {
+          "accepted": true,
+          "boundary_call_targets": [],
+          "calls": [
+            {
+              "arg_types": [
+                null
+              ],
+              "column": 17,
+              "in_loop": false,
+              "line": 15,
+              "target": "range"
+            },
+            {
+              "arg_types": [],
+              "column": 21,
+              "in_loop": true,
+              "line": 17,
+              "target": "<dynamic>"
+            },
+            {
+              "arg_types": [
+                null,
+                null,
+                null
+              ],
+              "column": 21,
+              "in_loop": true,
+              "line": 17,
+              "target": "torch.nn.functional.linear"
+            },
+            {
+              "arg_types": [],
+              "column": 21,
+              "in_loop": true,
+              "line": 19,
+              "target": "<dynamic>"
+            },
+            {
+              "arg_types": [
+                null,
+                null,
+                null
+              ],
+              "column": 21,
+              "in_loop": true,
+              "line": 19,
+              "target": "torch.nn.functional.linear"
+            },
+            {
+              "arg_types": [],
+              "column": 11,
+              "in_loop": false,
+              "line": 20,
+              "target": "hidden.mean"
+            }
+          ],
+          "column": 0,
+          "diagnostics": [],
+          "embedding_reason": null,
+          "explicitly_marked": false,
+          "external_accelerator": null,
+          "file_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/src/torch_bench_app/kernels.py",
+          "inferred_arg_types": {},
+          "inferred_return_type": null,
+          "is_embedding_candidate": false,
+          "is_native_candidate": true,
+          "line": 5,
+          "module_name": "torch_bench_app.kernels",
+          "name": "inference",
+          "native_runtime_semantics": false,
+          "native_status": "accepted",
+          "native_target_language": "rust",
+          "plugin_claims": [
+            {
+              "column": 21,
+              "end_column": 55,
+              "end_line": 17,
+              "expression": {
+                "children": [
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 0,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                    "target": ""
+                  },
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 1,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                    "target": ""
+                  },
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 2,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-1d",
+                    "target": ""
+                  }
+                ],
+                "keywords": [],
+                "kind": "call",
+                "leaf_index": null,
+                "leaf_kind": null,
+                "literal": {
+                  "is_literal": false
+                },
+                "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                "target": "torch.nn.functional.linear"
+              },
+              "kind": "call",
+              "line": 17,
+              "operand_literals": [
+                {
+                  "is_literal": false
+                },
+                {
+                  "is_literal": false
+                },
+                {
+                  "is_literal": false
+                }
+              ],
+              "operand_types": [
+                "rextio-torch/tensor-f32-cpu-2d",
+                "rextio-torch/tensor-f32-cpu-2d",
+                "rextio-torch/tensor-f32-cpu-1d"
+              ],
+              "plugin_id": "rextio-torch",
+              "result_type": "rextio-torch/tensor-f32-cpu-2d",
+              "rule_id": "rextio-torch/functional-linear-f32-cpu-2d",
+              "target": "torch.nn.functional.linear"
+            },
+            {
+              "column": 21,
+              "end_column": 62,
+              "end_line": 17,
+              "expression": {
+                "children": [],
+                "keywords": [],
+                "kind": "call",
+                "leaf_index": null,
+                "leaf_kind": null,
+                "literal": {
+                  "is_literal": false
+                },
+                "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                "target": "relu"
+              },
+              "kind": "call",
+              "line": 17,
+              "operand_types": [],
+              "plugin_id": "rextio-torch",
+              "receiver": {
+                "arg_type": "rextio-torch/tensor-f32-cpu-2d",
+                "expr_kind": "call",
+                "is_safe": false,
+                "schema": null
+              },
+              "result_type": "rextio-torch/tensor-f32-cpu-2d",
+              "rule_id": "rextio-torch/tensor-relu-f32-cpu-2d",
+              "target": "relu"
+            },
+            {
+              "column": 21,
+              "end_column": 55,
+              "end_line": 19,
+              "expression": {
+                "children": [
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 0,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                    "target": ""
+                  },
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 1,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                    "target": ""
+                  },
+                  {
+                    "children": [],
+                    "keywords": [],
+                    "kind": "leaf",
+                    "leaf_index": 2,
+                    "leaf_kind": "name",
+                    "literal": {
+                      "is_literal": false
+                    },
+                    "result_type": "rextio-torch/tensor-f32-cpu-1d",
+                    "target": ""
+                  }
+                ],
+                "keywords": [],
+                "kind": "call",
+                "leaf_index": null,
+                "leaf_kind": null,
+                "literal": {
+                  "is_literal": false
+                },
+                "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                "target": "torch.nn.functional.linear"
+              },
+              "kind": "call",
+              "line": 19,
+              "operand_literals": [
+                {
+                  "is_literal": false
+                },
+                {
+                  "is_literal": false
+                },
+                {
+                  "is_literal": false
+                }
+              ],
+              "operand_types": [
+                "rextio-torch/tensor-f32-cpu-2d",
+                "rextio-torch/tensor-f32-cpu-2d",
+                "rextio-torch/tensor-f32-cpu-1d"
+              ],
+              "plugin_id": "rextio-torch",
+              "result_type": "rextio-torch/tensor-f32-cpu-2d",
+              "rule_id": "rextio-torch/functional-linear-f32-cpu-2d",
+              "target": "torch.nn.functional.linear"
+            },
+            {
+              "column": 21,
+              "end_column": 62,
+              "end_line": 19,
+              "expression": {
+                "children": [],
+                "keywords": [],
+                "kind": "call",
+                "leaf_index": null,
+                "leaf_kind": null,
+                "literal": {
+                  "is_literal": false
+                },
+                "result_type": "rextio-torch/tensor-f32-cpu-2d",
+                "target": "relu"
+              },
+              "kind": "call",
+              "line": 19,
+              "operand_types": [],
+              "plugin_id": "rextio-torch",
+              "receiver": {
+                "arg_type": "rextio-torch/tensor-f32-cpu-2d",
+                "expr_kind": "call",
+                "is_safe": false,
+                "schema": null
+              },
+              "result_type": "rextio-torch/tensor-f32-cpu-2d",
+              "rule_id": "rextio-torch/tensor-relu-f32-cpu-2d",
+              "target": "relu"
+            },
+            {
+              "column": 11,
+              "end_column": 44,
+              "end_line": 20,
+              "expression": {
+                "children": [],
+                "keywords": [
+                  {
+                    "arg_type": "int",
+                    "literal": {
+                      "is_literal": true,
+                      "value": 1,
+                      "value_kind": "int"
+                    },
+                    "name": "dim"
+                  },
+                  {
+                    "arg_type": "bool",
+                    "literal": {
+                      "is_literal": true,
+                      "value": false,
+                      "value_kind": "bool"
+                    },
+                    "name": "keepdim"
+                  }
+                ],
+                "kind": "call",
+                "leaf_index": null,
+                "leaf_kind": null,
+                "literal": {
+                  "is_literal": false
+                },
+                "result_type": "rextio-torch/tensor-f32-cpu-1d",
+                "target": "hidden.mean"
+              },
+              "keywords": [
+                {
+                  "arg_type": "int",
+                  "literal": {
+                    "is_literal": true,
+                    "value": 1,
+                    "value_kind": "int"
+                  },
+                  "name": "dim"
+                },
+                {
+                  "arg_type": "bool",
+                  "literal": {
+                    "is_literal": true,
+                    "value": false,
+                    "value_kind": "bool"
+                  },
+                  "name": "keepdim"
+                }
+              ],
+              "kind": "call",
+              "line": 20,
+              "operand_types": [],
+              "plugin_id": "rextio-torch",
+              "receiver": {
+                "arg_type": "rextio-torch/tensor-f32-cpu-2d",
+                "expr_kind": "name",
+                "is_safe": true,
+                "schema": null
+              },
+              "result_type": "rextio-torch/tensor-f32-cpu-1d",
+              "rule_id": "rextio-torch/tensor-mean-dim1-f32-cpu-2d",
+              "target": "hidden.mean"
+            }
+          ],
+          "plugin_type_keys": [
+            "rextio-torch/tensor-f32-cpu-1d",
+            "rextio-torch/tensor-f32-cpu-2d"
+          ],
+          "qualname": "torch_bench_app.kernels.inference",
+          "rejection_codes": [],
+          "route": "native-plugin:rextio-torch"
+        }
+      ],
+      "import_policies": [
+        {
+          "max_depth": 0,
+          "origin": "external-plugin",
+          "package": "torch",
+          "plugin": "rextio-torch",
+          "policy": "plugin",
+          "reason": "active plugin 'rextio-torch' declares support for this package",
+          "target": "torch.nn.functional",
+          "visible_name": "F"
+        },
+        {
+          "max_depth": 0,
+          "origin": "external",
+          "package": "rextio_torch",
+          "plugin": null,
+          "policy": "fallback",
+          "reason": "external package without an active plugin uses the default external import policy",
+          "target": "rextio_torch.types.TensorF32Cpu1D",
+          "visible_name": "TensorF32Cpu1D"
+        },
+        {
+          "max_depth": 0,
+          "origin": "external",
+          "package": "rextio_torch",
+          "plugin": null,
+          "policy": "fallback",
+          "reason": "external package without an active plugin uses the default external import policy",
+          "target": "rextio_torch.types.TensorF32Cpu2D",
+          "visible_name": "TensorF32Cpu2D"
+        }
+      ],
+      "imports": {
+        "F": "torch.nn.functional",
+        "TensorF32Cpu1D": "rextio_torch.types.TensorF32Cpu1D",
+        "TensorF32Cpu2D": "rextio_torch.types.TensorF32Cpu2D"
+      },
+      "logger_group_targets": {},
+      "logger_names": [],
+      "module_name": "torch_bench_app.kernels",
+      "top_level": null
+    }
+  ],
+  "native_candidates": [
+    "torch_bench_app.kernels.inference"
+  ],
+  "native_top_levels": [],
+  "project_root": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu",
+  "rejected_native": [],
+  "rejected_native_top_levels": []
+}

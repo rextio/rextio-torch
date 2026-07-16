@@ -19,3 +19,10 @@ benchmarks/results/*
 !benchmarks/results/report.md
 !benchmarks/results/evidence/
 !benchmarks/results/evidence/**
+# Phase B has independent authoritative output ownership. Smoke or ad-hoc
+# runs must use ignored paths outside this allow-list.
+benchmarks/results_phase_b/*
+!benchmarks/results_phase_b/latest.json
+!benchmarks/results_phase_b/report.md
+!benchmarks/results_phase_b/evidence/
+!benchmarks/results_phase_b/evidence/**

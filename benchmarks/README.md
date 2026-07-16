@@ -89,3 +89,37 @@ failure:
 ```
 
 These tests use fakes only; they do **not** run smoke or full timing.
+
+## Phase B: deep MLP with mixed Python control flow
+
+Phase B is an independent, preregistered follow-up. Its exact kernel keeps a
+runtime `for` loop and alternating `if` branch around two weight-tied
+`linear → ReLU` paths, followed by `mean(dim=1, keepdim=False)`. The frozen
+six-cell matrix and both primary comparisons are specified in
+[`docs/preregister-phase-b-deep-control-benchmark-2026-07-17.md`](../docs/preregister-phase-b-deep-control-benchmark-2026-07-17.md).
+
+Phase B does not overwrite or reinterpret Phase A evidence:
+
+- authoritative JSON: `benchmarks/results_phase_b/latest.json`
+- authoritative report: `benchmarks/results_phase_b/report.md`
+- copied route/build evidence: `benchmarks/results_phase_b/evidence/`
+
+The focused unit tests exercise frozen cases, output ownership, and synthetic
+GO/NO-GO decisions only. They do not build an extension, start benchmark
+workers, or collect timings:
+
+```bash
+.venv/bin/python -m pytest tests/test_analyzer_phase_b_chain.py \
+  tests/test_phase_b_benchmark_harness.py -q
+```
+
+After the preregistration and harness are committed, a deliberate clean-tree
+run may use:
+
+```bash
+# Fast preflight only; never authoritative evidence
+.venv/bin/python -m benchmarks.bench_phase_b --smoke
+
+# Full preregistered matrix; owns only results_phase_b/
+.venv/bin/python -m benchmarks.bench_phase_b
+```

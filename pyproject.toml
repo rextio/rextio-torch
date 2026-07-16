@@ -44,6 +44,9 @@ rextio-torch = "rextio_torch.plugin:plugin"
 test = [
   "pytest>=8.0",
 ]
+benchmark = [
+  "numpy==2.4.6",
+]
 dev = [
   "pytest>=8.0",
   "ruff>=0.15",

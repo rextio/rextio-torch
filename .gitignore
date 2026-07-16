@@ -12,3 +12,10 @@ target/
 *.so
 *.dylib
 *.pyd
+# Intermediate benchmark artifacts; keep authoritative full results trackable
+# when they exist. Smoke runs write only to ignored/temp paths.
+benchmarks/results/*
+!benchmarks/results/latest.json
+!benchmarks/results/report.md
+!benchmarks/results/evidence/
+!benchmarks/results/evidence/**

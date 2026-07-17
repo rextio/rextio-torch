@@ -5,12 +5,14 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
-Private incubator cut. **Alpha AOT** expands the Phase A vertical slice into a
+Public-source **Alpha AOT** candidate expands the Phase A vertical slice into a
 broader fail-closed native surface. **Certified** real-Cargo evidence remains
 **macOS arm64 / CPython 3.11 / torch 2.11.0** (`LIBTORCH_USE_PYTORCH=1`; no
-version-check bypass). **Linux x86_64** and **Linux aarch64** are
-**experimental** hosts for local/smoke testing of the same pins; **Windows** is
-**deferred** (unverified). Package remains unreleased
+version-check bypass). **Linux x86_64** and **Linux AArch64** are
+**experimental** runtime-backed hosts; **macOS x86_64** is availability-gated
+because the pinned torch wheel does not exist; 32-bit Linux/macOS cells are
+explicitly unsupported; **Windows** is **deferred** (unverified). The package
+remains unreleased on PyPI
 (`Private :: Do Not Upload`).
 
 Phase A/B benchmark result artifacts are retained as **historical context
@@ -18,7 +20,7 @@ only**; performance is not a release gate for this Alpha cut.
 
 ### Added
 
-- Private incubator package scaffold for plugin API 1.3 with the
+- Public Alpha package scaffold for plugin API 1.3, retaining the pre-release
   `Private :: Do Not Upload` classifier.
 - `requires-python = ">=3.11,<3.12"` (CPython 3.11 only for this cut).
 - Materialized `RxtTorchTensor` boundary types for float32 CPU rank-1 and
@@ -62,6 +64,18 @@ only**; performance is not a release gate for this Alpha cut.
 - Opt-in maintainer script `scripts/linux-smoke.sh` and focused unit tests for
   the portable pin/host contract (plugin must not reject Linux solely by OS;
   real-Cargo e2e remains optional and fail-closed on pin mismatches).
+- A declarative eight-cell Linux/macOS architecture truth model (`x86` = i686,
+  `x64` = x86_64, ARM32 = ARMv7, ARM64 = AArch64) with stable fail-closed
+  reasons for unavailable pinned runtimes.
+- SHA-pinned, read-only GitHub Actions for quality, all platform-contract
+  cells, real native E2E on macOS ARM64 and Linux x86_64, package artifacts and
+  clean install smoke; scheduled/manual evidence covers Linux AArch64 and the
+  macOS x86_64 artifact-availability gate.
+- A stable `CI gate` branch-protection result, exact package-build tool pins,
+  non-isolated artifact builds, and wheel-installed (not editable-installed)
+  native E2E with an explicit zero-skip assertion for runtime-backed profiles.
+- Placeholder sanitization for workstation paths in retained Phase A/B raw
+  benchmark provenance; measurements and evidence lineage are unchanged.
 
 ### Notes
 

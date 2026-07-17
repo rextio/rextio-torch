@@ -1,0 +1,265 @@
+name: CI
+
+on:
+  push:
+    branches: [main, alpha/native-aot-0.1.0]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: torch-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  RUST_TOOLCHAIN: "1.93.1"
+
+jobs:
+  quality:
+    name: Quality (CPython 3.11)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install lightweight quality dependencies
+        run: |
+          python -m pip install \
+            "rextio==0.1.3" \
+            "pytest>=8,<9" \
+            "ruff>=0.15,<0.16" \
+            "mypy>=1.11,<2"
+          python -m pip install --no-deps -e .
+      - name: Ruff
+        run: ruff check src tests benchmarks
+      - name: Mypy
+        run: mypy
+      - name: Unit and contract tests
+        run: python -m pytest -q tests --ignore=tests/e2e
+
+  platform-contract:
+    name: Platform contract (${{ matrix.os }} / ${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            arch: x86
+            expected: unsupported
+          - os: linux
+            arch: x64
+            expected: experimental
+          - os: linux
+            arch: arm32
+            expected: unsupported
+          - os: linux
+            arch: arm64
+            expected: experimental
+          - os: macos
+            arch: x86
+            expected: unsupported
+          - os: macos
+            arch: x64
+            expected: availability-gated
+          - os: macos
+            arch: arm32
+            expected: unsupported
+          - os: macos
+            arch: arm64
+            expected: certified
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install contract package without backend runtime
+        run: python -m pip install --no-deps -e .
+      - name: Validate declared result
+        run: >-
+          python -m rextio_torch.platforms
+          --os "${{ matrix.os }}"
+          --arch "${{ matrix.arch }}"
+          --expect "${{ matrix.expected }}"
+
+  native-e2e:
+    name: Native E2E (${{ matrix.profile }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: linux-x64
+            runner: ubuntu-24.04
+            os: linux
+            arch: x64
+            expected: experimental
+            machine: x86_64
+          - profile: macos-arm64
+            runner: macos-15
+            os: macos
+            arch: arm64
+            expected: certified
+            machine: arm64
+    env:
+      LIBTORCH_USE_PYTORCH: "1"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/.ci-cargo-target
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update
+          rustup default "${RUST_TOOLCHAIN}"
+          test "$(rustc --version | awk '{print $2}')" = "${RUST_TOOLCHAIN}"
+      - name: Restore Cargo dependency cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            .ci-cargo-target
+          key: rextio-torch-${{ runner.os }}-${{ runner.arch }}-rust-1.93.1-tch-0.24.0-${{ hashFiles('pyproject.toml') }}
+      - name: Build and install the wheel in a dedicated certification environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install "build==1.5.0" "setuptools==81.0.0"
+          .venv/bin/python -m build --wheel --no-isolation
+          .venv/bin/python -m pip install dist/*.whl "pytest>=8,<9"
+      - name: Verify runner, pins, and profile
+        run: |
+          .venv/bin/python - <<'PY'
+          import os
+          import platform
+          import sys
+          import torch
+
+          expected_machine = "${{ matrix.machine }}"
+          assert platform.machine() == expected_machine, (platform.machine(), expected_machine)
+          assert sys.version_info[:2] == (3, 11)
+          assert torch.__version__.split("+")[0] == "2.11.0"
+          assert os.environ["LIBTORCH_USE_PYTORCH"] == "1"
+          assert "LIBTORCH_BYPASS_VERSION_CHECK" not in os.environ
+          PY
+          .venv/bin/python -m rextio_torch.platforms \
+            --os "${{ matrix.os }}" \
+            --arch "${{ matrix.arch }}" \
+            --expect "${{ matrix.expected }}" \
+            --require-native
+      - name: Run real Cargo certification slices
+        run: |
+          command -v cargo
+          test -x .venv/bin/python
+          .venv/bin/python -m pytest -q -rs -o pythonpath= \
+            --junitxml=native-e2e.xml tests/e2e -m needs_cargo
+          .venv/bin/python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("native-e2e.xml").getroot()
+          suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+          totals = {
+              name: sum(int(suite.attrib.get(name, "0")) for suite in suites)
+              for name in ("tests", "failures", "errors", "skipped")
+          }
+          assert totals["tests"] >= 2, totals
+          assert totals["failures"] == totals["errors"] == totals["skipped"] == 0, totals
+          PY
+
+  package:
+    name: Package gate (wheel and sdist)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install package tooling
+        run: >-
+          python -m pip install
+          "build==1.5.0"
+          "setuptools==81.0.0"
+          "twine==6.2.0"
+          "check-wheel-contents==0.6.3"
+      - name: Assert the unreleased upload gate
+        run: |
+          python - <<'PY'
+          import tomllib
+
+          project = tomllib.load(open("pyproject.toml", "rb"))["project"]
+          assert "Private :: Do Not Upload" in project["classifiers"]
+          assert "torch==2.11.0" in project["dependencies"]
+          assert "rextio>=0.1.3,<0.2" in project["dependencies"]
+          PY
+      - name: Build wheel and sdist
+        run: |
+          rm -rf build dist
+          python -m build --no-isolation
+      - name: Validate artifacts
+        run: |
+          python -m twine check dist/*
+          check-wheel-contents dist/*.whl
+      - name: Fresh wheel and sdist install smoke (import-minimal)
+        run: |
+          python -m venv /tmp/rextio-torch-wheel
+          /tmp/rextio-torch-wheel/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-wheel/bin/python -m pip install --no-deps dist/*.whl
+          python -m venv /tmp/rextio-torch-sdist
+          /tmp/rextio-torch-sdist/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-sdist/bin/python -m pip install "setuptools==81.0.0"
+          /tmp/rextio-torch-sdist/bin/python -m pip install \
+            --no-build-isolation --no-deps dist/*.tar.gz
+          for env_dir in /tmp/rextio-torch-wheel /tmp/rextio-torch-sdist; do
+            "$env_dir/bin/python" - <<'PY'
+          from importlib.metadata import distribution, entry_points
+
+          dist = distribution("rextio-torch")
+          assert dist.version == "0.1.0"
+          requires = set(dist.requires or ())
+          assert "torch==2.11.0" in requires
+          factory = next(
+              ep for ep in entry_points(group="rextio.plugins") if ep.name == "rextio-torch"
+          ).load()
+          assert factory().api_version == "1.3"
+          PY
+          done
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    needs: [quality, platform-contract, native-e2e, package]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every blocking lane
+        run: |
+          test "${{ needs.quality.result }}" = "success"
+          test "${{ needs.platform-contract.result }}" = "success"
+          test "${{ needs.native-e2e.result }}" = "success"
+          test "${{ needs.package.result }}" = "success"

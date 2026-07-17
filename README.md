@@ -1,21 +1,23 @@
 # rextio-torch
 
-**Private incubator** Rextio plugin that lowers a proven subset of Python
+**Public Alpha** Rextio plugin that lowers a proven subset of Python
 PyTorch inference code to Rust expressions backed by
 [`tch`](https://github.com/LaurentMazare/tch-rs).
 
 | Field | Value |
 | --- | --- |
 | Package version | **0.1.0** (from `rextio_torch.__about__`) |
-| Release status | **Unreleased Alpha** — not for PyPI |
-| Classifier | `Private :: Do Not Upload` |
+| Release status | **Public-source Alpha, unreleased on PyPI** |
+| Upload gate | `Private :: Do Not Upload` remains until release-owner approval |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
-| Experimental hosts | **Linux x86_64**, **Linux aarch64** — usable for local testing; **not** certified |
+| Experimental hosts | **Linux x86_64**, **Linux AArch64** — runtime-backed but **not** certified |
+| Availability-gated | **macOS x86_64** — pinned torch 2.11.0 CPython 3.11 wheel absent |
+| Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README is the **0.1.0 private native-AOT Alpha support contract**. Every
+This README is the **0.1.0 public native-AOT Alpha support contract**. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
 exercise them. Unsupported sites must stay on the ordinary Python fallback or
@@ -66,13 +68,32 @@ tooling must fail visibly (never via `LIBTORCH_BYPASS_VERSION_CHECK`).
 
 ---
 
-## Host platforms (certified / experimental / deferred)
+## Host platforms and CI truth model
 
-| Status | OS / arch | Meaning |
+Architecture labels are normalized here: `x86` means **i686** (32-bit), `x64`
+means **x86_64/AMD64**, ARM32 means **ARMv7**, and ARM64 means **AArch64**.
+Every requested Linux/macOS cell is represented in
+`rextio_torch.platforms`; a green static contract cell is not a native support
+claim.
+
+| OS / arch | Alpha status | Native evidence / required result |
 | --- | --- | --- |
-| **Certified** | macOS **arm64** (`aarch64-apple-darwin`) | Real-Cargo Alpha evidence was produced and recorded here with CPython 3.11, torch 2.11.0, `LIBTORCH_USE_PYTORCH=1`, and the documented Rust toolchain. |
-| **Experimental** | Linux **x86_64**, Linux **aarch64** | Intentionally usable for local / CI smoke testing of the same pinned contract. **Not** a certification host: green smoke results are engineering evidence only until re-recorded as certified. |
-| **Deferred** | Windows (any arch) | Unverified. No install recipe, no smoke claim, no support surface for this Alpha cut. |
+| macOS ARM64 | **Certified** | Real Cargo on `macos-15` for every PR/push, with CPython 3.11, torch 2.11.0, tch 0.24.0, and rustc/cargo 1.93.1. |
+| Linux x64 | **Experimental, runtime-backed** | Real Cargo on `ubuntu-24.04` for every PR/push with the same pins. Green is engineering evidence, not certification. |
+| Linux ARM64 | **Experimental, runtime-backed** | Real Cargo on `ubuntu-24.04-arm` in scheduled/manual CI. It is deliberately non-blocking until hosted-runner evidence is reviewed. |
+| macOS x64 | **Availability-gated, not supported** | The exact torch 2.11.0 CPython 3.11 wheel has no macOS x86_64 artifact. Scheduled/manual CI verifies that premise and requests reassessment if it changes. |
+| Linux x86 / ARM32 | **Unsupported** | Static contract tests require a stable fail-closed result; torch 2.11.0 publishes no CPython 3.11 i686/ARMv7 wheel. No fake native job. |
+| macOS x86 / ARM32 | **Unsupported / impossible modern target** | Static contract tests require a stable fail-closed result; neither a viable hosted runner nor pinned wheel exists. |
+| Windows (all) | **Deferred** | Unverified and outside this Alpha train; no support claim. |
+
+The blocking workflow separates `quality`, the eight-cell
+`platform-contract`, runtime-backed `native-e2e`, and `package` jobs. Actions
+receive only `contents: read`; third-party Actions are pinned to immutable
+commit SHAs. A stable `CI gate` result aggregates every blocking lane for
+branch protection. Native jobs build a clean wheel with pinned tooling, install
+that wheel into a fresh venv, and reject any skipped runtime-backed test. The
+scheduled/manual workflow owns expensive or
+availability-gated experimental evidence.
 
 Rules that carry `verified=True` mean the native rule family was compiled and
 executed under the **certified** host contract above. They do **not** mean
@@ -432,21 +453,26 @@ AOT surface is the product goal, not beating a speedup threshold.
 - The native extension must load under the same CPython 3.11 + torch 2.11.0
   that built it.
 - **Certified** real-Cargo evidence remains **macOS arm64 only**. Linux
-  x86_64/aarch64 are **experimental** (smoke/local testing only); results there
-  do not rewrite certification without a deliberate re-record.
+  x86_64/AArch64 are **experimental** runtime-backed profiles; results there do
+  not rewrite certification without a deliberate re-record.
+- The eight-cell platform table is declarative and never probes or silently
+  rejects the ambient host. Native CI calls its explicit runtime requirement
+  before building; unavailable cells fail closed with stable reason codes.
 - Linux residual risks include distro libstdc++/glibc differences, torch wheel
   manylinux tags, and first-time `tch` compile cost — not silent OS rejection
   by this plugin.
 - **Windows** is **deferred** (unverified).
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
-- Package remains private / unreleased; do not publish without a release review.
+- Package remains unreleased on PyPI; public source does not imply a published
+  distribution.
 
 ---
 
 ## Repository safeguards
 
-- Do not publish to PyPI or change GitHub visibility during incubation.
+- Do not publish to PyPI until the release owner removes the upload gate after
+  reviewing supported-profile CI and clean merged-`main` artifacts.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
 - Package metadata includes `Private :: Do Not Upload` (version **0.1.0**).

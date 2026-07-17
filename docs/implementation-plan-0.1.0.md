@@ -1,6 +1,6 @@
 # rextio-torch 0.1.0 implementation plan
 
-Status: private, unreleased incubation
+Status: public-source Alpha candidate, unreleased on PyPI
 
 **Alpha AOT status:** Phase A vertical slice remains **real-Cargo certified**.
 The broader fail-closed AOT surface (activations rank 1/2, matmul, elementwise
@@ -11,7 +11,9 @@ The broader fail-closed AOT surface (activations rank 1/2, matmul, elementwise
 | Status | OS / arch | Contract |
 | --- | --- | --- |
 | **Certified** | macOS **arm64** | Real-Cargo Alpha evidence: CPython 3.11 / torch 2.11.0 / `LIBTORCH_USE_PYTORCH=1` (never `LIBTORCH_BYPASS_VERSION_CHECK`). |
-| **Experimental** | Linux **x86_64**, Linux **aarch64** | Same pins; intentionally usable for local smoke via `scripts/linux-smoke.sh` and focused tests. **Not** certified. |
+| **Experimental** | Linux **x86_64**, Linux **AArch64** | Same pins; real hosted Cargo E2E (blocking x86_64, scheduled/manual AArch64). **Not** certified. |
+| **Availability-gated** | macOS **x86_64** | No torch 2.11.0 CPython 3.11 x86_64 wheel; scheduled/manual CI verifies that absence. No support claim. |
+| **Unsupported** | Linux/macOS **i686**, **ARMv7** | Static expected-unsupported tests; missing pinned runtimes and, on modern macOS, impossible runner targets. |
 | **Deferred** | Windows | Unverified; no support claim in this cut. |
 
 The plugin does **not** reject Linux solely by OS; unavailable or mismatched
@@ -161,10 +163,11 @@ raise through the fallible tch path.
 ## Repository and release safeguards
 
 - Package version is `0.1.0`, marked unreleased.
-- The private-incubator package metadata includes
+- The public Alpha candidate metadata retains the pre-release upload gate
   `Private :: Do Not Upload`.
 - Use the public `rextio>=0.1.3,<0.2` dependency, not a core-next VCS pin.
-- Do not tag, publish to PyPI, or change GitHub visibility during incubation.
+- Do not tag or publish to PyPI before release-owner approval from clean
+  merged `main`.
 - Do not add or modify a project-local `AGENTS.md` without owner direction.
 
 ## Acceptance checks
@@ -177,13 +180,17 @@ raise through the fallible tch path.
 - Lowering has focused source/codegen tests and does not rely on `assert`.
 - Real-Cargo tests prove Phase A and Alpha control-flow routes when the pinned
   local environment is available.
+- A declarative matrix covers Linux/macOS x86, x64, ARM32, and ARM64 without
+  mistaking static negative tests for native support. Runtime-backed CI uses
+  macOS ARM64 and Linux x86_64 on push/PR; Linux AArch64 is scheduled/manual;
+  macOS x64 remains an artifact-availability gate.
 - Package build plus `twine check` / `check-wheel-contents` succeeds before any
   release review (tools listed in the `dev` extra; gate not yet run for publish).
 
 ## Residual platform risks
 
 - **Certified** real-Cargo evidence remains macOS arm64 only.
-- Linux x86_64/aarch64 are **experimental** (smoke/local testing; not a
+- Linux x86_64/AArch64 are **experimental** (real hosted E2E; not a
   certification host). Distro glibc/libstdc++, torch manylinux wheels, and cold
   `tch` builds are residual risks — not OS-level rejection by this plugin.
 - Windows is **deferred** (unverified).

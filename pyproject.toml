@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rextio-torch"
 dynamic = ["version"]
-description = "Private incubator Rextio plugin that lowers a proven float32 CPU PyTorch inference slice to tch (plugin API 1.3)."
+description = "Public Alpha Rextio plugin that lowers a proven float32 CPU PyTorch inference slice to tch (plugin API 1.3)."
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 license = "MIT"

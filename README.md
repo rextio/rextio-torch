@@ -11,7 +11,9 @@ PyTorch inference code to Rust expressions backed by
 | Classifier | `Private :: Do Not Upload` |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
-| Certification host | **macOS arm64**, CPython **3.11**, torch **2.11.0** |
+| Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
+| Experimental hosts | **Linux x86_64**, **Linux aarch64** — usable for local testing; **not** certified |
+| Deferred | **Windows** — unverified; no support claim |
 
 This README is the **0.1.0 private native-AOT Alpha support contract**. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
@@ -57,9 +59,62 @@ a release gate for this Alpha cut.
    type keys) is not available on older plugin APIs.
 
 Certification and real-Cargo tests configure this environment explicitly.
-**macOS arm64 is certification evidence, not a runtime platform guard in this
-plugin.** Other OS/arch combinations are unverified residual risk rather than
-an advertised support target.
+**Host OS is not a runtime claim gate in this plugin:** the source does not
+reject Linux solely because it is not macOS. Pins (CPython, torch, tch,
+API) and toolchain availability still apply; mismatched or unavailable
+tooling must fail visibly (never via `LIBTORCH_BYPASS_VERSION_CHECK`).
+
+---
+
+## Host platforms (certified / experimental / deferred)
+
+| Status | OS / arch | Meaning |
+| --- | --- | --- |
+| **Certified** | macOS **arm64** (`aarch64-apple-darwin`) | Real-Cargo Alpha evidence was produced and recorded here with CPython 3.11, torch 2.11.0, `LIBTORCH_USE_PYTORCH=1`, and the documented Rust toolchain. |
+| **Experimental** | Linux **x86_64**, Linux **aarch64** | Intentionally usable for local / CI smoke testing of the same pinned contract. **Not** a certification host: green smoke results are engineering evidence only until re-recorded as certified. |
+| **Deferred** | Windows (any arch) | Unverified. No install recipe, no smoke claim, no support surface for this Alpha cut. |
+
+Rules that carry `verified=True` mean the native rule family was compiled and
+executed under the **certified** host contract above. They do **not** mean
+every experimental Linux box is certified.
+
+### Linux experimental verification recipe
+
+Use this only to exercise the pinned environment on Linux. It does **not**
+promote Linux to certified status.
+
+```bash
+# CPython 3.11 venv with the package + pins (torch==2.11.0, rextio>=0.1.3,<0.2)
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e '.[dev]'
+
+# Required link mode; version-check bypass is forbidden
+export LIBTORCH_USE_PYTORCH=1
+unset LIBTORCH_BYPASS_VERSION_CHECK
+
+# Fail closed if PATH does not resolve torch 2.11.0 for torch-sys
+python -c "import torch; v=torch.__version__.split('+')[0]; assert v=='2.11.0', v"
+
+# Focused unit tests (no native build)
+pytest -q tests --ignore=tests/e2e
+
+# Opt-in real-Cargo native slice (needs cargo + rustc; skips only if cargo missing)
+# Failures from wrong torch / missing libtorch / ABI mismatch must surface — do not bypass.
+pytest -q tests/e2e -m needs_cargo
+```
+
+Or run the maintainable wrapper (same contract, explicit env checks):
+
+```bash
+./scripts/linux-smoke.sh            # unit tests only
+./scripts/linux-smoke.sh --cargo    # also run real-Cargo e2e when cargo is on PATH
+```
+
+If the pinned torch, CPython, Rextio API, or Cargo toolchain is wrong or
+missing in a way that blocks the native path, the smoke must **fail or skip
+with a clear reason** — never mask by setting `LIBTORCH_BYPASS_VERSION_CHECK`.
 
 ---
 
@@ -376,8 +431,13 @@ AOT surface is the product goal, not beating a speedup threshold.
 - Cold builds compile `tch` / `torch-sys` for each generated project.
 - The native extension must load under the same CPython 3.11 + torch 2.11.0
   that built it.
-- Certification was executed on **macOS arm64**; other OS/arch combinations are
-  not yet proven.
+- **Certified** real-Cargo evidence remains **macOS arm64 only**. Linux
+  x86_64/aarch64 are **experimental** (smoke/local testing only); results there
+  do not rewrite certification without a deliberate re-record.
+- Linux residual risks include distro libstdc++/glibc differences, torch wheel
+  manylinux tags, and first-time `tch` compile cost — not silent OS rejection
+  by this plugin.
+- **Windows** is **deferred** (unverified).
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
 - Package remains private / unreleased; do not publish without a release review.

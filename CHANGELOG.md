@@ -6,9 +6,12 @@ Changelog and Semantic Versioning conventions.
 ## [Unreleased]
 
 Private incubator cut. **Alpha AOT** expands the Phase A vertical slice into a
-broader fail-closed native surface on the tested **macOS arm64 / CPython 3.11 /
-torch 2.11.0** environment (`LIBTORCH_USE_PYTORCH=1`; no version-check bypass).
-Package remains unreleased (`Private :: Do Not Upload`).
+broader fail-closed native surface. **Certified** real-Cargo evidence remains
+**macOS arm64 / CPython 3.11 / torch 2.11.0** (`LIBTORCH_USE_PYTORCH=1`; no
+version-check bypass). **Linux x86_64** and **Linux aarch64** are
+**experimental** hosts for local/smoke testing of the same pins; **Windows** is
+**deferred** (unverified). Package remains unreleased
+(`Private :: Do Not Upload`).
 
 Phase A/B benchmark result artifacts are retained as **historical context
 only**; performance is not a release gate for this Alpha cut.
@@ -51,6 +54,14 @@ only**; performance is not a release gate for this Alpha cut.
   every advertised rule family is compiled and executed by the serialized
   certification project and carries a unique diagnostic code.
 - `check-wheel-contents>=0.6` in the `dev` extra for the package gate.
+- Explicit **certified / experimental / deferred** host-platform semantics in
+  the README and implementation plan (macOS arm64 certified; Linux x86_64 and
+  aarch64 experimental; Windows deferred), plus a Linux experimental smoke
+  recipe that keeps `LIBTORCH_USE_PYTORCH=1` and forbids
+  `LIBTORCH_BYPASS_VERSION_CHECK`.
+- Opt-in maintainer script `scripts/linux-smoke.sh` and focused unit tests for
+  the portable pin/host contract (plugin must not reject Linux solely by OS;
+  real-Cargo e2e remains optional and fail-closed on pin mismatches).
 
 ### Notes
 

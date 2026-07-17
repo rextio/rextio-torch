@@ -4,9 +4,18 @@ Status: private, unreleased incubation
 
 **Alpha AOT status:** Phase A vertical slice remains **real-Cargo certified**.
 The broader fail-closed AOT surface (activations rank 1/2, matmul, elementwise
-`+`, sum) is also certified in one serialized Cargo project. Tested environment:
-**macOS arm64 / CPython 3.11 / torch 2.11.0** with `LIBTORCH_USE_PYTORCH=1`
-(never `LIBTORCH_BYPASS_VERSION_CHECK`).
+`+`, sum) is also certified in one serialized Cargo project.
+
+**Host platforms:**
+
+| Status | OS / arch | Contract |
+| --- | --- | --- |
+| **Certified** | macOS **arm64** | Real-Cargo Alpha evidence: CPython 3.11 / torch 2.11.0 / `LIBTORCH_USE_PYTORCH=1` (never `LIBTORCH_BYPASS_VERSION_CHECK`). |
+| **Experimental** | Linux **x86_64**, Linux **aarch64** | Same pins; intentionally usable for local smoke via `scripts/linux-smoke.sh` and focused tests. **Not** certified. |
+| **Deferred** | Windows | Unverified; no support claim in this cut. |
+
+The plugin does **not** reject Linux solely by OS; unavailable or mismatched
+toolchain/torch combinations must fail visibly under the pinned contract.
 
 **Performance:** Phase A/B product-route benchmarks are **historical context
 only** (see `benchmarks/results/` and `benchmarks/results_phase_b/`). They are
@@ -173,12 +182,31 @@ raise through the fallible tch path.
 
 ## Residual platform risks
 
-- Certification proven on macOS arm64 only so far.
+- **Certified** real-Cargo evidence remains macOS arm64 only.
+- Linux x86_64/aarch64 are **experimental** (smoke/local testing; not a
+  certification host). Distro glibc/libstdc++, torch manylinux wheels, and cold
+  `tch` builds are residual risks — not OS-level rejection by this plugin.
+- Windows is **deferred** (unverified).
 - `torch-sys` interpreter discovery depends on `PATH` / `VIRTUAL_ENV`.
 - Cold native builds recompile `tch` against the active torch 2.11 install.
-- Other OS/arch, CUDA/MPS remain out of scope.
+- CUDA/MPS remain out of scope.
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
+
+## Linux experimental smoke (not certification)
+
+Maintainers may run the portable pin contract on Linux without weakening AOT
+pins:
+
+1. CPython 3.11 venv, `pip install -e '.[dev]'` (torch 2.11.0, rextio API 1.3).
+2. `export LIBTORCH_USE_PYTORCH=1` and ensure `LIBTORCH_BYPASS_VERSION_CHECK` is
+   unset.
+3. Focused unit tests: `pytest -q tests --ignore=tests/e2e`.
+4. Optional real-Cargo slice: `pytest -q tests/e2e -m needs_cargo` (or
+   `./scripts/linux-smoke.sh --cargo`).
+
+Passing smoke on Linux is engineering evidence only; it does not rewrite the
+certified-host row until deliberately re-recorded.
 
 ## Historical benchmark context (not a gate)
 

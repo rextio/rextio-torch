@@ -220,13 +220,14 @@ jobs:
             "wheel==0.47.0" \
             "twine==6.2.0" \
             "check-wheel-contents==0.6.3"
-      - name: Assert the unreleased upload gate
+      - name: Assert the public Alpha release metadata
         run: |
           python - <<'PY'
           import tomllib
 
           project = tomllib.load(open("pyproject.toml", "rb"))["project"]
-          assert "Private :: Do Not Upload" in project["classifiers"]
+          assert "Private :: Do Not Upload" not in project["classifiers"]
+          assert "Development Status :: 3 - Alpha" in project["classifiers"]
           assert "torch==2.11.0" in project["dependencies"]
           assert "rextio>=0.1.3,<0.2" in project["dependencies"]
           PY

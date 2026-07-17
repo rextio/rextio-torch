@@ -7,8 +7,8 @@ PyTorch inference code to Rust expressions backed by
 | Field | Value |
 | --- | --- |
 | Package version | **0.1.0** (from `rextio_torch.__about__`) |
-| Release status | **Public-source Alpha, unreleased on PyPI** |
-| Upload gate | `Private :: Do Not Upload` remains until release-owner approval |
+| Release status | **0.1.0 public Alpha release candidate**, prepared **2026-07-18** |
+| Distribution | PyPI publication is **pending** release-owner approval and live verification |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -409,7 +409,12 @@ claim/lower layer but is not a separate real-Cargo fixture.
 
 ---
 
-## Install (development only)
+## Install before PyPI publication
+
+This repository is prepared as the 0.1.0 public Alpha candidate, but that does
+not prove a live PyPI distribution exists yet. Until publication is separately
+verified, install from an approved checkout or locally built artifact rather
+than assuming `pip install rextio-torch==0.1.0` is available.
 
 ```bash
 # CPython 3.11 only; requires rextio 0.1.3+ and torch 2.11.0
@@ -427,7 +432,7 @@ export LIBTORCH_USE_PYTORCH=1
 ```
 
 The `dev` extra includes packaging tools (`build`, `twine`,
-`check-wheel-contents`) for the pre-release package gate.
+`check-wheel-contents`) for release-candidate artifact checks.
 
 ---
 
@@ -464,18 +469,20 @@ AOT surface is the product goal, not beating a speedup threshold.
 - **Windows** is **deferred** (unverified).
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
-- Package remains unreleased on PyPI; public source does not imply a published
-  distribution.
+- Candidate metadata and artifacts are ready for release review; public source
+  and a dated changelog do not imply a live PyPI distribution.
 
 ---
 
 ## Repository safeguards
 
-- Do not publish to PyPI until the release owner removes the upload gate after
-  reviewing supported-profile CI and clean merged-`main` artifacts.
+- The temporary `Private` upload-block classifier has been removed from this
+  release candidate after supported-profile CI and clean merged-`main` review.
+- Tagging, PyPI upload, and live no-cache install verification remain explicit
+  release-owner actions; this README does not claim they have happened.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Package metadata includes `Private :: Do Not Upload` (version **0.1.0**).
+- Package metadata identifies version **0.1.0** as Development Status Alpha.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

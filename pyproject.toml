@@ -21,7 +21,6 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.11",
   "Topic :: Software Development :: Build Tools",
-  "Private :: Do Not Upload",
 ]
 # Public core floor for plugin API 1.3. Torch is pinned to the tch 0.24.0 /
 # libtorch baseline; the plugin facade and types vocabulary deliberately never

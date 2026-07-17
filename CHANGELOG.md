@@ -5,23 +5,31 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
-Public-source **Alpha AOT** candidate expands the Phase A vertical slice into a
+No changes yet.
+
+## [0.1.0] - 2026-07-18 (public Alpha release candidate)
+
+This dated section records the reviewed 0.1.0 candidate; it does **not** claim
+that PyPI publication has already occurred. Publication, tag, and live-install
+verification remain release-owner actions after this candidate is approved.
+
+The public-source **Alpha AOT** candidate expands the Phase A vertical slice into a
 broader fail-closed native surface. **Certified** real-Cargo evidence remains
 **macOS arm64 / CPython 3.11 / torch 2.11.0** (`LIBTORCH_USE_PYTORCH=1`; no
 version-check bypass). **Linux x86_64** and **Linux AArch64** are
 **experimental** runtime-backed hosts; **macOS x86_64** is availability-gated
 because the pinned torch wheel does not exist; 32-bit Linux/macOS cells are
 explicitly unsupported; **Windows** is **deferred** (unverified). The package
-remains unreleased on PyPI
-(`Private :: Do Not Upload`).
+is a release candidate whose live PyPI publication is still pending.
 
 Phase A/B benchmark result artifacts are retained as **historical context
 only**; performance is not a release gate for this Alpha cut.
 
 ### Added
 
-- Public Alpha package scaffold for plugin API 1.3, retaining the pre-release
-  `Private :: Do Not Upload` classifier.
+- Public Alpha package metadata for plugin API 1.3; the temporary upload-block
+  classifier was removed only after the merged candidate passed its blocking
+  CI matrix.
 - `requires-python = ">=3.11,<3.12"` (CPython 3.11 only for this cut).
 - Materialized `RxtTorchTensor` boundary types for float32 CPU rank-1 and
   rank-2 tensors, with PyO3 0.29-compatible raw tch `python-extension` bridge
@@ -55,7 +63,7 @@ only**; performance is not a release gate for this Alpha cut.
 - Native Phase A and expanded Alpha AOT rule records marked `verified=True`;
   every advertised rule family is compiled and executed by the serialized
   certification project and carries a unique diagnostic code.
-- `check-wheel-contents>=0.6` in the `dev` extra for the package gate.
+- Exact `check-wheel-contents==0.6.3` in the `dev` extra for the package gate.
 - Explicit **certified / experimental / deferred** host-platform semantics in
   the README and implementation plan (macOS arm64 certified; Linux x86_64 and
   aarch64 experimental; Windows deferred), plus a Linux experimental smoke

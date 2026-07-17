@@ -63,14 +63,18 @@ def test_core_loader_accepts_the_plugin() -> None:
     ]
 
 
-def test_covers_phase_a_surface() -> None:
+def test_covers_alpha_aot_surface() -> None:
     coverage = plugin().covers()
     assert isinstance(coverage, CoverageDecl)
     assert coverage.packages == ("torch",)
     assert "torch.nn.functional" in coverage.modules
     assert "torch.nn.functional.linear" in coverage.symbols
+    assert "torch.matmul" in coverage.symbols
     assert "torch.Tensor.relu" in coverage.symbols
+    assert "torch.Tensor.sigmoid" in coverage.symbols
+    assert "torch.Tensor.tanh" in coverage.symbols
     assert "torch.Tensor.mean" in coverage.symbols
+    assert "torch.Tensor.sum" in coverage.symbols
 
 
 def test_rule_records_are_namespaced_and_well_formed() -> None:
@@ -91,6 +95,7 @@ def test_rule_records_are_namespaced_and_well_formed() -> None:
     assert "RXTP-TORCH-002" in codes
     assert "RXTP-TORCH-003" in codes
     assert "RXTP-TORCH-010" in codes
+    assert "RXTP-TORCH-014" in codes
 
 
 def test_type_vocabulary_keys_and_boundary() -> None:
@@ -131,12 +136,19 @@ def test_crate_dependency_is_exact_tch_python_extension() -> None:
     ]
 
 
-def test_private_incubator_metadata() -> None:
+def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["build-system"]["requires"] == [
+        "setuptools==82.0.1",
+        "wheel==0.47.0",
+    ]
     project = pyproject["project"]
     assert project["name"] == "rextio-torch"
     assert project["requires-python"] == ">=3.11,<3.12"
+    assert project["description"].startswith("Public Alpha Rextio plugin")
     assert "Private :: Do Not Upload" in project["classifiers"]
+    assert "Development Status :: 3 - Alpha" in project["classifiers"]
+    assert "Development Status :: 2 - Pre-Alpha" not in project["classifiers"]
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" not in project["classifiers"]
     dependencies = project["dependencies"]
@@ -144,3 +156,14 @@ def test_private_incubator_metadata() -> None:
     assert "torch==2.11.0" in dependencies
     assert all("git+" not in dep for dep in dependencies)
     assert "rextio-core-next" not in " ".join(dependencies)
+    assert project["optional-dependencies"]["test"] == ["pytest==9.1.1"]
+    assert project["optional-dependencies"]["dev"] == [
+        "pytest==9.1.1",
+        "ruff==0.15.22",
+        "mypy==2.3.0",
+        "build==1.5.0",
+        "setuptools==81.0.0",
+        "wheel==0.47.0",
+        "twine==6.2.0",
+        "check-wheel-contents==0.6.3",
+    ]

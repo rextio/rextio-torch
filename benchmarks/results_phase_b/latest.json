@@ -3349,10 +3349,10 @@
       "dir_info": {
         "editable": true
       },
-      "url": "file:///Volumes/Data/workspace/rextio/rextio"
+      "url": "file:///WORKSPACE/rextio"
     },
     "core_dirty": false,
-    "core_import_file": "/Volumes/Data/workspace/rextio/rextio/src/rextio/__init__.py",
+    "core_import_file": "/WORKSPACE/rextio/src/rextio/__init__.py",
     "core_install_mode": "editable",
     "core_sha": "4ba053d1ff28978ccf69f9543e0124595bdebbc0",
     "core_version": "0.1.3",
@@ -3368,16 +3368,16 @@
       "dir_info": {
         "editable": true
       },
-      "url": "file:///Volumes/Data/workspace/rextio/rextio-torch"
+      "url": "file:///WORKSPACE/rextio-torch"
     },
     "plugin_dirty": false,
-    "plugin_import_file": "/Volumes/Data/workspace/rextio/rextio-torch/src/rextio_torch/__init__.py",
+    "plugin_import_file": "/WORKSPACE/rextio-torch/src/rextio_torch/__init__.py",
     "plugin_install_mode": "editable",
     "plugin_sha": "8d72a7ea7ba8c28bd798df7a6495fde6264c03df",
     "preregistration_sha256": "81a0d62738f295c01bbecf11eb0def1956b287a5ccea601e66179ad6995c81a2",
     "processor": "arm",
     "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 21.0.0 (clang-2100.0.123.102)]",
-    "python_executable": "/Volumes/Data/workspace/rextio/rextio-torch/.venv/bin/python",
+    "python_executable": "/WORKSPACE/rextio-torch/.venv/bin/python",
     "required_rextio_spec": ">=0.1.3,<0.2",
     "required_tch": "=0.24.0",
     "required_tch_feature": "python-extension",

@@ -1,4 +1,4 @@
-"""rextio-torch: private incubator Rextio plugin for a proven PyTorch slice.
+"""rextio-torch: public Alpha Rextio plugin for a proven PyTorch slice.
 
 Implements Rextio plugin API 1.3 for a float32 CPU functional-linear → ReLU →
 mean(dim=1, keepdim=False) vertical slice lowered via tch 0.24.0

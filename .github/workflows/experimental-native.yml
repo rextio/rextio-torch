@@ -1,0 +1,145 @@
+name: Experimental native profiles
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: torch-experimental-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+  RUST_TOOLCHAIN: "1.93.1"
+
+jobs:
+  linux-aarch64-native:
+    name: Linux AArch64 native E2E (experimental)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    env:
+      LIBTORCH_USE_PYTORCH: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update
+          rustup default "${RUST_TOOLCHAIN}"
+          test "$(rustc --version | awk '{print $2}')" = "${RUST_TOOLCHAIN}"
+      - name: Restore Cargo dependency cache
+        # Do not set/cache CARGO_TARGET_DIR: core discovers each generated
+        # native artifact in that generated project's own target/release.
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: rextio-torch-linux-arm64-rust-1.93.1-tch-0.24.0-${{ hashFiles('pyproject.toml') }}
+      - name: Build and install the wheel in a dedicated certification environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install "pip==26.1"
+          .venv/bin/python -m pip install \
+            "build==1.5.0" "setuptools==82.0.1" "wheel==0.47.0"
+          .venv/bin/python -m build --wheel --no-isolation
+          # torch 2.11.0 requires setuptools<82 at runtime; the build above has
+          # already consumed the separately pinned 82.0.1 build environment.
+          .venv/bin/python -m pip install \
+            "setuptools==81.0.0" "rextio==0.1.3" "torch==2.11.0" "pytest==9.1.1"
+          .venv/bin/python -m pip install --no-deps dist/*.whl
+          .venv/bin/python -m pip check
+      - name: Verify runner, pins, and profile
+        run: |
+          .venv/bin/python - <<'PY'
+          import os
+          import platform
+          import sys
+          import torch
+
+          assert platform.machine() == "aarch64", platform.machine()
+          assert sys.version_info[:2] == (3, 11)
+          assert torch.__version__.split("+")[0] == "2.11.0"
+          assert os.environ["LIBTORCH_USE_PYTORCH"] == "1"
+          assert "LIBTORCH_BYPASS_VERSION_CHECK" not in os.environ
+          PY
+          .venv/bin/python -m rextio_torch.platforms \
+            --os linux --arch arm64 --expect experimental --require-native
+      - name: Run real Cargo certification slices
+        run: |
+          command -v cargo
+          test -x .venv/bin/python
+          .venv/bin/python -m pytest -q -rs -o pythonpath= \
+            --junitxml=native-e2e.xml tests/e2e -m needs_cargo
+          .venv/bin/python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse("native-e2e.xml").getroot()
+          suites = [root] if root.tag == "testsuite" else list(root.findall("testsuite"))
+          totals = {
+              name: sum(int(suite.attrib.get(name, "0")) for suite in suites)
+              for name in ("tests", "failures", "errors", "skipped")
+          }
+          assert totals["tests"] >= 2, totals
+          assert totals["failures"] == totals["errors"] == totals["skipped"] == 0, totals
+          PY
+
+  macos-x64-availability:
+    name: macOS x86_64 pinned-runtime availability gate
+    runs-on: macos-15-intel
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install contract package without backend runtime
+        run: |
+          python -m pip install "pip==26.1"
+          python -m pip install --no-deps -e .
+      - name: Confirm availability-gated disposition
+        run: |
+          python - <<'PY'
+          import json
+          import platform
+          import urllib.request
+
+          assert platform.machine() == "x86_64", platform.machine()
+          with urllib.request.urlopen("https://pypi.org/pypi/torch/2.11.0/json") as response:
+              files = [item["filename"] for item in json.load(response)["urls"]]
+
+          def is_cp311_macos_x64_compatible_wheel(filename: str) -> bool:
+              return (
+                  filename.endswith(".whl")
+                  and "cp311-cp311" in filename
+                  and "macosx" in filename
+                  and any(tag in filename for tag in ("x86_64", "universal2"))
+              )
+
+          candidates = [
+              name
+              for name in files
+              if is_cp311_macos_x64_compatible_wheel(name)
+          ]
+          assert candidates == [], (
+              "torch 2.11.0 CPython 3.11 macOS x86_64/universal2 artifact appeared; "
+              "reassess the Alpha profile"
+          )
+          PY
+          python -m rextio_torch.platforms \
+            --os macos --arch x64 --expect availability-gated

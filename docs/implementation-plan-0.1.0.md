@@ -1,11 +1,27 @@
 # rextio-torch 0.1.0 implementation plan
 
-Status: private, unreleased incubation
+Status: public-source Alpha candidate, unreleased on PyPI
 
-**Phase A status:** implemented and **real-Cargo certified** on the tested
-**macOS arm64 / CPython 3.11 / torch 2.11.0** environment with
-`LIBTORCH_USE_PYTORCH=1` (never `LIBTORCH_BYPASS_VERSION_CHECK`). Broader 0.1.0
-stretch surface remains open.
+**Alpha AOT status:** Phase A vertical slice remains **real-Cargo certified**.
+The broader fail-closed AOT surface (activations rank 1/2, matmul, elementwise
+`+`, sum) is also certified in one serialized Cargo project.
+
+**Host platforms:**
+
+| Status | OS / arch | Contract |
+| --- | --- | --- |
+| **Certified** | macOS **arm64** | Real-Cargo Alpha evidence: CPython 3.11 / torch 2.11.0 / `LIBTORCH_USE_PYTORCH=1` (never `LIBTORCH_BYPASS_VERSION_CHECK`). |
+| **Experimental** | Linux **x86_64**, Linux **AArch64** | Same pins; real hosted Cargo E2E (blocking x86_64, scheduled/manual AArch64). **Not** certified. |
+| **Availability-gated** | macOS **x86_64** | No torch 2.11.0 CPython 3.11 x86_64 wheel; scheduled/manual CI verifies that absence. No support claim. |
+| **Unsupported** | Linux/macOS **i686**, **ARMv7** | Static expected-unsupported tests; missing pinned runtimes and, on modern macOS, impossible runner targets. |
+| **Deferred** | Windows | Unverified; no support claim in this cut. |
+
+The plugin does **not** reject Linux solely by OS; unavailable or mismatched
+toolchain/torch combinations must fail visibly under the pinned contract.
+
+**Performance:** Phase A/B product-route benchmarks are **historical context
+only** (see `benchmarks/results/` and `benchmarks/results_phase_b/`). They are
+not a release gate for Alpha AOT usefulness.
 
 ## Product definition
 
@@ -24,6 +40,7 @@ inference only.
 - PyTorch: `torch==2.11.0`
 - Rust binding: `tch==0.24.0` with the `python-extension` feature
 - Device: CPU only
+- Mode: inference / no-grad only
 
 The published `tch` 0.24.0 release targets PyTorch/libtorch 2.11.0 exactly.
 `LIBTORCH_BYPASS_VERSION_CHECK` is not an accepted build or release path.
@@ -81,33 +98,54 @@ no-grad output when inputs request gradients, input non-mutation, returned
 output lifetime after inputs are released, and fail-closed boundary rejects
 for runtime dtype/rank violations.
 
-The plugin may expose equivalent function spellings where Rextio API 1.3
-metadata can prove the same operation. Arbitrary `nn.Module`, `.eval()`, and
-module/state-dict conversion are not part of Phase A.
+Native Phase A and expanded Alpha rule records are marked `verified=True` after
+the serialized certification project compiles and executes every rule family.
 
-Native Phase A rule records are marked `verified=True`.
+## Alpha AOT surface (implemented)
 
-## Remaining 0.1.0 surface
+Same fail-closed claim → independent lower revalidation → fallible no-grad
+helpers:
 
-After the boundary and first real-Cargo route work, extend the same fail-closed
-design to:
+| Op | Metadata contract |
+| --- | --- |
+| `.relu()` / `.sigmoid()` / `.tanh()` | Zero-arg method; rank-1 or rank-2; result = receiver |
+| Rank-2 matmul | `@` / `torch.matmul` / `.matmul`; two rank-2 operands; inner sizes runtime-checked |
+| Elementwise `+` | Same-rank 1d/2d or rank-2 + rank-1; concrete broadcast sizes runtime-checked |
+| `.mean` / `.sum` | `dim=1`, `keepdim=False` literals only; rank-2 → rank-1 |
+| Functional linear | Unchanged Phase A three-operand form |
 
-- float32 first, followed by float64 where the same semantics are verified;
-- rank-1 and rank-2 tensors, plus rank-0 only if full reductions are added;
-- elementwise `+`, `-`, `*`, and `/`;
-- same-shape tensor operations, scalar operands, and explicitly enumerated
-  trailing rank-2/rank-1 broadcasting;
-- `relu`, `sigmoid`, and `tanh`;
-- literal-shape `reshape` and `view`;
-- literal-dimension rank-2 `transpose`;
-- literal `dim` and `keepdim` forms of `sum` and `mean`;
-- rank-2 `matmul`;
-- `torch.nn.functional.linear` with rank-2 input and weight and optional
-  rank-1 bias.
+### Control-flow vertical slice
 
-Every claim must be determined from authoritative API 1.3 type, receiver,
-callable, schema, and literal metadata. Lowering must independently revalidate
-the metadata and fail closed with explicit exceptions rather than assertions.
+Python `for` / `if` around matmul, bias `+`, relu/sigmoid, and mean lower to
+Rust control flow around tch helpers when their conditions are Rextio-native
+scalar `int` / `bool` expressions. Tensor comparisons and tensor-data-dependent
+conditions are not claimable. Because core does not claim method calls whose
+receiver is a bare BinOp, kernels use named temps:
+
+```python
+even = hidden @ weight + bias
+hidden = even.relu()
+```
+
+Use distinct temp names per if-arm when both branches need intermediates (core
+scopes Rust `let` bindings per arm).
+
+### Intentionally not claimed (without weakening guards)
+
+- Literal transpose / reshape / view (view/alias ambiguity with shallow clone)
+- Elementwise `-`, `*`, `/` and scalar operands (not yet proven in this cut)
+- Whole-tensor mean/sum, dynamic dim/keepdim
+- In-place methods and operators
+
+Every claim is determined from authoritative API 1.3 type, receiver, callable,
+schema, and literal metadata. Lowering independently revalidates metadata and
+fails closed with explicit exceptions rather than assertions. Unsupported forms
+remain fallback or rejected — never falsely claimed.
+
+The annotation vocabulary proves dtype, device, and rank, not concrete tensor
+sizes. The original libtorch runtime therefore remains authoritative for inner
+matmul dimensions and concrete broadcasting compatibility; incompatible sizes
+raise through the fallible tch path.
 
 ## Explicit exclusions
 
@@ -115,7 +153,7 @@ the metadata and fail closed with explicit exceptions rather than assertions.
 - autograd, training, backward, optimizers, and parameter mutation
 - arbitrary `nn.Module` conversion or execution
 - dynamic dtype, device, rank, reduction dimensions, or reshape rank
-- data-dependent Python control flow
+- tensor comparisons and tensor-data-dependent Python conditions
 - custom operators
 - in-place methods and operators
 - ambiguous alias/view behavior
@@ -125,13 +163,14 @@ the metadata and fail closed with explicit exceptions rather than assertions.
 ## Repository and release safeguards
 
 - Package version is `0.1.0`, marked unreleased.
-- The private-incubator package metadata includes
+- The public Alpha candidate metadata retains the pre-release upload gate
   `Private :: Do Not Upload`.
 - Use the public `rextio>=0.1.3,<0.2` dependency, not a core-next VCS pin.
-- Do not tag, publish to PyPI, or change GitHub visibility during incubation.
+- Do not tag or publish to PyPI before release-owner approval from clean
+  merged `main`.
 - Do not add or modify a project-local `AGENTS.md` without owner direction.
 
-## Initial acceptance checks
+## Acceptance checks
 
 - Plugin entry point loads against Rextio plugin API 1.3.
 - Coverage, rules, diagnostic namespace, exact crate pin and feature, type
@@ -139,24 +178,53 @@ the metadata and fail closed with explicit exceptions rather than assertions.
 - Unsupported dtype/device/rank/dynamic literal/in-place cases are not claimed
   or are explicitly rejected according to the documented authority.
 - Lowering has focused source/codegen tests and does not rely on `assert`.
-- One Python 3.11, torch 2.11.0 real-Cargo test proves the Phase A route,
-  numerical equivalence, dtype/device/shape, no-grad output, input
-  non-mutation, lifetime, and fail-closed boundary rejects (**done** on the
-  tested macOS arm64 environment).
+- Real-Cargo tests prove Phase A and Alpha control-flow routes when the pinned
+  local environment is available.
+- A declarative matrix covers Linux/macOS x86, x64, ARM32, and ARM64 without
+  mistaking static negative tests for native support. Runtime-backed CI uses
+  macOS ARM64 and Linux x86_64 on push/PR; Linux AArch64 is scheduled/manual;
+  macOS x64 remains an artifact-availability gate.
 - Package build plus `twine check` / `check-wheel-contents` succeeds before any
   release review (tools listed in the `dev` extra; gate not yet run for publish).
 
 ## Residual platform risks
 
-- Certification proven on macOS arm64 only so far.
+- **Certified** real-Cargo evidence remains macOS arm64 only.
+- Linux x86_64/AArch64 are **experimental** (real hosted E2E; not a
+  certification host). Distro glibc/libstdc++, torch manylinux wheels, and cold
+  `tch` builds are residual risks — not OS-level rejection by this plugin.
+- Windows is **deferred** (unverified).
 - `torch-sys` interpreter discovery depends on `PATH` / `VIRTUAL_ENV`.
 - Cold native builds recompile `tch` against the active torch 2.11 install.
-- Other OS/arch, CUDA/MPS, and the stretch surface remain out of scope.
+- CUDA/MPS remain out of scope.
+- Core limitation: method claims require named or call-chain receivers, not
+  bare BinOp receivers.
 
-## Benchmark gate
+## Linux experimental smoke (not certification)
+
+Maintainers may run the portable pin contract on Linux without weakening AOT
+pins:
+
+1. CPython 3.11 venv, `pip install -e '.[dev]'` (torch 2.11.0, rextio API 1.3).
+2. `export LIBTORCH_USE_PYTORCH=1` and ensure `LIBTORCH_BYPASS_VERSION_CHECK` is
+   unset.
+3. Focused unit tests: `pytest -q tests --ignore=tests/e2e`.
+4. Optional real-Cargo slice: `pytest -q tests/e2e -m needs_cargo` (or
+   `./scripts/linux-smoke.sh --cargo`).
+
+Passing smoke on Linux is engineering evidence only; it does not rewrite the
+certified-host row until deliberately re-recorded.
+
+## Historical benchmark context (not a gate)
 
 Benchmark only the generated Rextio wrapper, not a standalone tch prototype.
-Compare native and eager-PyTorch fallback under `torch.no_grad`, with fixed
-thread counts and warmups. Record tensor sizes, chain length, environment
-versions, raw samples, and both boundary-included and internal-chain timing.
-`torch.compile` is a context lane rather than the primary fallback baseline.
+Phase A and Phase B preregistered matrices recorded boundary-inclusive
+native vs eager-fallback latency under fixed threads/warmups. Retained
+artifacts:
+
+- `benchmarks/results/latest.json` + `report.md` (Phase A)
+- `benchmarks/results_phase_b/latest.json` + `report.md` (Phase B)
+
+Those numbers document measured product-route latency on the recorded machine.
+They do **not** gate shipping the Alpha AOT surface; the product goal for this
+cut is a tightly pinned, useful native-AOT slice with fail-closed correctness.

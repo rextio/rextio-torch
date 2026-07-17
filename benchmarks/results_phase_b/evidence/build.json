@@ -29,7 +29,7 @@
   "native_build": {
     "artifact_path": "/private/var/folders/lc/fscpgs615pq83nyy1gkh1nn40000gn/T/rextio-torch-phase-b-qe78oqlu/.rextio/generated/rust/target/release/lib_rextio_native.dylib",
     "command": [
-      "/Users/songsiyoung/.cargo/bin/cargo",
+      "/USER_HOME/.cargo/bin/cargo",
       "build",
       "--release",
       "--manifest-path",

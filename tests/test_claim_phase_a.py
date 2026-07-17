@@ -1,4 +1,4 @@
-"""Focused claim tests for the linear → ReLU → mean Phase A slice."""
+"""Focused claim tests for the Alpha AOT tensor surface."""
 
 from __future__ import annotations
 
@@ -13,9 +13,21 @@ from rextio.plugins.api import (
     Rejected,
 )
 
-from rextio_torch.claim.activations import RELU_RULE
+from rextio_torch.claim.activations import (
+    RELU_RULE,
+    RELU_RULE_1D,
+    SIGMOID_RULE_2D,
+    TANH_RULE_2D,
+)
+from rextio_torch.claim.binops import (
+    ADD_BROADCAST_2D_1D_RULE,
+    ADD_SAME_RANK_RULE,
+    MATMUL_BINOP_RULE,
+    MATMUL_CALL_RULE,
+    MATMUL_CALL_TARGET,
+)
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
-from rextio_torch.claim.reductions import MEAN_RULE
+from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_MEAN,
     DIAGNOSTIC_UNSUPPORTED,
@@ -76,6 +88,17 @@ def _method_site(
     )
 
 
+def _binop_site(op: str, left: str | None, right: str | None) -> ClaimSite:
+    return ClaimSite(
+        kind="binop",
+        target=op,
+        operand_types=(left, right),
+        file_path="",
+        line=0,
+        column=0,
+    )
+
+
 def test_claims_functional_linear_phase_a() -> None:
     result = PLUGIN.claim(_linear_site(), CONFIG)
     assert result == Claimed(rule_id=LINEAR_RULE, result_type=TENSOR_F32_CPU_2D)
@@ -84,6 +107,20 @@ def test_claims_functional_linear_phase_a() -> None:
 def test_claims_relu_on_rank2() -> None:
     result = PLUGIN.claim(_method_site("relu", TENSOR_F32_CPU_2D), CONFIG)
     assert result == Claimed(rule_id=RELU_RULE, result_type=TENSOR_F32_CPU_2D)
+
+
+def test_claims_relu_on_rank1() -> None:
+    result = PLUGIN.claim(_method_site("relu", TENSOR_F32_CPU_1D), CONFIG)
+    assert result == Claimed(rule_id=RELU_RULE_1D, result_type=TENSOR_F32_CPU_1D)
+
+
+def test_claims_sigmoid_and_tanh_rank2() -> None:
+    assert PLUGIN.claim(_method_site("sigmoid", TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=SIGMOID_RULE_2D, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_method_site("tanh", TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=TANH_RULE_2D, result_type=TENSOR_F32_CPU_2D
+    )
 
 
 def test_claims_relu_with_bare_method_target() -> None:
@@ -111,6 +148,22 @@ def test_claims_mean_dim1_keepdim_false() -> None:
     assert result == Claimed(rule_id=MEAN_RULE, result_type=TENSOR_F32_CPU_1D)
 
 
+def test_claims_sum_dim1_keepdim_false() -> None:
+    keywords = (
+        KeywordArg(name="dim", arg_type="int", literal=ClaimLiteral(is_literal=True, value=1)),
+        KeywordArg(
+            name="keepdim",
+            arg_type="bool",
+            literal=ClaimLiteral(is_literal=True, value=False),
+        ),
+    )
+    result = PLUGIN.claim(
+        _method_site("sum", TENSOR_F32_CPU_2D, keywords=keywords),
+        CONFIG,
+    )
+    assert result == Claimed(rule_id=SUM_RULE, result_type=TENSOR_F32_CPU_1D)
+
+
 def test_mean_keyword_order_is_irrelevant() -> None:
     keywords = (
         KeywordArg(
@@ -125,6 +178,50 @@ def test_mean_keyword_order_is_irrelevant() -> None:
         CONFIG,
     )
     assert result == Claimed(rule_id=MEAN_RULE, result_type=TENSOR_F32_CPU_1D)
+
+
+def test_claims_same_rank_add() -> None:
+    assert PLUGIN.claim(_binop_site("+", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=ADD_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("+", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=ADD_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_1D
+    )
+
+
+def test_claims_broadcast_add_rank2_rank1() -> None:
+    assert PLUGIN.claim(_binop_site("+", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=ADD_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("+", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=ADD_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+
+
+def test_claims_matmul_binop_and_call() -> None:
+    assert PLUGIN.claim(_binop_site("@", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=MATMUL_BINOP_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    site = ClaimSite(
+        kind="call",
+        target=MATMUL_CALL_TARGET,
+        operand_types=(TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+        file_path="",
+        line=0,
+        column=0,
+    )
+    assert PLUGIN.claim(site, CONFIG) == Claimed(
+        rule_id=MATMUL_CALL_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+
+    method = _method_site(
+        "matmul",
+        TENSOR_F32_CPU_2D,
+        operand_types=(TENSOR_F32_CPU_2D,),
+    )
+    assert PLUGIN.claim(method, CONFIG) == Claimed(
+        rule_id=MATMUL_CALL_RULE, result_type=TENSOR_F32_CPU_2D
+    )
 
 
 def test_rejects_wrong_linear_ranks() -> None:
@@ -170,17 +267,16 @@ def test_rejects_mean_keepdim_true() -> None:
     assert result.diagnostic.code == DIAGNOSTIC_MEAN
 
 
-def test_rejects_relu_on_rank1() -> None:
-    result = PLUGIN.claim(_method_site("relu", TENSOR_F32_CPU_1D), CONFIG)
+def test_rejects_matmul_rank1() -> None:
+    result = PLUGIN.claim(_binop_site("@", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG)
     assert isinstance(result, Rejected)
-    assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
 def test_not_covered_for_unrelated_target() -> None:
     site = ClaimSite(
         kind="call",
-        target="torch.matmul",
-        operand_types=(TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+        target="torch.softmax",
+        operand_types=(TENSOR_F32_CPU_2D,),
         file_path="",
         line=0,
         column=0,

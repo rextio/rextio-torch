@@ -42,7 +42,7 @@ jobs:
             "mypy==2.3.0"
           python -m pip install --no-deps -e .
       - name: Ruff
-        run: ruff check src tests benchmarks
+        run: ruff check src tests benchmarks scripts
       - name: Mypy
         run: mypy
       - name: Unit and contract tests
@@ -220,13 +220,14 @@ jobs:
             "wheel==0.47.0" \
             "twine==6.2.0" \
             "check-wheel-contents==0.6.3"
-      - name: Assert the unreleased upload gate
+      - name: Assert the public Alpha release metadata
         run: |
           python - <<'PY'
           import tomllib
 
           project = tomllib.load(open("pyproject.toml", "rb"))["project"]
-          assert "Private :: Do Not Upload" in project["classifiers"]
+          assert "Private :: Do Not Upload" not in project["classifiers"]
+          assert "Development Status :: 3 - Alpha" in project["classifiers"]
           assert "torch==2.11.0" in project["dependencies"]
           assert "rextio>=0.1.3,<0.2" in project["dependencies"]
           PY
@@ -238,6 +239,27 @@ jobs:
         run: |
           python -m twine check dist/*
           check-wheel-contents dist/*.whl
+      - name: Audit and exercise extracted sdist fixtures
+        run: |
+          rm -rf /tmp/rextio-torch-sdist-audit /tmp/rextio-torch-sdist-tests
+          python scripts/check_sdist.py dist/*.tar.gz \
+            --extract-to /tmp/rextio-torch-sdist-audit
+          python -m venv /tmp/rextio-torch-sdist-tests
+          audit_python=/tmp/rextio-torch-sdist-tests/bin/python
+          "$audit_python" -m pip install "pip==26.1"
+          "$audit_python" -m pip install "rextio==0.1.3" "pytest==9.1.1"
+          extracted_root="$(find /tmp/rextio-torch-sdist-audit \
+            -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -n "$extracted_root"
+          (
+            cd "$extracted_root"
+            "$audit_python" -m pytest -q \
+              tests/test_benchmark_harness.py \
+              tests/test_phase_b_benchmark_harness.py \
+              tests/test_analyzer_phase_b_chain.py \
+              tests/test_platform_contract.py \
+              tests/test_import_minimal.py
+          )
       - name: Fresh wheel and sdist install smoke (import-minimal)
         run: |
           python -m venv /tmp/rextio-torch-wheel

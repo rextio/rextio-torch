@@ -9,13 +9,27 @@ route. Primary comparison calls the **same generated Rextio wrapper** in two
 Protocol (frozen before measurement):
 [`docs/preregister-phase-a-benchmark-2026-07-17.md`](../docs/preregister-phase-a-benchmark-2026-07-17.md).
 
-## Do not run yet
+## Historical execution status (supersedes the preregistration-era warning)
 
-This repository ships the harness and unit tests only. **No performance
-benchmark has been executed here**, and no authoritative result files exist
-until a deliberate full run is performed under the preregistered pins.
+The earlier “do not run yet / no benchmark executed” notice applied only
+before the frozen runs on 2026-07-17. Phase A and Phase B were subsequently
+executed, and their authoritative JSON, reports, and route/build evidence are
+retained in this repository.
 
-## Commands (when ready)
+- Phase A verdict: **NO-GO** for performance-gated expansion (aggregate
+  fallback/native speedup `1.098517`, below the preregistered `1.20` gate).
+- Phase B verdict: **NO-GO** against both fallback (`1.151046`) and direct eager
+  (`1.134275`), each below the same aggregate speedup gate.
+
+These measurements remain historical evidence and performance-NO-GO context.
+They do not block the later, narrowly scoped native-AOT Alpha, whose objective
+superseded speed-gated expansion. No further benchmark run is requested for
+the 0.1.0 release train.
+
+## Reproduction commands (historical; not routine release checks)
+
+The commands are retained for reproducibility. Do not overwrite authoritative
+results without a separately approved, preregistered rerun.
 
 ```bash
 # Fast harness / route gate only — writes to ignored temp paths only
@@ -54,11 +68,11 @@ All float32 CPU with fixed deterministic seeds for `x` / `weight` / `bias`.
 - **10,000**-resample paired bootstrap over `log(native/fallback)`.
 - Compilation and first-call warm-up reported outside steady-state.
 
-## Expansion GO gate (binary)
+## Historical expansion GO gate (binary; superseded as a release criterion)
 
-All of the following must hold or the verdict is **NO-GO** for broadening /
-public release now. Context sizes and context lanes **cannot** rescue a
-failure:
+Under the original Phase A decision protocol, all of the following had to hold
+or the verdict was **NO-GO** for performance-gated broadening/publication.
+Context sizes and context lanes could not rescue a failure:
 
 1. Every primary cell (all six) is provenance/correctness eligible.
 2. Target aggregate geometric-mean **fallback/native** speedup point estimate
@@ -113,8 +127,8 @@ workers, or collect timings:
   tests/test_phase_b_benchmark_harness.py -q
 ```
 
-After the preregistration and harness are committed, a deliberate clean-tree
-run may use:
+The following Phase B commands are likewise retained for reproduction only;
+they are not an instruction to rerun benchmarks during the Alpha release:
 
 ```bash
 # Fast preflight only; never authoritative evidence

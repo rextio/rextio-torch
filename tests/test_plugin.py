@@ -136,7 +136,7 @@ def test_crate_dependency_is_exact_tch_python_extension() -> None:
     ]
 
 
-def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
+def test_public_alpha_release_candidate_metadata() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert pyproject["build-system"]["requires"] == [
         "setuptools==82.0.1",
@@ -146,7 +146,7 @@ def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
     assert project["name"] == "rextio-torch"
     assert project["requires-python"] == ">=3.11,<3.12"
     assert project["description"].startswith("Public Alpha Rextio plugin")
-    assert "Private :: Do Not Upload" in project["classifiers"]
+    assert "Private :: Do Not Upload" not in project["classifiers"]
     assert "Development Status :: 3 - Alpha" in project["classifiers"]
     assert "Development Status :: 2 - Pre-Alpha" not in project["classifiers"]
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]

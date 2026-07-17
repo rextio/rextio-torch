@@ -1,6 +1,6 @@
 # rextio-torch 0.1.0 implementation plan
 
-Status: public-source Alpha candidate, unreleased on PyPI
+Status: public Alpha 0.1.0 released 2026-07-18
 
 **Alpha AOT status:** Phase A vertical slice remains **real-Cargo certified**.
 The broader fail-closed AOT surface (activations rank 1/2, matmul, elementwise
@@ -162,12 +162,11 @@ raise through the fallible tch path.
 
 ## Repository and release safeguards
 
-- Package version is `0.1.0`, marked unreleased.
-- The public Alpha candidate metadata retains the pre-release upload gate
-  `Private :: Do Not Upload`.
+- Package version is `0.1.0`, marked Development Status Alpha; the temporary
+  `Private` upload-block classifier has been removed from the release.
 - Use the public `rextio>=0.1.3,<0.2` dependency, not a core-next VCS pin.
-- Do not tag or publish to PyPI before release-owner approval from clean
-  merged `main`.
+- Annotated-tag, PyPI-artifact, and live no-cache-install evidence are recorded
+  separately from this implementation contract.
 - Do not add or modify a project-local `AGENTS.md` without owner direction.
 
 ## Acceptance checks

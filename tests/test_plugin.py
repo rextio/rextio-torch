@@ -138,6 +138,10 @@ def test_crate_dependency_is_exact_tch_python_extension() -> None:
 
 def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["build-system"]["requires"] == [
+        "setuptools==82.0.1",
+        "wheel==0.47.0",
+    ]
     project = pyproject["project"]
     assert project["name"] == "rextio-torch"
     assert project["requires-python"] == ">=3.11,<3.12"
@@ -150,3 +154,14 @@ def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
     assert "torch==2.11.0" in dependencies
     assert all("git+" not in dep for dep in dependencies)
     assert "rextio-core-next" not in " ".join(dependencies)
+    assert project["optional-dependencies"]["test"] == ["pytest==9.1.1"]
+    assert project["optional-dependencies"]["dev"] == [
+        "pytest==9.1.1",
+        "ruff==0.15.22",
+        "mypy==2.3.0",
+        "build==1.5.0",
+        "setuptools==81.0.0",
+        "wheel==0.47.0",
+        "twine==6.2.0",
+        "check-wheel-contents==0.6.3",
+    ]

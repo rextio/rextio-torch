@@ -48,7 +48,7 @@ def _require_api_13() -> None:
 
 
 class RextioTorchPlugin:
-    """Plugin API 1.3 provider for the Phase A float32 CPU inference slice."""
+    """Plugin API 1.3 provider for the Alpha AOT float32 CPU inference surface."""
 
     plugin_id = PLUGIN_ID
     api_version = REQUIRED_PLUGIN_API

@@ -63,14 +63,18 @@ def test_core_loader_accepts_the_plugin() -> None:
     ]
 
 
-def test_covers_phase_a_surface() -> None:
+def test_covers_alpha_aot_surface() -> None:
     coverage = plugin().covers()
     assert isinstance(coverage, CoverageDecl)
     assert coverage.packages == ("torch",)
     assert "torch.nn.functional" in coverage.modules
     assert "torch.nn.functional.linear" in coverage.symbols
+    assert "torch.matmul" in coverage.symbols
     assert "torch.Tensor.relu" in coverage.symbols
+    assert "torch.Tensor.sigmoid" in coverage.symbols
+    assert "torch.Tensor.tanh" in coverage.symbols
     assert "torch.Tensor.mean" in coverage.symbols
+    assert "torch.Tensor.sum" in coverage.symbols
 
 
 def test_rule_records_are_namespaced_and_well_formed() -> None:
@@ -91,6 +95,7 @@ def test_rule_records_are_namespaced_and_well_formed() -> None:
     assert "RXTP-TORCH-002" in codes
     assert "RXTP-TORCH-003" in codes
     assert "RXTP-TORCH-010" in codes
+    assert "RXTP-TORCH-014" in codes
 
 
 def test_type_vocabulary_keys_and_boundary() -> None:

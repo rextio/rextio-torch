@@ -1,4 +1,4 @@
-"""Rust helpers for Phase A tensor operations (linear, ReLU, mean).
+"""Rust helpers for Alpha AOT tensor operations.
 
 Every operation uses fallible tch APIs under ``no_grad`` and maps ``TchError``
 to a Python exception without panicking.
@@ -8,7 +8,12 @@ from __future__ import annotations
 
 LINEAR = "__rxttorch_linear"
 RELU = "__rxttorch_relu"
+SIGMOID = "__rxttorch_sigmoid"
+TANH = "__rxttorch_tanh"
 MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
+SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
+ADD = "__rxttorch_add"
+MATMUL = "__rxttorch_matmul"
 
 
 def linear_helper() -> str:
@@ -36,6 +41,24 @@ def relu_helper() -> str:
 }"""
 
 
+def sigmoid_helper() -> str:
+    """Return the no-grad fallible sigmoid helper."""
+    return r"""fn __rxttorch_sigmoid(input: &RxtTorchTensor) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_sigmoid().map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def tanh_helper() -> str:
+    """Return the no-grad fallible tanh helper."""
+    return r"""fn __rxttorch_tanh(input: &RxtTorchTensor) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_tanh().map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
 def mean_dim1_keepfalse_helper() -> str:
     """Return the no-grad fallible mean(dim=1, keepdim=False) helper."""
     return r"""fn __rxttorch_mean_dim1_keepdim_false(
@@ -50,11 +73,59 @@ def mean_dim1_keepfalse_helper() -> str:
 }"""
 
 
+def sum_dim1_keepfalse_helper() -> str:
+    """Return the no-grad fallible sum(dim=1, keepdim=False) helper."""
+    return r"""fn __rxttorch_sum_dim1_keepdim_false(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input
+        .0
+        .f_sum_dim_intlist(1i64, false, None)
+        .map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def add_helper() -> str:
+    """Return the no-grad fallible elementwise add helper (includes broadcast)."""
+    return r"""fn __rxttorch_add(
+    left: &RxtTorchTensor,
+    right: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = left.0.f_add(&right.0).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def matmul_helper() -> str:
+    """Return the no-grad fallible rank-2 matmul helper."""
+    return r"""fn __rxttorch_matmul(
+    left: &RxtTorchTensor,
+    right: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = left.0.f_matmul(&right.0).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
 __all__ = [
+    "ADD",
     "LINEAR",
+    "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
     "RELU",
+    "SIGMOID",
+    "SUM_DIM1_KEEPFALSE",
+    "TANH",
+    "add_helper",
     "linear_helper",
+    "matmul_helper",
     "mean_dim1_keepfalse_helper",
     "relu_helper",
+    "sigmoid_helper",
+    "sum_dim1_keepfalse_helper",
+    "tanh_helper",
 ]

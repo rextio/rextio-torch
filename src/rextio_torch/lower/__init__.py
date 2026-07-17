@@ -1,10 +1,10 @@
-"""Lower router: dispatch claimed sites to Phase A lower modules."""
+"""Lower router: dispatch claimed sites to Alpha AOT lower modules."""
 
 from __future__ import annotations
 
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
-from rextio_torch.lower import activations, linear, reductions
+from rextio_torch.lower import activations, binops, linear, reductions
 
 __all__ = ["lower"]
 
@@ -15,7 +15,7 @@ def lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr:
     Independently revalidates authoritative claim metadata and fails closed
     with ``ValueError`` (not ``assert``) so guards survive ``python -O``.
     """
-    for lane in (linear, activations, reductions):
+    for lane in (linear, activations, reductions, binops):
         result = lane.try_lower(claimed, ctx)
         if result is not None:
             return result

@@ -122,13 +122,23 @@ jobs:
           assert platform.machine() == "x86_64", platform.machine()
           with urllib.request.urlopen("https://pypi.org/pypi/torch/2.11.0/json") as response:
               files = [item["filename"] for item in json.load(response)["urls"]]
+
+          def is_cp311_macos_x64_compatible_wheel(filename: str) -> bool:
+              return (
+                  filename.endswith(".whl")
+                  and "cp311-cp311" in filename
+                  and "macosx" in filename
+                  and any(tag in filename for tag in ("x86_64", "universal2"))
+              )
+
           candidates = [
               name
               for name in files
-              if "cp311-cp311" in name and "macosx" in name and "x86_64" in name
+              if is_cp311_macos_x64_compatible_wheel(name)
           ]
           assert candidates == [], (
-              "torch 2.11.0 macOS x86_64 artifact appeared; reassess the Alpha profile"
+              "torch 2.11.0 CPython 3.11 macOS x86_64/universal2 artifact appeared; "
+              "reassess the Alpha profile"
           )
           PY
           python -m rextio_torch.platforms \

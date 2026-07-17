@@ -147,6 +147,8 @@ def test_public_alpha_metadata_retains_unreleased_upload_gate() -> None:
     assert project["requires-python"] == ">=3.11,<3.12"
     assert project["description"].startswith("Public Alpha Rextio plugin")
     assert "Private :: Do Not Upload" in project["classifiers"]
+    assert "Development Status :: 3 - Alpha" in project["classifiers"]
+    assert "Development Status :: 2 - Pre-Alpha" not in project["classifiers"]
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" not in project["classifiers"]
     dependencies = project["dependencies"]

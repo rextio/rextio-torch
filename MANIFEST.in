@@ -1,0 +1,7 @@
+include CHANGELOG.md
+include MANIFEST.in
+recursive-include benchmarks *.json *.md *.py
+recursive-include docs *.md
+include scripts/check_sdist.py
+include scripts/linux-smoke.sh
+recursive-include tests *.py

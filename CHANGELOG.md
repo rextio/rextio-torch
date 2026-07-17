@@ -84,6 +84,9 @@ only**; performance is not a release gate for this Alpha cut.
   native E2E with an explicit zero-skip assertion for runtime-backed profiles.
 - Placeholder sanitization for workstation paths in retained Phase A/B raw
   benchmark provenance; measurements and evidence lineage are unchanged.
+- An explicit source-distribution manifest containing the shipped test suite,
+  benchmark fixtures, documentation, and Linux smoke script, plus a CI audit
+  that proves repository-byte equality and runs focused tests after extraction.
 
 ### Notes
 

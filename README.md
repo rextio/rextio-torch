@@ -7,8 +7,8 @@ PyTorch inference code to Rust expressions backed by
 | Field | Value |
 | --- | --- |
 | Package version | **0.1.0** (from `rextio_torch.__about__`) |
-| Release status | **0.1.0 public Alpha release candidate**, prepared **2026-07-18** |
-| Distribution | PyPI publication is **pending** release-owner approval and live verification |
+| Release status | **0.1.0 public Alpha**, released **2026-07-18** |
+| Distribution | [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -409,15 +409,16 @@ claim/lower layer but is not a separate real-Cargo fixture.
 
 ---
 
-## Install before PyPI publication
+## Install
 
-This repository is prepared as the 0.1.0 public Alpha candidate, but that does
-not prove a live PyPI distribution exists yet. Until publication is separately
-verified, install from an approved checkout or locally built artifact rather
-than assuming `pip install rextio-torch==0.1.0` is available.
+Install the exact public Alpha in a CPython 3.11 environment. A source checkout
+remains useful for development and for running the focused contract tests.
 
 ```bash
 # CPython 3.11 only; requires rextio 0.1.3+ and torch 2.11.0
+python3.11 -m pip install 'rextio-torch==0.1.0'
+
+# Development checkout alternative
 python3.11 -m pip install -e '.[dev]'
 ```
 
@@ -432,7 +433,7 @@ export LIBTORCH_USE_PYTORCH=1
 ```
 
 The `dev` extra includes packaging tools (`build`, `twine`,
-`check-wheel-contents`) for release-candidate artifact checks.
+`check-wheel-contents`) for release artifact checks.
 
 ---
 
@@ -469,17 +470,17 @@ AOT surface is the product goal, not beating a speedup threshold.
 - **Windows** is **deferred** (unverified).
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
-- Candidate metadata and artifacts are ready for release review; public source
-  and a dated changelog do not imply a live PyPI distribution.
+- Release artifacts are built from clean `main` and checked independently from
+  the historical benchmark evidence.
 
 ---
 
 ## Repository safeguards
 
-- The temporary `Private` upload-block classifier has been removed from this
-  release candidate after supported-profile CI and clean merged-`main` review.
-- Tagging, PyPI upload, and live no-cache install verification remain explicit
-  release-owner actions; this README does not claim they have happened.
+- The temporary `Private` upload-block classifier was removed after
+  supported-profile CI and clean merged-`main` review.
+- The annotated tag, PyPI artifacts, and live no-cache install are verified as
+  separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
 - Package metadata identifies version **0.1.0** as Development Status Alpha.

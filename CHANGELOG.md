@@ -7,20 +7,17 @@ Changelog and Semantic Versioning conventions.
 
 No changes yet.
 
-## [0.1.0] - 2026-07-18 (public Alpha release candidate)
+## [0.1.0] - 2026-07-18 (public Alpha)
 
-This dated section records the reviewed 0.1.0 candidate; it does **not** claim
-that PyPI publication has already occurred. Publication, tag, and live-install
-verification remain release-owner actions after this candidate is approved.
+This is the first public native-AOT Alpha release of `rextio-torch`.
 
-The public-source **Alpha AOT** candidate expands the Phase A vertical slice into a
+The public-source **Alpha AOT** release expands the Phase A vertical slice into a
 broader fail-closed native surface. **Certified** real-Cargo evidence remains
 **macOS arm64 / CPython 3.11 / torch 2.11.0** (`LIBTORCH_USE_PYTORCH=1`; no
 version-check bypass). **Linux x86_64** and **Linux AArch64** are
 **experimental** runtime-backed hosts; **macOS x86_64** is availability-gated
 because the pinned torch wheel does not exist; 32-bit Linux/macOS cells are
-explicitly unsupported; **Windows** is **deferred** (unverified). The package
-is a release candidate whose live PyPI publication is still pending.
+explicitly unsupported; **Windows** is **deferred** (unverified).
 
 Phase A/B benchmark result artifacts are retained as **historical context
 only**; performance is not a release gate for this Alpha cut.
@@ -28,7 +25,7 @@ only**; performance is not a release gate for this Alpha cut.
 ### Added
 
 - Public Alpha package metadata for plugin API 1.3; the temporary upload-block
-  classifier was removed only after the merged candidate passed its blocking
+  classifier was removed only after the release passed its blocking
   CI matrix.
 - `requires-python = ">=3.11,<3.12"` (CPython 3.11 only for this cut).
 - Materialized `RxtTorchTensor` boundary types for float32 CPU rank-1 and

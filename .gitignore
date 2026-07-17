@@ -8,7 +8,6 @@ build/
 dist/
 *.egg-info/
 target/
-.ci-cargo-target/
 native-e2e.xml
 .rextio/
 *.so

@@ -122,7 +122,6 @@ jobs:
             machine: arm64
     env:
       LIBTORCH_USE_PYTORCH: "1"
-      CARGO_TARGET_DIR: ${{ github.workspace }}/.ci-cargo-target
     steps:
       - name: Check out source
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -139,12 +138,13 @@ jobs:
           rustup default "${RUST_TOOLCHAIN}"
           test "$(rustc --version | awk '{print $2}')" = "${RUST_TOOLCHAIN}"
       - name: Restore Cargo dependency cache
+        # Do not set/cache CARGO_TARGET_DIR: core discovers each generated
+        # native artifact in that generated project's own target/release.
         uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            .ci-cargo-target
           key: rextio-torch-${{ runner.os }}-${{ runner.arch }}-rust-1.93.1-tch-0.24.0-${{ hashFiles('pyproject.toml') }}
       - name: Build and install the wheel in a dedicated certification environment
         run: |

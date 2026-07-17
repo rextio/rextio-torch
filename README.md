@@ -4,51 +4,249 @@
 PyTorch inference code to Rust expressions backed by
 [`tch`](https://github.com/LaurentMazare/tch-rs).
 
-Status: **unreleased 0.1.0 Alpha** — not for PyPI. Package metadata includes
-`Private :: Do Not Upload`.
-
-**Alpha AOT** expands the original Phase A vertical slice into a broader
-fail-closed, real-Cargo-certified native surface on the tested environment: **macOS arm64**,
-**CPython 3.11**, **torch 2.11.0**, Rextio plugin API **1.3**, with
-`LIBTORCH_USE_PYTORCH=1` (never `LIBTORCH_BYPASS_VERSION_CHECK`).
-
-Performance benchmarks from Phase A/B are retained only as **historical
-context** under `benchmarks/results/` and `benchmarks/results_phase_b/`. They
-are **not** a release gate for this Alpha cut.
-
-## Compatibility baseline
-
-| Component | Pin |
+| Field | Value |
 | --- | --- |
-| CPython | 3.11 only (`requires-python = ">=3.11,<3.12"`) |
-| Rextio | `>=0.1.3,<0.2` (plugin API **1.3**) |
-| PyTorch | `torch==2.11.0` |
-| Rust binding | `tch==0.24.0` with feature `python-extension` |
-| Device | **CPU only** |
-| Mode | **Inference / no-grad only** |
+| Package version | **0.1.0** (from `rextio_torch.__about__`) |
+| Release status | **Unreleased Alpha** — not for PyPI |
+| Classifier | `Private :: Do Not Upload` |
+| Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
+| Product mode | **CPU inference / no-grad only** |
+| Certification host | **macOS arm64**, CPython **3.11**, torch **2.11.0** |
 
-The published `tch` 0.24.0 release targets libtorch / PyTorch **2.11.0**
-exactly. `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path.
-Native builds that link the Python PyTorch install set `LIBTORCH_USE_PYTORCH=1`
-and must use the same active CPython 3.11 environment as Rextio / PyO3.
+This README is the **0.1.0 private native-AOT Alpha support contract**. Every
+form, rank, pin, and fail-closed behavior below is backed by current claim /
+lower / rules / rust_snippets sources and the focused or real-Cargo tests that
+exercise them. Unsupported sites must stay on the ordinary Python fallback or
+be explicitly rejected — **never falsely claimed**.
 
-## Alpha AOT surface
+Performance numbers under `benchmarks/results/` and
+`benchmarks/results_phase_b/` are **historical context only**. They are **not**
+a release gate for this Alpha cut.
 
-Float32 CPU rank-1 and rank-2 tensors, claimed only when API 1.3 metadata
-proves the form. Every claimed site independently revalidates lowering
-metadata, uses fallible `tch` APIs under `no_grad`, avoids `assert`, and keeps
-zero-storage-copy Python tensor boundaries.
+---
 
-| Form | Notes |
+## Version and ABI contract
+
+| Component | Exact pin | Why it must match |
+| --- | --- | --- |
+| CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
+| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Registration/contract calls fail unless core advertises plugin API exactly **1.3**. |
+| Plugin API | **1.3** | Claim sites, receivers, keyword literals, type vocabulary, and crate deps are API 1.3 contracts. |
+| PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
+| Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
+| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from Rextio 0.1.3's generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
+| Certified Rust toolchain | `rustc 1.93.1`, `cargo 1.93.1` on `aarch64-apple-darwin` | The real-Cargo Alpha evidence was reproduced with this local toolchain. This repo has no `rust-toolchain.toml`. |
+| libtorch linkage | **`LIBTORCH_USE_PYTORCH=1`** | Builds against the active Python torch install. |
+| Version-check bypass | **Forbidden** | `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path (stripped in e2e env setup; never set). |
+| Device | **CPU only** | Boundary extract rejects non-CPU tensors at runtime. |
+| Dtype | **float32 only** | Boundary extract rejects non-float32 at runtime. |
+| Mode | **Inference / no-grad** | Every op helper wraps `tch::no_grad_guard()`; certified native outputs have `requires_grad is False` even when inputs request grad. |
+
+### Why tch / libtorch / PyTorch / CPython must be one matched set
+
+1. **tch 0.24.0 ↔ libtorch / PyTorch 2.11.0** — the published `tch` release
+   targets that libtorch line exactly. Linking a different torch version fails
+   the exact version check unless bypassed (bypass is rejected here).
+2. **`LIBTORCH_USE_PYTORCH=1`** — `torch-sys` discovers Python via
+   `PATH` / `VIRTUAL_ENV` (not only `PYO3_PYTHON`) and reads that interpreter’s
+   torch. A mismatched torch on `PATH` fails the **2.11.0** check.
+3. **CPython 3.11** — the generated native extension must load under the **same**
+   CPython 3.11 + torch 2.11.0 environment that built it (PyO3 ABI + tch
+   python-extension bridge).
+4. **Rextio 0.1.3+ / API 1.3** — claim metadata (receivers, literal keywords,
+   type keys) is not available on older plugin APIs.
+
+Certification and real-Cargo tests configure this environment explicitly.
+**macOS arm64 is certification evidence, not a runtime platform guard in this
+plugin.** Other OS/arch combinations are unverified residual risk rather than
+an advertised support target.
+
+---
+
+## Annotation vocabulary (`rextio_torch.types`)
+
+| Annotation | Plugin type key | dtype | device | rank |
+| --- | --- | --- | --- | --- |
+| `TensorF32Cpu2D` | `rextio-torch/tensor-f32-cpu-2d` | float32 | CPU | 2 |
+| `TensorF32Cpu1D` | `rextio-torch/tensor-f32-cpu-1d` | float32 | CPU | 1 |
+
+Marker classes intentionally **import neither torch nor Rextio**. Runtime values
+remain ordinary `torch.Tensor` objects; the analyzer resolves the dotted
+spellings when the plugin is enabled.
+
+**What annotations prove:** dtype, device, and rank only.
+
+**What they do not prove:** concrete dimensions. Matmul inner-size compatibility
+and concrete PyTorch broadcasting are validated by **libtorch via fallible tch
+APIs at execution time**.
+
+Native Rust representation: plugin-owned `RxtTorchTensor(tch::Tensor)`.
+Boundary unpack/wrap uses tch’s python-extension bridge (another ref-counted
+handle, **no storage copy**). `Clone` uses `shallow_clone()` — in-place ops are
+excluded because shallow clones alias storage.
+
+---
+
+## Exactly supported Python forms and result ranks
+
+Claims require API 1.3 metadata that proves the form (operand / receiver type
+keys, call target, static keyword literals). Result ranks are those of the
+claimed `result_type`.
+
+| Form | Syntax contract | Operand / receiver ranks | Result rank | Rule id (native) |
+| --- | --- | --- | --- | --- |
+| Functional linear | `torch.nn.functional.linear(x, w, b)` — **three positional** tensors; **no keywords**; **no method form** | x, w: **2**; b: **1** | **2** | `rextio-torch/functional-linear-f32-cpu-2d` |
+| ReLU method | `.relu()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-relu-f32-cpu-1d` or `…/tensor-relu-f32-cpu-2d` |
+| Sigmoid method | `.sigmoid()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-sigmoid-f32-cpu-1d` or `…/tensor-sigmoid-f32-cpu-2d` |
+| Tanh method | `.tanh()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-tanh-f32-cpu-1d` or `…/tensor-tanh-f32-cpu-2d` |
+| Matmul binop | `a @ b` | both **2** | **2** | `rextio-torch/tensor-matmul-f32-cpu-2d` |
+| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | both **2** | **2** | `rextio-torch/tensor-matmul-call-f32-cpu-2d` |
+| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver **2**, other **2** | **2** | same as call form |
+| Elementwise `+` (same rank) | `a + b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-add-f32-cpu-same-rank` |
+| Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
+| Mean | `.mean(dim=1, keepdim=False)` — **only** those two **literal** keywords; no positionals | receiver **2** | **1** | `rextio-torch/tensor-mean-dim1-f32-cpu-2d` |
+| Sum | `.sum(dim=1, keepdim=False)` — same literal guards as mean | receiver **2** | **1** | `rextio-torch/tensor-sum-dim1-f32-cpu-2d` |
+
+Native op helpers (all fallible, all under `no_grad`):
+
+| Python form | Rust helper | tch API used |
+| --- | --- | --- |
+| linear | `__rxttorch_linear` | `f_linear` |
+| `.relu()` | `__rxttorch_relu` | `f_relu` |
+| `.sigmoid()` | `__rxttorch_sigmoid` | `f_sigmoid` |
+| `.tanh()` | `__rxttorch_tanh` | `f_tanh` |
+| `.mean(…)` | `__rxttorch_mean_dim1_keepdim_false` | `f_mean_dim(1, false, None)` |
+| `.sum(…)` | `__rxttorch_sum_dim1_keepdim_false` | `f_sum_dim_intlist(1, false, None)` |
+| `+` | `__rxttorch_add` | `f_add` |
+| matmul / `@` | `__rxttorch_matmul` | `f_matmul` |
+
+Coverage symbols declared for the analyzer include
+`torch.nn.functional.linear`, `torch.matmul`, and method forms
+`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul}`. Binary `+` / `@` are claimed
+via binop sites (not module symbols alone).
+
+### Control flow around claimed ops
+
+Python `for` / `if` with Rextio-lowerable scalar `int` / `bool` conditions become
+Rust control flow around the native tch helpers (certified control-flow
+vertical slice). Tensor comparisons and tensor-data-dependent conditions are
+**not** claimable by plugin API 1.3 and remain on the Python fallback.
+
+**Core receiver limitation (not a plugin gap):** Rextio core does not offer
+method calls whose receiver is a **bare BinOp** to plugins. Write named temps:
+
+```python
+# Accepted pattern
+even = hidden @ weight + bias
+hidden = even.relu()
+
+# Not offered to plugins (bare BinOp receiver)
+# hidden = (hidden @ weight + bias).relu()
+```
+
+Use **distinct temp names per if-arm** when both branches need intermediates
+(core scopes Rust `let` bindings per arm).
+
+---
+
+## Static preconditions (analysis / claim time)
+
+A site is claimed only when **all** of the following hold for that form.
+Otherwise the plugin returns `Rejected` (recognized surface, wrong shape) or
+`NotCovered` (unrelated / unresolved) — see [Compile-time fallback vs runtime
+fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
+
+| Check | Enforcement |
 | --- | --- |
-| `torch.nn.functional.linear(x, w, b)` | Rank-2 input/weight + rank-1 bias (Phase A certified) |
-| `.relu()` / `.sigmoid()` / `.tanh()` | Method form, rank-1 and rank-2 |
-| `a @ b` / `torch.matmul` / `.matmul` | Rank-2 × rank-2 → rank-2; inner sizes checked by tch at runtime |
-| `a + b` | Same-rank 1d/2d or rank-2 + rank-1; concrete broadcast sizes checked by tch at runtime |
-| `.mean(dim=1, keepdim=False)` | Rank-2 → rank-1 (Phase A certified) |
-| `.sum(dim=1, keepdim=False)` | Rank-2 → rank-1 (same literal guards as mean) |
+| Plugin type keys are the registered float32 CPU rank-1/2 keys | `is_tensor_type` / exact type equality per rule |
+| Linear: target `torch.nn.functional.linear`, no receiver, exactly 3 positionals, no keywords, ranks (2, 2, 1) | `claim/linear.py` |
+| Activations: method form only (receiver present), zero args/keywords, rank 1 or 2 | `claim/activations.py` — module-style `torch.relu` etc. → `NotCovered` |
+| Reductions: method form, **no** positionals, keywords exactly `{dim, keepdim}` with **literal** `dim=1` and `keepdim=False`, receiver rank 2 | `claim/reductions.py` |
+| Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
+| Add: binary `+` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
+| Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
-### Example (Phase A certified chain)
+Keyword order for `dim` / `keepdim` does not matter; values must still be static
+literals. Dynamic dim/keepdim, wrong dim, or `keepdim=True` → **Rejected**.
+
+Lowering **independently revalidates** the same metadata (`rule_id`, ranks,
+operand counts, receiver) and raises `ValueError` on drift — guards use
+exceptions, not `assert`, so they survive `python -O`.
+
+---
+
+## Unsupported / fallback forms
+
+These stay **unclaimed**, **rejected**, or **out of scope**. They must never
+become silent native claims.
+
+| Category | Examples / notes | Claim outcome (when offered as a torch site) |
+| --- | --- | --- |
+| Other devices | CUDA, MPS, non-CPU | Outside vocabulary; boundary would reject non-CPU if a native path were reached |
+| Other dtypes | float64, int, etc. | Outside vocabulary; boundary rejects non-float32 at runtime on native paths |
+| Other ranks | rank-0 / rank-3+, matmul with rank-1, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
+| Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
+| Modules | arbitrary `nn.Module`, module-style activations (`torch.relu`, …) | Uncovered / not claimed |
+| Linear variants | keywords, optional bias omission, method linear | `Rejected` or not the linear lane |
+| In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
+| Elementwise other ops | `-`, `*`, `/`, scalar operands | Not claimed |
+| Reductions other shapes | whole-tensor mean/sum, `dim≠1`, `keepdim=True`, dynamic dim/keepdim, positionals | `Rejected` or unclaimed |
+| Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
+| Unsupported broadcast ranks | `+` rank combinations other than same-rank or 2d+1d | `Rejected` |
+| Unrelated torch APIs | e.g. `torch.softmax` | `NotCovered` |
+| Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
+| Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
+| Bare BinOp method receivers | `(a @ b).relu()` | Core does not offer site; use temps |
+| Version bypass | `LIBTORCH_BYPASS_VERSION_CHECK` | Forbidden build path |
+| Custom operators | user ops outside the table above | Uncovered |
+
+Rule record `rextio-torch/unsupported-tensor-surface` (`RXTP-TORCH-010`,
+outcome **fallback**) documents the fail-closed rejection lane for covered torch
+sites whose types or shapes fall outside the Alpha surface.
+
+---
+
+## Compile-time fallback vs runtime fail-closed
+
+Two different layers. Do not conflate them.
+
+### Analysis / codegen time (before or while building native code)
+
+| Outcome | Meaning | User effect |
+| --- | --- | --- |
+| **Claimed** | Metadata proves a native rule | Site can lower to a tch helper |
+| **Rejected** | Recognized surface, wrong static shape/types | Diagnostic error (`RXTP-TORCH-*`); site stays on **Python fallback** — never a false native claim |
+| **NotCovered** | Not this plugin’s target, or types unresolved | Other plugins / ordinary Python fallback |
+| **Lower `ValueError`** | Claimed metadata changed or is inconsistent at lower | Codegen fails closed (no `assert` / no silent bad emit) |
+
+Native rules that passed real-Cargo certification are marked `verified=True` in
+`rules/records.py`. The unsupported-surface fallback record is not a native
+op and remains `verified=False`.
+
+### Runtime (native extension executing)
+
+| Check | Failure behavior | Typical message / path |
+| --- | --- | --- |
+| Boundary: value is a `torch.Tensor` | Python exception | `rextio-torch: expected a torch.Tensor` |
+| Boundary: device is CPU | `ValueError` | `rextio-torch: expected a CPU tensor` |
+| Boundary: dtype is float32 | `ValueError` | `rextio-torch: expected a float32 tensor` |
+| Boundary: rank matches annotation | `ValueError` | `rextio-torch: expected rank-N tensor, got rank M` |
+| Matmul inner dimensions | Fallible `f_matmul` → mapped error | `TchError` → `PyRuntimeError` via `__rxttorch_map_err` |
+| Add / broadcast concrete sizes | Fallible `f_add` | same mapping |
+| Other op failures | Fallible `f_*` APIs under `no_grad` | same mapping; no `unwrap` / `panic!` / `assert` |
+
+Certified e2e tests force **native-only** mode for the boundary rejects they
+exercise, so eager fallback cannot mask float64/wrong-rank failures. Inputs are
+not mutated; native outputs remain no-grad CPU float32 of the promised rank
+when contracts hold. The non-CPU check and incompatible concrete
+matmul/broadcast errors are source-enforced fallible paths, but the CPU-only
+real-Cargo fixtures do not directly execute those failure cases.
+
+---
+
+## Examples of accepted vs rejected syntax
+
+### Accepted (Phase A certified chain)
 
 ```python
 from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D
@@ -62,13 +260,13 @@ def inference(
     return F.linear(x, weight, bias).relu().mean(dim=1, keepdim=False)
 ```
 
-### Example (control-flow vertical slice)
+Claims: linear (2→2), relu (2→2), mean (2→1). Real-Cargo certified.
 
-Core claims method calls on named receivers and call chains; a bare BinOp
-receiver such as `(a @ b + bias).relu()` is not offered to plugins. Use temps:
+### Accepted (control-flow + expanded Alpha surface)
 
 ```python
 from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D
+import torch
 
 def inference(
     x: TensorF32Cpu2D,
@@ -86,40 +284,54 @@ def inference(
             odd = hidden @ weight + bias
             hidden = odd.sigmoid()
     return hidden.mean(dim=1, keepdim=False)
+
+def expanded_surface(
+    x: TensorF32Cpu2D,
+    weight: TensorF32Cpu2D,
+    offset: TensorF32Cpu1D,
+) -> TensorF32Cpu1D:
+    hidden = torch.matmul(x, weight)
+    hidden = hidden.tanh()
+    hidden = hidden + hidden
+    hidden = hidden.matmul(weight)
+    reduced = hidden.sum(dim=1, keepdim=False)
+    reduced = reduced + offset
+    return reduced.relu().sigmoid().tanh()
 ```
 
-Python `for` / `if` with Rextio-lowerable scalar `int` / `bool` conditions become
-Rust control flow around native tch helpers. Tensor comparisons and
-tensor-data-dependent conditions are not claimable by plugin API 1.3 and remain
-on the Python fallback.
+One serialized certification project exercises every Alpha rule family (both
+matmul call forms, same-rank and 2D+1D add families, sum, tanh, rank-1
+activation chaining, and the control-flow route). The claim table also accepts
+the reverse **1D+2D** broadcast order; that exact order is unit-tested at the
+claim/lower layer but is not a separate real-Cargo fixture.
 
-Tensor annotations prove dtype, device, and rank only. They do not carry
-concrete dimensions, so matmul compatibility and concrete PyTorch broadcasting
-are deliberately validated by the reused libtorch runtime at execution time.
-One serialized certification project exercises every Alpha rule family,
-including both call forms of matmul, both supported add rank patterns, sum,
-tanh, and rank-1 activation chaining.
+### Rejected or not covered (illustrative)
 
-### Annotation vocabulary (`rextio_torch.types`)
+```python
+# Rejected: linear wrong ranks (1d input)
+# F.linear(x_1d, weight_2d, bias_1d)
 
-| Annotation | dtype | device | rank |
-| --- | --- | --- | --- |
-| `TensorF32Cpu2D` | float32 | CPU | 2 |
-| `TensorF32Cpu1D` | float32 | CPU | 1 |
+# Rejected: mean dim / keepdim not the literal contract
+# t.mean(dim=0, keepdim=False)
+# t.mean(dim=1, keepdim=True)
 
-Marker classes intentionally **import neither torch nor Rextio**. Runtime
-values remain ordinary `torch.Tensor` objects; the analyzer resolves the dotted
-spellings when the plugin is enabled.
+# Rejected: rank-1 matmul
+# a_1d @ b_2d
 
-### Explicit exclusions (still fallback / rejected)
+# NotCovered: unrelated torch API
+# torch.softmax(x, dim=-1)
 
-CUDA/MPS, training/autograd, arbitrary `nn.Module`, dynamic dtype/device/rank
-or reduction dimensions, in-place ops, scalar/`*`/`-`/`/` elementwise forms,
-literal transpose/views (not claimed — view/alias risk), unsupported
-broadcasting rank combinations, tensor comparisons/data-dependent conditions,
-and version-check bypasses.
+# NotCovered: module-style activation (no receiver on the claim site)
+# torch.relu(x)
 
-Unsupported forms must remain fallback or rejected — never falsely claimed.
+# Not offered by core to plugins: bare BinOp receiver
+# (a @ b + bias).relu()
+
+# Not claimed: in-place / other elementwise / views
+# x.relu_();  x * y;  x.transpose(0, 1)
+```
+
+---
 
 ## Install (development only)
 
@@ -130,8 +342,18 @@ python3.11 -m pip install -e '.[dev]'
 
 Plugin discovery and `rextio_torch.types` import **without** importing torch.
 Real native builds need a matching torch 2.11 / libtorch environment and a Rust
-toolchain. The `dev` extra includes packaging tools (`build`, `twine`,
+toolchain, with:
+
+```bash
+export LIBTORCH_USE_PYTORCH=1
+# never: LIBTORCH_BYPASS_VERSION_CHECK
+# ensure `python` on PATH is the same CPython 3.11 env as PyO3 / Rextio
+```
+
+The `dev` extra includes packaging tools (`build`, `twine`,
 `check-wheel-contents`) for the pre-release package gate.
+
+---
 
 ## Historical benchmarks (not a release gate)
 
@@ -145,6 +367,8 @@ Those runs measured boundary-inclusive latency and expansion GO criteria. For
 this Alpha cut they are **historical evidence only** — usefulness of the pinned
 AOT surface is the product goal, not beating a speedup threshold.
 
+---
+
 ## Residual platform risks
 
 - `torch-sys` discovers Python via `PATH` / `VIRTUAL_ENV`, not only
@@ -154,10 +378,20 @@ AOT surface is the product goal, not beating a speedup threshold.
   that built it.
 - Certification was executed on **macOS arm64**; other OS/arch combinations are
   not yet proven.
+- Core limitation: method claims require named or call-chain receivers, not
+  bare BinOp receivers.
 - Package remains private / unreleased; do not publish without a release review.
+
+---
 
 ## Repository safeguards
 
 - Do not publish to PyPI or change GitHub visibility during incubation.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
+- Package metadata includes `Private :: Do Not Upload` (version **0.1.0**).
+
+For the longer product definition and phase history, see the
+[0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical
+benchmark protocols are indexed in [benchmarks/README.md](benchmarks/README.md);
+this README is the current support surface.

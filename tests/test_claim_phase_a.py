@@ -23,6 +23,8 @@ from rextio_torch.claim.activations import (
 from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
     ADD_SAME_RANK_RULE,
+    FUNCTION_MUL_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
@@ -248,25 +250,37 @@ def test_rejects_multiply_with_classification_result_type(left: str, right: str)
     assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
-def test_multiply_claims_no_call_aliases_or_scalar_forms() -> None:
-    for target, receiver in (("torch.mul", None), ("tensor.mul", TENSOR_F32_CPU_1D)):
-        result = PLUGIN.claim(
-            ClaimSite(
-                kind="call",
-                target=target,
-                operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
-                file_path="",
-                line=0,
-                column=0,
-                receiver=(
-                    ReceiverMeta(arg_type=receiver, expr_kind="name", is_safe=True)
-                    if receiver is not None
-                    else None
-                ),
-            ),
-            CONFIG,
-        )
-        assert isinstance(result, NotCovered)
+def test_multiply_claims_exact_function_alias_but_no_method_or_scalar_forms() -> None:
+    functional = ClaimSite(
+        kind="call",
+        target="torch.mul",
+        operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        operand_literals=(
+            ClaimLiteral(is_literal=False),
+            ClaimLiteral(is_literal=False),
+        ),
+        file_path="",
+        line=0,
+        column=0,
+    )
+    assert PLUGIN.claim(functional, CONFIG) == Claimed(
+        rule_id=FUNCTION_MUL_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    method = ClaimSite(
+        kind="call",
+        target="tensor.mul",
+        operand_types=(TENSOR_F32_CPU_1D,),
+        file_path="",
+        line=0,
+        column=0,
+        receiver=ReceiverMeta(
+            arg_type=TENSOR_F32_CPU_1D,
+            expr_kind="name",
+            is_safe=True,
+        ),
+    )
+    assert isinstance(PLUGIN.claim(method, CONFIG), NotCovered)
     scalar = PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, "int"), CONFIG)
     assert isinstance(scalar, Rejected)
     assert scalar.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
@@ -345,9 +359,17 @@ def test_claims_mean_keepdim_true() -> None:
     )
 
 
-def test_rejects_matmul_rank1() -> None:
+def test_claims_mixed_rank_matmul_but_rejects_rank1_rank1() -> None:
     result = PLUGIN.claim(_binop_site("@", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG)
-    assert isinstance(result, Rejected)
+    assert result == Claimed(
+        rule_id=MATMUL_BINOP_MIXED_RANK_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    rank0 = PLUGIN.claim(
+        _binop_site("@", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        CONFIG,
+    )
+    assert isinstance(rank0, Rejected)
 
 
 def test_not_covered_for_unrelated_target() -> None:

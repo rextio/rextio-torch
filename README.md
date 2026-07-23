@@ -183,9 +183,9 @@ claimed `result_type`.
 | Sigmoid method | `.sigmoid()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-sigmoid-f32-cpu-1d` or `…/tensor-sigmoid-f32-cpu-2d` |
 | Tanh method | `.tanh()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-tanh-f32-cpu-1d` or `…/tensor-tanh-f32-cpu-2d` |
 | Functional activations | Exact `torch.relu(t)`, `torch.sigmoid(t)`, or `torch.tanh(t)`; one positional tensor, no keywords | input **1** or **2** | **same as input** | `…/function-{relu,sigmoid,tanh}-f32-cpu-rank1-2` |
-| Matmul binop | `a @ b` | both **2** | **2** | `rextio-torch/tensor-matmul-f32-cpu-2d` |
-| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | both **2** | **2** | `rextio-torch/tensor-matmul-call-f32-cpu-2d` |
-| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver **2**, other **2** | **2** | same as call form |
+| Matmul binop | `a @ b` | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-f32-cpu-{2d,mixed-rank}` |
+| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-call-f32-cpu-{2d,mixed-rank}` |
+| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver/other **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | same as call form |
 | Elementwise `+` (same rank) | `a + b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-add-f32-cpu-same-rank` |
 | Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
 | Elementwise `*` (same rank) | `a * b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-mul-f32-cpu-same-rank` |
@@ -257,7 +257,7 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; rank 1/2 and no keywords | `claim/activations.py` |
 | Reductions: receiver or exact `torch.mean/sum`; dim literal 0/1 once positionally/keyword; keepdim omitted=False or named bool; output must already map to rank-1/2 | `claim/reductions.py` |
 | Classification: receiver or exact `torch.softmax/argmax`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
-| Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
+| Matmul `@` / `torch.matmul` / `.matmul`: rank-2/rank-2 or one rank-2 plus one rank-1 operand in either order; call forms disallow keywords; method form takes one positional operand; rank-1/rank-1 stays rejected because it would return rank-0 | `claim/binops.py` |
 | Elementwise arithmetic: binary `+` / `*` / `-` / `/`, or exact `torch.add/sub/mul/div(a, b)` with two positional non-literal tensors and no keywords; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/method/option variants and other ranks rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
@@ -281,7 +281,7 @@ become silent native claims.
 | --- | --- | --- |
 | Other devices | CUDA, MPS, non-CPU | Outside vocabulary; boundary would reject non-CPU if a native path were reached |
 | Other dtypes | float64, int, etc. | Outside vocabulary; boundary rejects non-float32 at runtime on native paths |
-| Other ranks | rank-0 / rank-3+, matmul with rank-1, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
+| Other ranks | rank-0 / rank-3+, rank-1 × rank-1 matmul, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
 | Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
 | Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
 | Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by Core API 1.3; others reject/fallback |
@@ -423,10 +423,11 @@ def cpu_surface_followup(
 
 The same serialized real-Cargo project executes this slice plus omitted and
 positional-`None` linear forms, every same-rank/2D↔1D subtraction and division
-order, functional rank-2 argmax with default `keepdim=False`, and rank-1
-argmax with named `keepdim=True`. It checks numerical parity, exact
-dtype/device/rank, no-grad output, non-mutation, native route evidence, and a
-runtime incompatible-broadcast failure.
+order, all six mixed-rank matmul spellings/order combinations, functional
+rank-2 argmax with default `keepdim=False`, and rank-1 argmax with named
+`keepdim=True`. It checks numerical parity, exact dtype/device/rank, no-grad
+output, non-mutation, native route evidence, and runtime incompatible
+matmul/broadcast failures.
 
 ### Rejected or not covered (illustrative)
 
@@ -443,8 +444,8 @@ runtime incompatible-broadcast failure.
 # Rejected: duplicate positional and keyword dim
 # t.sum(0, dim=1)
 
-# Rejected: rank-1 matmul
-# a_1d @ b_2d
+# Rejected: rank-1 × rank-1 matmul would produce unregistered rank-0
+# a_1d @ b_1d
 
 # Rejected: exact i64 output type is unavailable
 # matrix.argmax(dim=1, keepdim=True)  # would be int64 rank-2

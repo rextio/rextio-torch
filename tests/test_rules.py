@@ -26,6 +26,8 @@ from rextio_torch.claim.binops import (
     FUNCTION_DIV_RULE,
     FUNCTION_MUL_RULE,
     FUNCTION_SUB_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
+    MATMUL_CALL_MIXED_RANK_RULE,
     SUB_BROADCAST_2D_1D_RULE,
     SUB_SAME_RANK_RULE,
 )
@@ -78,6 +80,8 @@ def test_native_rules_match_claim_constants() -> None:
         FUNCTION_SUB_RULE,
         FUNCTION_MUL_RULE,
         FUNCTION_DIV_RULE,
+        MATMUL_BINOP_MIXED_RANK_RULE,
+        MATMUL_CALL_MIXED_RANK_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
         assert by_id[rule_id].verified is True

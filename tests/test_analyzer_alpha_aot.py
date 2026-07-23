@@ -14,7 +14,9 @@ from rextio.targets.models import TargetSpec
 from rextio_torch.claim.activations import RELU_RULE, SIGMOID_RULE_2D
 from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
     MATMUL_BINOP_RULE,
+    MATMUL_CALL_MIXED_RANK_RULE,
     MATMUL_CALL_RULE,
     MUL_BROADCAST_2D_1D_RULE,
     MUL_SAME_RANK_RULE,
@@ -65,6 +67,20 @@ def method_matmul(
     right: TensorF32Cpu2D,
 ) -> TensorF32Cpu2D:
     return left.matmul(right)
+
+
+def mixed_rank_matmul(
+    matrix: TensorF32Cpu2D,
+    left_vector: TensorF32Cpu1D,
+    right_vector: TensorF32Cpu1D,
+) -> TensorF32Cpu1D:
+    binop_mv = matrix @ right_vector
+    binop_vm = left_vector @ matrix
+    function_mv = torch.matmul(matrix, right_vector)
+    function_vm = torch.matmul(left_vector, matrix)
+    method_mv = matrix.matmul(right_vector)
+    method_vm = left_vector.matmul(matrix)
+    return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
 
 
 def multiply_surface(
@@ -182,6 +198,17 @@ def test_analyzer_alpha_control_flow_routes_native(tmp_path: Path) -> None:
     assert method.plugin_claims[0].target.rpartition(".")[2] == "matmul"
     assert method.plugin_claims[0].receiver is not None
     assert method.plugin_claims[0].receiver.arg_type == TENSOR_F32_CPU_2D
+
+    mixed = _function(analysis, "myapp.kernels.mixed_rank_matmul")
+    assert mixed.accepted is True
+    assert mixed.route == f"native-plugin:{PLUGIN_ID}"
+    mixed_rules = [claim.rule_id for claim in mixed.plugin_claims]
+    assert mixed_rules.count(MATMUL_BINOP_MIXED_RANK_RULE) == 2
+    assert mixed_rules.count(MATMUL_CALL_MIXED_RANK_RULE) == 4
+    assert all(
+        claim.result_type == "rextio-torch/tensor-f32-cpu-1d"
+        for claim in mixed.plugin_claims[:6]
+    )
 
     multiply = _function(analysis, "myapp.kernels.multiply_surface")
     assert multiply.accepted is True

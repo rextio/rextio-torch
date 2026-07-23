@@ -5,6 +5,10 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add mixed-rank matrix/vector matmul for `2D × 1D` and `1D × 2D` through
+  `@`, exact `torch.matmul`, and zero-keyword `.matmul`, returning float32 CPU
+  rank-1 through the existing fallible no-grad `f_matmul` helper. Rank-1 ×
+  rank-1 remains fallback because rank-0 is outside the registered vocabulary.
 - Add exact `torch.add/sub/mul/div(a, b)` spellings for two positional
   float32 CPU rank-1/rank-2 tensors. They reuse the existing same-rank and
   rank-2/rank-1 trailing-broadcast matrix and fallible no-grad helpers;

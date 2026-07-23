@@ -198,7 +198,8 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "Binary @ with two float32 CPU rank-2 operands. Result is rank-2 "
             "float32 CPU. Inner-dimension compatibility is not represented by "
             "the rank-only annotation vocabulary and is checked by tch at runtime. "
-            "Rank-1, mixed ranks, and other dtypes/devices stay unclaimed."
+            "Mixed rank-2/rank-1 forms use the sibling mixed-rank rule; rank-1 × "
+            "rank-1 and other dtypes/devices stay unclaimed."
         ),
         outcome="native",
         diagnostic_code="RXTP-TORCH-009",
@@ -230,6 +231,59 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         guidance=(
             "Annotate both tensors as TensorF32Cpu2D and call torch.matmul(a, b) "
             "or a.matmul(b) with runtime-compatible inner dimensions."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-matmul-f32-cpu-mixed-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "mixed-rank float32 CPU matrix/vector matmul via rank-2 @ rank-1 "
+                "or rank-1 @ rank-2"
+            ),
+        ),
+        constraint=(
+            "Binary @ with one float32 CPU rank-2 operand and one float32 CPU "
+            "rank-1 operand, in either order. Result is rank-1 float32 CPU. "
+            "Concrete inner dimensions remain a fallible tch runtime contract. "
+            "Rank-1 @ rank-1 is excluded because it produces an unregistered "
+            "rank-0 result; other dtypes/devices/ranks remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-035",
+        guidance=(
+            "Use TensorF32Cpu2D @ TensorF32Cpu1D or the reverse order and ensure "
+            "their concrete inner dimensions are compatible at runtime."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-matmul-call-f32-cpu-mixed-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "mixed-rank float32 CPU matrix/vector matmul via "
+                "torch.matmul(a, b) or a.matmul(b)"
+            ),
+        ),
+        constraint=(
+            "Exact functional torch.matmul with two positional operands, or "
+            "zero-keyword method .matmul with one positional operand, where one "
+            "tensor is float32 CPU rank-2 and the other is float32 CPU rank-1. "
+            "Either order returns float32 CPU rank-1. Concrete inner dimensions "
+            "are checked by fallible tch f_matmul at runtime. Rank-1 × rank-1, "
+            "keywords, and other dtypes/devices/ranks remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-036",
+        guidance=(
+            "Call torch.matmul(matrix, vector), torch.matmul(vector, matrix), "
+            "matrix.matmul(vector), or vector.matmul(matrix) without keywords."
         ),
         stability="experimental",
         verified=True,

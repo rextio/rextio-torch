@@ -141,6 +141,20 @@ def functional_arithmetic_aliases(
     return torch.div(multiplied, right)
 
 
+def mixed_rank_matmul(
+    matrix: TensorF32Cpu2D,
+    left_vector: TensorF32Cpu1D,
+    right_vector: TensorF32Cpu1D,
+) -> TensorF32Cpu1D:
+    binop_mv = matrix @ right_vector
+    binop_vm = left_vector @ matrix
+    function_mv = torch.matmul(matrix, right_vector)
+    function_vm = torch.matmul(left_vector, matrix)
+    method_mv = matrix.matmul(right_vector)
+    method_vm = left_vector.matmul(matrix)
+    return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
+
+
 def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = torch.softmax(logits, 0)
     return torch.argmax(probabilities, dim=1)
@@ -311,6 +325,17 @@ def _eager_functional_arithmetic_aliases(left, right, bias, vector):
     subtracted = torch.sub(added, bias)
     multiplied = torch.mul(vector, subtracted)
     return torch.div(multiplied, right)
+
+
+def _eager_mixed_rank_matmul(matrix, left_vector, right_vector):
+    torch = _import_torch()
+    binop_mv = matrix @ right_vector
+    binop_vm = left_vector @ matrix
+    function_mv = torch.matmul(matrix, right_vector)
+    function_vm = torch.matmul(left_vector, matrix)
+    method_mv = matrix.matmul(right_vector)
+    method_vm = left_vector.matmul(matrix)
+    return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
 
 
 def _eager_functional_classify(logits):
@@ -665,6 +690,19 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         "rextio-torch/function-div-f32-cpu-rank1-2",
     ]
 
+    mixed_record = _route_of(project, "torch_app.kernels.mixed_rank_matmul")
+    assert mixed_record["native_status"] == "accepted"
+    assert mixed_record["route"] == "native-plugin:rextio-torch"
+    mixed_rules = [
+        claim["rule_id"] for claim in mixed_record.get("plugin_claims") or []
+    ]
+    assert mixed_rules.count(
+        "rextio-torch/tensor-matmul-f32-cpu-mixed-rank"
+    ) == 2
+    assert mixed_rules.count(
+        "rextio-torch/tensor-matmul-call-f32-cpu-mixed-rank"
+    ) == 4
+
     functional_record = _route_of(
         project, "torch_app.kernels.functional_classify"
     )
@@ -790,6 +828,40 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
     assert alias_out.requires_grad is False
     for actual, snapshot in zip(arithmetic_args, arithmetic_snap, strict=True):
         assert _tensor_equal(actual, snapshot)
+
+    matrix = torch.tensor(
+        [[1.0, -2.0, 0.5], [3.0, 4.0, -1.0], [2.0, 0.25, 5.0]],
+        dtype=torch.float32,
+    )
+    left_vector = torch.tensor([0.5, -1.5, 2.0], dtype=torch.float32)
+    right_vector = torch.tensor([-2.0, 1.25, 0.75], dtype=torch.float32)
+    mixed_args = (matrix, left_vector, right_vector)
+    mixed_snap = _copy_tensor_args(mixed_args)
+    mixed_checker = project.equivalence_checker(
+        "torch_app.kernels.mixed_rank_matmul",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    mixed_out = mixed_checker(*mixed_args)
+    mixed_eager = _eager_mixed_rank_matmul(*mixed_snap)
+    assert _tensor_equal(mixed_out, mixed_eager)
+    assert mixed_out.device.type == "cpu"
+    assert mixed_out.dtype == torch.float32
+    assert tuple(mixed_out.shape) == (3,)
+    assert mixed_out.requires_grad is False
+    for actual, snapshot in zip(mixed_args, mixed_snap, strict=True):
+        assert _tensor_equal(actual, snapshot)
+
+    with _native_mode(project, "native"):
+        from torch_app.kernels import mixed_rank_matmul
+
+        with pytest.raises(RuntimeError):
+            mixed_rank_matmul(
+                torch.ones((2, 3), dtype=torch.float32),
+                torch.ones(2, dtype=torch.float32),
+                torch.ones(4, dtype=torch.float32),
+            )
 
     with _native_mode(project, "native"):
         from torch_app.kernels import arithmetic_followup

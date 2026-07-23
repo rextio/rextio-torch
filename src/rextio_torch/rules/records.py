@@ -31,6 +31,32 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/functional-linear-none-f32-cpu-2d",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.nn.functional.linear(input, weight) with bias omitted, "
+                "literal positional None, or exact literal keyword bias=None"
+            ),
+        ),
+        constraint=(
+            "Exact canonical functional.linear target with float32 CPU rank-2 "
+            "input and weight. Bias is absent or statically proved literal None; "
+            "result is rank-2 float32 CPU under no-grad. Tensor-valued keyword "
+            "bias/input/weight cannot be represented by Core plugin API 1.3 and "
+            "stays fallback. Other keywords and module forms are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-023",
+        guidance=(
+            "Pass input/weight positionally. Omit bias, pass positional literal "
+            "None, or use the exact literal keyword bias=None."
+        ),
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
         id="rextio-torch/tensor-relu-f32-cpu-2d",
         provider="rextio-torch",
         scope=RuleScope(

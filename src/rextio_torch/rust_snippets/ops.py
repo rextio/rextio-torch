@@ -7,6 +7,7 @@ to a Python exception without panicking.
 from __future__ import annotations
 
 LINEAR = "__rxttorch_linear"
+LINEAR_NO_BIAS = "__rxttorch_linear_no_bias"
 RELU = "__rxttorch_relu"
 SIGMOID = "__rxttorch_sigmoid"
 TANH = "__rxttorch_tanh"
@@ -32,6 +33,21 @@ def linear_helper() -> str:
     let out = input
         .0
         .f_linear(&weight.0, Some(&bias.0))
+        .map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def linear_no_bias_helper() -> str:
+    """Return the no-grad fallible functional linear helper with ``bias=None``."""
+    return r"""fn __rxttorch_linear_no_bias(
+    input: &RxtTorchTensor,
+    weight: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input
+        .0
+        .f_linear(&weight.0, Option::<&tch::Tensor>::None)
         .map_err(__rxttorch_map_err)?;
     Ok(RxtTorchTensor(out))
 }"""
@@ -227,6 +243,7 @@ __all__ = [
     "ARGMAX_DIM1_KEEPFALSE",
     "DIV",
     "LINEAR",
+    "LINEAR_NO_BIAS",
     "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
     "MUL",
@@ -242,6 +259,7 @@ __all__ = [
     "argmax_dim1_keepfalse_helper",
     "div_helper",
     "linear_helper",
+    "linear_no_bias_helper",
     "matmul_helper",
     "mean_dim1_keepfalse_helper",
     "mul_helper",

@@ -27,7 +27,7 @@ from rextio_torch.claim.binops import (
 )
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
 from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
-from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D
 from rextio_torch.plugin import plugin
 from rextio_torch.rust_snippets import (
     ADD,
@@ -289,6 +289,40 @@ def test_lower_add_and_matmul() -> None:
     assert mat_lowered.rust == f"{MATMUL}(&a, &w)?"
     assert matmul_helper() in mat_lowered.helpers
     assert "f_matmul" in matmul_helper()
+
+
+@pytest.mark.parametrize(
+    ("rule_id", "left", "right", "result_type"),
+    (
+        (ADD_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (ADD_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (ADD_SAME_RANK_RULE, TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
+        (ADD_BROADCAST_2D_1D_RULE, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+        (ADD_BROADCAST_2D_1D_RULE, TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D),
+    ),
+)
+def test_lower_add_rejects_non_f32_claim_metadata(
+    rule_id: str, left: str, right: str, result_type: str
+) -> None:
+    claimed = ClaimSite(
+        kind="binop",
+        target="+",
+        operand_types=(left, right),
+        file_path="",
+        line=0,
+        column=0,
+        rule_id=rule_id,
+        result_type=result_type,
+    )
+    with pytest.raises(ValueError, match="float32 CPU"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("left", "right"),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
 
 
 def test_lower_matmul_call_forms_revalidate_target_receiver_and_operands() -> None:

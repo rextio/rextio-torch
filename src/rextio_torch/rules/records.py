@@ -305,6 +305,49 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         stability="experimental",
         verified=True,
     ),
+    RuleRecord(
+        id="rextio-torch/tensor-softmax-dim1-f32-cpu-2d",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="tensor.softmax(dim=1) on float32 CPU rank-2 logits (method form)",
+        ),
+        constraint=(
+            "Method call with no positional arguments and exactly the literal keyword "
+            "dim=<int 1> on a float32 CPU rank-2 receiver. No dtype keyword or "
+            "functional spelling is claimed. Result remains float32 CPU rank-2."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-015",
+        guidance="Write .softmax(dim=1) with a literal keyword on TensorF32Cpu2D logits.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-argmax-dim1-keepfalse-i64-cpu-1d",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "tensor.argmax(dim=1, keepdim=False) on float32 CPU rank-2 logits "
+                "(method form)"
+            ),
+        ),
+        constraint=(
+            "Method call with no positional arguments and exactly literal dim=<int 1> "
+            "and keepdim=<bool False> on a float32 CPU rank-2 receiver. The result "
+            "is checked and materialized as an int64 CPU rank-1 tensor. Dynamic values, "
+            "keepdim=True, dtype overrides, and functional spellings stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-016",
+        guidance=(
+            "Write .argmax(dim=1, keepdim=False) after rank-2 float32 CPU logits; "
+            "annotate the function result as TensorI64Cpu1D."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
 )
 
 

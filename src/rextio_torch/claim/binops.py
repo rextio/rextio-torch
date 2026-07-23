@@ -9,10 +9,10 @@ from rextio_torch.diagnostics import (
     DIAGNOSTIC_MATMUL,
     DIAGNOSTIC_MATMUL_CALL,
     DIAGNOSTIC_UNSUPPORTED,
+    TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
     is_tensor_type,
     reject,
-    tensor_meta,
 )
 
 ADD_SAME_RANK_RULE = "rextio-torch/tensor-add-f32-cpu-same-rank"
@@ -22,6 +22,8 @@ MATMUL_CALL_RULE = "rextio-torch/tensor-matmul-call-f32-cpu-2d"
 MATMUL_CALL_TARGET = "torch.matmul"
 
 ADD_RULES: frozenset[str] = frozenset({ADD_SAME_RANK_RULE, ADD_BROADCAST_2D_1D_RULE})
+
+_ADD_F32_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
 
 def _method_name(target: str) -> str:
@@ -55,26 +57,22 @@ def _try_claim_add(site: ClaimSite) -> ClaimResult | None:
             "operand types are outside the float32 CPU rank-1/2 tensor surface",
             "Annotate both operands with TensorF32Cpu1D or TensorF32Cpu2D.",
         )
-    left_meta = tensor_meta(left)
-    right_meta = tensor_meta(right)
-    if left_meta is None or right_meta is None:
+    if left not in _ADD_F32_TYPES or right not in _ADD_F32_TYPES:
         return reject(
             site,
             DIAGNOSTIC_UNSUPPORTED,
-            f"unknown tensor type keys for +: {left!r}, {right!r}",
-            "Use the registered rextio_torch.types float32 CPU tensor annotations.",
+            f"+ requires float32 CPU rank-1/2 operands; got {left!r}, {right!r}",
+            "Use TensorF32Cpu1D or TensorF32Cpu2D for both add operands.",
         )
-    _, _, left_rank = left_meta
-    _, _, right_rank = right_meta
-    if left_rank == right_rank:
+    if left == right:
         return Claimed(rule_id=ADD_SAME_RANK_RULE, result_type=left)
     # Trailing bias broadcast: rank-2 + rank-1 (either order) → rank-2.
-    if {left_rank, right_rank} == {1, 2}:
+    if {left, right} == _ADD_F32_TYPES:
         return Claimed(rule_id=ADD_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D)
     return reject(
         site,
         DIAGNOSTIC_ADD,
-        f"unsupported + broadcasting for ranks {left_rank} and {right_rank}",
+        f"unsupported + operand types {left!r} and {right!r}",
         "Supported forms: same-rank + and rank-2 + rank-1 trailing bias broadcast.",
     )
 

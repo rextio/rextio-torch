@@ -6,8 +6,8 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.1** (unreleased; from `rextio_torch.__about__`) |
-| Release status | **Unreleased compatibility hotfix**; latest release is **0.1.0 public Alpha** (2026-07-18) |
+| Package version | **0.1.2** (unreleased; from `rextio_torch.__about__`) |
+| Release status | **Unreleased compatibility + classification-head update**; latest release is **0.1.0 public Alpha** (2026-07-18) |
 | Distribution | Latest published release: [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
@@ -17,7 +17,8 @@ PyTorch inference code to Rust expressions backed by
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README documents the **unreleased 0.1.1 compatibility update** to the
+This README documents the **unreleased 0.1.2 compatibility and
+classification-head update** to the
 0.1.0 public native-AOT Alpha support contract. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
@@ -149,6 +150,7 @@ with a clear reason** — never mask by setting `LIBTORCH_BYPASS_VERSION_CHECK`.
 | --- | --- | --- | --- | --- |
 | `TensorF32Cpu2D` | `rextio-torch/tensor-f32-cpu-2d` | float32 | CPU | 2 |
 | `TensorF32Cpu1D` | `rextio-torch/tensor-f32-cpu-1d` | float32 | CPU | 1 |
+| `TensorI64Cpu1D` | `rextio-torch/tensor-i64-cpu-1d` | int64 | CPU | 1 (classification result only) |
 
 Marker classes intentionally **import neither torch nor Rextio**. Runtime values
 remain ordinary `torch.Tensor` objects; the analyzer resolves the dotted
@@ -186,6 +188,8 @@ claimed `result_type`.
 | Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
 | Mean | `.mean(dim=1, keepdim=False)` — **only** those two **literal** keywords; no positionals | receiver **2** | **1** | `rextio-torch/tensor-mean-dim1-f32-cpu-2d` |
 | Sum | `.sum(dim=1, keepdim=False)` — same literal guards as mean | receiver **2** | **1** | `rextio-torch/tensor-sum-dim1-f32-cpu-2d` |
+| Classification softmax | `.softmax(dim=1)` — **only** literal `dim=1`; no dtype keyword or functional spelling | receiver **2** | **2** | `rextio-torch/tensor-softmax-dim1-f32-cpu-2d` |
+| Classification argmax | `.argmax(dim=1, keepdim=False)` — **only** those literal keywords | receiver **2** | **1 int64** | `rextio-torch/tensor-argmax-dim1-keepfalse-i64-cpu-1d` |
 
 Native op helpers (all fallible, all under `no_grad`):
 
@@ -199,10 +203,12 @@ Native op helpers (all fallible, all under `no_grad`):
 | `.sum(…)` | `__rxttorch_sum_dim1_keepdim_false` | `f_sum_dim_intlist(1, false, None)` |
 | `+` | `__rxttorch_add` | `f_add` |
 | matmul / `@` | `__rxttorch_matmul` | `f_matmul` |
+| `.softmax(dim=1)` | `__rxttorch_softmax_dim1` | `f_softmax(1, None)` |
+| `.argmax(dim=1, keepdim=False)` | `__rxttorch_argmax_dim1_keepdim_false` | `f_argmax(1, false)` |
 
 Coverage symbols declared for the analyzer include
 `torch.nn.functional.linear`, `torch.matmul`, and method forms
-`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul}`. Binary `+` / `@` are claimed
+`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul,softmax,argmax}`. Binary `+` / `@` are claimed
 via binop sites (not module symbols alone).
 
 ### Control flow around claimed ops
@@ -271,6 +277,8 @@ become silent native claims.
 | In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
 | Elementwise other ops | `-`, `*`, `/`, scalar operands | Not claimed |
 | Reductions other shapes | whole-tensor mean/sum, `dim≠1`, `keepdim=True`, dynamic dim/keepdim, positionals | `Rejected` or unclaimed |
+| Classification variations | functional `torch.softmax`/`torch.argmax`, dtype override, dynamic dim/keepdim, `dim≠1`, `keepdim=True`, rank-3+ logits | `Rejected` or unclaimed |
+| Classification-result arithmetic | `TensorI64Cpu1D + TensorI64Cpu1D` or mixed int64/float32 `+` | `Rejected`; add remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
 | Unsupported broadcast ranks | `+` rank combinations other than same-rank or 2d+1d | `Rejected` |
 | Unrelated torch APIs | e.g. `torch.softmax` | `NotCovered` |
@@ -409,6 +417,9 @@ claim/lower layer but is not a separate real-Cargo fixture.
 
 # Not claimed: in-place / other elementwise / views
 # x.relu_();  x * y;  x.transpose(0, 1)
+
+# Accepted classification head: int64 rank-1 labels
+# logits.softmax(dim=1).argmax(dim=1, keepdim=False)
 ```
 
 ---
@@ -487,7 +498,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Unreleased package metadata identifies version **0.1.1** as Development Status Alpha.
+- Unreleased package metadata identifies version **0.1.2** as Development Status Alpha.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

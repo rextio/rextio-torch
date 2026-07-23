@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rextio.plugins.api import BoundaryConversion, PluginType
 
-from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D
 from rextio_torch.rust_snippets.boundary import boundary_helpers
 
 
@@ -40,6 +40,11 @@ PLUGIN_TYPES: tuple[PluginType, ...] = (
         TENSOR_F32_CPU_1D,
         "TensorF32Cpu1D",
         "__rxttorch_extract_f32_cpu_1d",
+    ),
+    _tensor_type(
+        TENSOR_I64_CPU_1D,
+        "TensorI64Cpu1D",
+        "__rxttorch_extract_i64_cpu_1d",
     ),
 )
 

@@ -46,7 +46,7 @@ def test_entry_point_factory_returns_plugin() -> None:
     assert isinstance(obj, RextioTorchPlugin)
     assert obj.plugin_id == PLUGIN_ID
     assert obj.api_version == REQUIRED_PLUGIN_API == "1.3"
-    assert __version__ == "0.1.1"
+    assert __version__ == "0.1.2"
 
 
 def test_core_loader_accepts_the_plugin() -> None:
@@ -105,6 +105,8 @@ def test_covers_alpha_aot_surface() -> None:
     assert "torch.Tensor.tanh" in coverage.symbols
     assert "torch.Tensor.mean" in coverage.symbols
     assert "torch.Tensor.sum" in coverage.symbols
+    assert "torch.Tensor.softmax" in coverage.symbols
+    assert "torch.Tensor.argmax" in coverage.symbols
 
 
 def test_rule_records_are_namespaced_and_well_formed() -> None:
@@ -126,6 +128,8 @@ def test_rule_records_are_namespaced_and_well_formed() -> None:
     assert "RXTP-TORCH-003" in codes
     assert "RXTP-TORCH-010" in codes
     assert "RXTP-TORCH-014" in codes
+    assert "RXTP-TORCH-015" in codes
+    assert "RXTP-TORCH-016" in codes
 
 
 def test_type_vocabulary_keys_and_boundary() -> None:
@@ -133,6 +137,7 @@ def test_type_vocabulary_keys_and_boundary() -> None:
     assert {t.key for t in types} == {
         "rextio-torch/tensor-f32-cpu-2d",
         "rextio-torch/tensor-f32-cpu-1d",
+        "rextio-torch/tensor-i64-cpu-1d",
     }
     for plugin_type in types:
         assert isinstance(plugin_type, PluginType)
@@ -152,6 +157,7 @@ def test_type_vocabulary_keys_and_boundary() -> None:
     assert spellings == {
         "rextio_torch.types.TensorF32Cpu2D",
         "rextio_torch.types.TensorF32Cpu1D",
+        "rextio_torch.types.TensorI64Cpu1D",
     }
 
 

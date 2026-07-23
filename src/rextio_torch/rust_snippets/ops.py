@@ -14,6 +14,8 @@ MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
 SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
 ADD = "__rxttorch_add"
 MATMUL = "__rxttorch_matmul"
+SOFTMAX_DIM1 = "__rxttorch_softmax_dim1"
+ARGMAX_DIM1_KEEPFALSE = "__rxttorch_argmax_dim1_keepdim_false"
 
 
 def linear_helper() -> str:
@@ -111,21 +113,52 @@ def matmul_helper() -> str:
 }"""
 
 
+def softmax_dim1_helper() -> str:
+    """Return the no-grad fallible softmax(dim=1) helper."""
+    return r"""fn __rxttorch_softmax_dim1(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_softmax(1i64, None).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def argmax_dim1_keepfalse_helper() -> str:
+    """Return the no-grad fallible argmax(dim=1, keepdim=False) helper."""
+    return r"""fn __rxttorch_argmax_dim1_keepdim_false(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_argmax(1i64, false).map_err(__rxttorch_map_err)?;
+    if out.device() != tch::Device::Cpu || out.kind() != tch::Kind::Int64 || out.dim() != 1 {
+        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+            "rextio-torch: argmax classification result violated CPU int64 rank-1 boundary",
+        ));
+    }
+    Ok(RxtTorchTensor(out))
+}"""
+
+
 __all__ = [
     "ADD",
+    "ARGMAX_DIM1_KEEPFALSE",
     "LINEAR",
     "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
     "RELU",
     "SIGMOID",
+    "SOFTMAX_DIM1",
     "SUM_DIM1_KEEPFALSE",
     "TANH",
     "add_helper",
+    "argmax_dim1_keepfalse_helper",
     "linear_helper",
     "matmul_helper",
     "mean_dim1_keepfalse_helper",
     "relu_helper",
     "sigmoid_helper",
+    "softmax_dim1_helper",
     "sum_dim1_keepfalse_helper",
     "tanh_helper",
 ]

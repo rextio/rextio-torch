@@ -16,6 +16,8 @@ from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.classification import ARGMAX_RULE, SOFTMAX_RULE
 from rextio_torch.claim.reductions import MEAN_RULE
@@ -63,6 +65,18 @@ def method_matmul(
     right: TensorF32Cpu2D,
 ) -> TensorF32Cpu2D:
     return left.matmul(right)
+
+
+def multiply_surface(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    vector: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    same_rank_2d = left * right
+    same_rank_1d = bias * vector
+    broadcast_forward = same_rank_2d * same_rank_1d
+    return same_rank_1d * broadcast_forward
 '''
 
 CLASSIFICATION_HEAD_SOURCE = '''
@@ -168,6 +182,13 @@ def test_analyzer_alpha_control_flow_routes_native(tmp_path: Path) -> None:
     assert method.plugin_claims[0].target.rpartition(".")[2] == "matmul"
     assert method.plugin_claims[0].receiver is not None
     assert method.plugin_claims[0].receiver.arg_type == TENSOR_F32_CPU_2D
+
+    multiply = _function(analysis, "myapp.kernels.multiply_surface")
+    assert multiply.accepted is True
+    assert multiply.route == f"native-plugin:{PLUGIN_ID}"
+    multiply_rules = [claim.rule_id for claim in multiply.plugin_claims]
+    assert multiply_rules.count(MUL_SAME_RANK_RULE) == 2
+    assert multiply_rules.count(MUL_BROADCAST_2D_1D_RULE) == 2
 
 
 def test_analyzer_classification_head_routes_native_with_i64_result(tmp_path: Path) -> None:

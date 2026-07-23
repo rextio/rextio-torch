@@ -24,6 +24,8 @@ from rextio_torch.claim.binops import (
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
 from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
@@ -34,6 +36,7 @@ from rextio_torch.rust_snippets import (
     LINEAR,
     MATMUL,
     MEAN_DIM1_KEEPFALSE,
+    MUL,
     RELU,
     SIGMOID,
     SUM_DIM1_KEEPFALSE,
@@ -43,6 +46,7 @@ from rextio_torch.rust_snippets import (
     linear_helper,
     matmul_helper,
     mean_dim1_keepfalse_helper,
+    mul_helper,
     relu_helper,
     sigmoid_helper,
     sum_dim1_keepfalse_helper,
@@ -294,6 +298,38 @@ def test_lower_add_and_matmul() -> None:
 @pytest.mark.parametrize(
     ("rule_id", "left", "right", "result_type"),
     (
+        (MUL_SAME_RANK_RULE, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        (MUL_SAME_RANK_RULE, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+        (MUL_BROADCAST_2D_1D_RULE, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D),
+        (MUL_BROADCAST_2D_1D_RULE, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+    ),
+)
+def test_lower_multiply(rule_id: str, left: str, right: str, result_type: str) -> None:
+    claimed = ClaimSite(
+        kind="binop",
+        target="*",
+        operand_types=(left, right),
+        file_path="",
+        line=0,
+        column=0,
+        rule_id=rule_id,
+        result_type=result_type,
+    )
+    lowered = PLUGIN.lower(
+        claimed,
+        LoweringContext(
+            operands=("left", "right"), target_language="rust", fresh_name=_fresh_name
+        ),
+    )
+    assert lowered.rust == f"{MUL}(&left, &right)?"
+    assert mul_helper() in lowered.helpers
+    assert "f_mul" in mul_helper()
+    assert "no_grad_guard" in mul_helper()
+
+
+@pytest.mark.parametrize(
+    ("rule_id", "left", "right", "result_type"),
+    (
         (ADD_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
         (ADD_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
         (ADD_SAME_RANK_RULE, TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
@@ -321,6 +357,59 @@ def test_lower_add_rejects_non_f32_claim_metadata(
                 operands=("left", "right"),
                 target_language="rust",
                 fresh_name=_fresh_name,
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("rule_id", "left", "right", "result_type"),
+    (
+        (MUL_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (MUL_SAME_RANK_RULE, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (MUL_BROADCAST_2D_1D_RULE, TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+    ),
+)
+def test_lower_multiply_rejects_forged_metadata(
+    rule_id: str, left: str, right: str, result_type: str
+) -> None:
+    claimed = ClaimSite(
+        kind="binop",
+        target="*",
+        operand_types=(left, right),
+        file_path="",
+        line=0,
+        column=0,
+        rule_id=rule_id,
+        result_type=result_type,
+    )
+    with pytest.raises(ValueError, match="float32 CPU"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("left", "right"), target_language="rust", fresh_name=_fresh_name
+            ),
+        )
+
+
+def test_lower_multiply_rejects_forged_rendered_receiver() -> None:
+    claimed = ClaimSite(
+        kind="binop",
+        target="*",
+        operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        file_path="",
+        line=0,
+        column=0,
+        rule_id=MUL_SAME_RANK_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    with pytest.raises(ValueError, match="two positional"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("left", "right"),
+                target_language="rust",
+                fresh_name=_fresh_name,
+                receiver="forged_receiver",
             ),
         )
 
@@ -525,6 +614,34 @@ def test_lower_guard_survives_optimized_interpreter() -> None:
     assert "guarded True" in completed.stdout
 
 
+def test_multiply_lower_guard_survives_optimized_interpreter() -> None:
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1] / "src"
+    program = (
+        "from rextio.plugins.api import ClaimSite, LoweringContext\n"
+        "from rextio_torch.claim.binops import MUL_SAME_RANK_RULE\n"
+        "from rextio_torch.diagnostics import TENSOR_F32_CPU_1D\n"
+        "from rextio_torch.plugin import plugin\n"
+        "claimed = ClaimSite(kind='binop', target='*',\n"
+        " operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D), file_path='', line=0, column=0,\n"
+        " rule_id=MUL_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_1D)\n"
+        "try:\n"
+        " plugin().lower(claimed, LoweringContext(operands=('a', 'b'), target_language='rust', fresh_name=lambda p: p, receiver='forged'))\n"
+        "except ValueError as exc:\n"
+        " print('guarded', 'two positional' in str(exc).lower())\n"
+        "else:\n"
+        " print('missing-guard')\n"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(src), env.get("PYTHONPATH", "")])
+    completed = subprocess.run(
+        [sys.executable, "-O", "-c", program], check=False, capture_output=True, text=True, env=env
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "guarded True" in completed.stdout
+
+
 def test_ops_helpers_map_errors_without_panic() -> None:
     helpers = (
         linear_helper(),
@@ -534,6 +651,7 @@ def test_ops_helpers_map_errors_without_panic() -> None:
         mean_dim1_keepfalse_helper(),
         sum_dim1_keepfalse_helper(),
         add_helper(),
+        mul_helper(),
         matmul_helper(),
     )
     for helper in helpers:

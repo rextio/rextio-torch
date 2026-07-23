@@ -35,7 +35,7 @@ a release gate for this Alpha cut.
 | Component | Exact pin | Why it must match |
 | --- | --- | --- |
 | CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
-| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Core's loader negotiates this provider's declared API **1.3** with supported Core 1.3/1.4 hosts; provider methods do not enforce host API equality. |
+| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Core's loader negotiates this provider's declared API **1.3** with compatible hosts; provider registration methods require a parseable host API in major 1 with minor >=3, without enforcing exact equality. |
 | Plugin API | **1.3** | Claim sites, receivers, keyword literals, type vocabulary, and crate deps are API 1.3 contracts. |
 | PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
 | Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
@@ -60,7 +60,9 @@ a release gate for this Alpha cut.
    python-extension bridge).
 4. **Rextio 0.1.3+ / provider API 1.3** — claim metadata (receivers, literal
    keywords, type keys) is not available on older plugin APIs. The provider
-   remains API 1.3 while Core's loader handles compatible 1.3/1.4 host APIs.
+   remains API 1.3 while Core's loader handles compatible host APIs.
+   Registration fails closed for API 1.2, other majors, or malformed host
+   versions before registration can reach fields unavailable on older Core.
 
 Certification and real-Cargo tests configure this environment explicitly.
 **Host OS is not a runtime claim gate in this plugin:** the source does not

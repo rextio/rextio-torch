@@ -64,7 +64,7 @@ def test_core_loader_accepts_the_plugin() -> None:
     ]
 
 
-@pytest.mark.parametrize("host_api", ("1.3", "1.4"))
+@pytest.mark.parametrize("host_api", ("1.3", "1.4", "1.5"))
 def test_loader_negotiates_api_13_provider_without_artifact_capability(
     monkeypatch: pytest.MonkeyPatch, host_api: str
 ) -> None:
@@ -77,6 +77,20 @@ def test_loader_negotiates_api_13_provider_without_artifact_capability(
     assert registry.active[0].api_version == "1.3"
     assert getattr(registry.active[0], "artifact_capability_declared", False) is False
     assert not hasattr(plugin(), "artifact_capability")
+
+
+@pytest.mark.parametrize(
+    "host_api",
+    ("1.2", "2.0", "1", "1.3.0", "not-a-version"),
+)
+def test_provider_registration_rejects_incompatible_host_api(
+    monkeypatch: pytest.MonkeyPatch, host_api: str
+) -> None:
+    import rextio.plugins.api as plugin_api
+
+    monkeypatch.setattr(plugin_api, "PLUGIN_API_VERSION", host_api)
+    with pytest.raises(RuntimeError, match="compatible Rextio plugin host API"):
+        RextioTorchPlugin().to_rextio_plugin()
 
 
 def test_covers_alpha_aot_surface() -> None:

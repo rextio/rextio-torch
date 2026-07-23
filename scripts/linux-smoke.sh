@@ -110,9 +110,8 @@ from rextio_torch.plugin import REQUIRED_PLUGIN_API, plugin
 
 print(f"PLUGIN_API_VERSION={PLUGIN_API_VERSION}")
 print(f"REQUIRED_PLUGIN_API={REQUIRED_PLUGIN_API}")
-if PLUGIN_API_VERSION not in {"1.3", "1.4"}:
-    raise SystemExit("error: Rextio plugin API must be compatible with provider API 1.3")
-deps = plugin().crate_dependencies()
+provider = plugin()
+deps = provider.crate_dependencies()
 assert deps[0].name == "tch" and deps[0].version == "=0.24.0"
 assert deps[0].features == ("python-extension",)
 print("crate pin: tch =0.24.0 features=python-extension")

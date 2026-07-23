@@ -67,7 +67,12 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
         if operation is None:
             return None
         diagnostic = _DIAGNOSTICS[operation]
-        if site.keywords or len(site.operand_types) != 1:
+        if (
+            site.keywords
+            or len(site.operand_types) != 1
+            or len(site.operand_literals) != 1
+            or site.operand_literals[0].is_literal
+        ):
             return reject(
                 site,
                 diagnostic,
@@ -90,7 +95,7 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
     if operation not in _METHODS or site.target in _FUNCTION_TARGETS:
         return None
     diagnostic = _DIAGNOSTICS[operation]
-    if site.operand_types or site.keywords:
+    if site.operand_types or site.operand_literals or site.keywords:
         return reject(
             site,
             diagnostic,

@@ -167,6 +167,12 @@ def test_rejects_noncanonical_unary_call_shapes(
         malformed = (
             replace(valid, keywords=(keyword,)),
             replace(valid, operand_types=(), operand_literals=()),
+            replace(valid, operand_literals=()),
+            replace(valid, operand_literals=(NON_LITERAL, NON_LITERAL)),
+            replace(
+                valid,
+                operand_literals=(ClaimLiteral(is_literal=True, value=1),),
+            ),
             replace(
                 valid,
                 operand_types=(TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
@@ -188,6 +194,7 @@ def test_rejects_noncanonical_unary_call_shapes(
         valid = _method(method)
         malformed = (
             replace(valid, operand_types=(TENSOR_F32_CPU_2D,)),
+            replace(valid, operand_literals=(NON_LITERAL,)),
             replace(valid, keywords=(keyword,)),
         )
         for site in malformed:
@@ -199,6 +206,27 @@ def test_unlisted_unary_aliases_remain_unclaimed() -> None:
         assert isinstance(PLUGIN.claim(_function(target), CONFIG), NotCovered)
     for method in ("absolute", "positive", "abs_", "neg_", "sqrt_"):
         assert isinstance(PLUGIN.claim(_method(method), CONFIG), NotCovered)
+
+
+def test_unary_methods_preserve_existing_receiver_metadata_policy() -> None:
+    receiver = ReceiverMeta(
+        arg_type=TENSOR_F32_CPU_2D,
+        expr_kind="call",
+        is_safe=False,
+    )
+    site = replace(_method("sqrt"), receiver=receiver)
+    assert PLUGIN.claim(site, CONFIG) == Claimed(
+        rule_id="rextio-torch/unary-sqrt-f32-cpu-rank1-2",
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    claimed = replace(
+        site,
+        rule_id="rextio-torch/unary-sqrt-f32-cpu-rank1-2",
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    assert PLUGIN.lower(claimed, _context(receiver="input")).rust == (
+        "__rxttorch_sqrt(&input)?"
+    )
 
 
 @pytest.mark.parametrize(("_op", "functions", "methods", "rule_id", "symbol", "fallible"), OPERATIONS)
@@ -250,6 +278,12 @@ def test_lower_revalidates_unary_rule_alias_shape_and_result_metadata() -> None:
         replace(valid_function, target="torch.absolute"),
         replace(valid_function, result_type=TENSOR_F32_CPU_1D),
         replace(valid_function, operand_types=(TENSOR_I64_CPU_1D,)),
+        replace(valid_function, operand_literals=()),
+        replace(valid_function, operand_literals=(NON_LITERAL, NON_LITERAL)),
+        replace(
+            valid_function,
+            operand_literals=(ClaimLiteral(is_literal=True, value=1),),
+        ),
         replace(
             valid_function,
             receiver=ReceiverMeta(
@@ -266,6 +300,7 @@ def test_lower_revalidates_unary_rule_alias_shape_and_result_metadata() -> None:
     forged_methods = (
         replace(valid_method, rule_id="rextio-torch/unary-abs-f32-cpu-rank1-2"),
         replace(valid_method, operand_types=(TENSOR_F32_CPU_2D,)),
+        replace(valid_method, operand_literals=(NON_LITERAL,)),
         replace(valid_method, receiver=None),
         replace(valid_method, result_type=TENSOR_F32_CPU_1D),
     )

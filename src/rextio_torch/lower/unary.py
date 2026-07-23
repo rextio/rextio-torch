@@ -70,6 +70,8 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             or ctx.receiver is not None
             or len(claimed.operand_types) != 1
             or claimed.operand_types[0] not in _RANK_TYPES
+            or len(claimed.operand_literals) != 1
+            or claimed.operand_literals[0].is_literal
             or claimed.keywords
             or claimed.result_type != claimed.operand_types[0]
             or len(ctx.operands) != 1
@@ -84,6 +86,7 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             receiver is None
             or receiver.arg_type not in _RANK_TYPES
             or claimed.operand_types
+            or claimed.operand_literals
             or claimed.keywords
             or claimed.result_type != receiver.arg_type
             or ctx.receiver is None

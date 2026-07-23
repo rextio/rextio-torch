@@ -198,7 +198,8 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "Binary @ with two float32 CPU rank-2 operands. Result is rank-2 "
             "float32 CPU. Inner-dimension compatibility is not represented by "
             "the rank-only annotation vocabulary and is checked by tch at runtime. "
-            "Rank-1, mixed ranks, and other dtypes/devices stay unclaimed."
+            "Mixed rank-2/rank-1 forms use the sibling mixed-rank rule; rank-1 × "
+            "rank-1 and other dtypes/devices stay unclaimed."
         ),
         outcome="native",
         diagnostic_code="RXTP-TORCH-009",
@@ -230,6 +231,218 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         guidance=(
             "Annotate both tensors as TensorF32Cpu2D and call torch.matmul(a, b) "
             "or a.matmul(b) with runtime-compatible inner dimensions."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-matmul-f32-cpu-mixed-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "mixed-rank float32 CPU matrix/vector matmul via rank-2 @ rank-1 "
+                "or rank-1 @ rank-2"
+            ),
+        ),
+        constraint=(
+            "Binary @ with one float32 CPU rank-2 operand and one float32 CPU "
+            "rank-1 operand, in either order. Result is rank-1 float32 CPU. "
+            "Concrete inner dimensions remain a fallible tch runtime contract. "
+            "Rank-1 @ rank-1 is excluded because it produces an unregistered "
+            "rank-0 result; other dtypes/devices/ranks remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-035",
+        guidance=(
+            "Use TensorF32Cpu2D @ TensorF32Cpu1D or the reverse order and ensure "
+            "their concrete inner dimensions are compatible at runtime."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-matmul-call-f32-cpu-mixed-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "mixed-rank float32 CPU matrix/vector matmul via "
+                "torch.matmul(a, b) or a.matmul(b)"
+            ),
+        ),
+        constraint=(
+            "Exact functional torch.matmul with two positional operands, or "
+            "zero-keyword method .matmul with one positional operand, where one "
+            "tensor is float32 CPU rank-2 and the other is float32 CPU rank-1. "
+            "Either order returns float32 CPU rank-1. Concrete inner dimensions "
+            "are checked by fallible tch f_matmul at runtime. Rank-1 × rank-1, "
+            "keywords, and other dtypes/devices/ranks remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-036",
+        guidance=(
+            "Call torch.matmul(matrix, vector), torch.matmul(vector, matrix), "
+            "matrix.matmul(vector), or vector.matmul(matrix) without keywords."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-abs-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.abs(tensor) or zero-argument tensor.abs()",
+        ),
+        constraint=(
+            "One positional float32 CPU rank-1/rank-2 tensor for torch.abs, or "
+            "a zero-argument .abs() receiver of the same types; no keywords. "
+            "Result preserves type and executes through fallible tch f_abs under "
+            "no-grad. Scalar, out, in-place, and alternate aliases stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-037",
+        guidance="Use exact torch.abs(tensor) or tensor.abs() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-neg-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.neg(tensor) or zero-argument tensor.neg()",
+        ),
+        constraint=(
+            "Exact neg spelling on one float32 CPU rank-1/rank-2 tensor, with "
+            "no keywords or method arguments. Result preserves type and uses "
+            "fallible tch f_neg under no-grad; in-place/scalar/out forms remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-038",
+        guidance="Use exact torch.neg(tensor) or tensor.neg() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-negative-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.negative(tensor) or zero-argument tensor.negative()",
+        ),
+        constraint=(
+            "Exact negative spelling on one float32 CPU rank-1/rank-2 tensor, "
+            "with no keywords or method arguments. Result preserves type and "
+            "uses the distinct fallible tch f_negative path under no-grad."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-039",
+        guidance=(
+            "Use exact torch.negative(tensor) or tensor.negative() without keywords."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-square-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.square(tensor) or zero-argument tensor.square()",
+        ),
+        constraint=(
+            "Exact square spelling on one float32 CPU rank-1/rank-2 tensor, with "
+            "no keywords or method arguments. Result preserves type and uses "
+            "fallible tch f_square under no-grad."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-040",
+        guidance="Use exact torch.square(tensor) or tensor.square() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-exp-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.exp(tensor) or zero-argument tensor.exp()",
+        ),
+        constraint=(
+            "Exact exp spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_exp under no-grad; IEEE overflow/underflow remains backend behavior."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-041",
+        guidance="Use exact torch.exp(tensor) or tensor.exp() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-log-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.log(tensor) or zero-argument tensor.log()",
+        ),
+        constraint=(
+            "Exact log spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_log under no-grad; domain NaN and zero-to-infinity behavior is "
+            "the pinned backend contract rather than an operation error."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-042",
+        guidance="Use exact torch.log(tensor) or tensor.log() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-sqrt-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.sqrt(tensor) or zero-argument tensor.sqrt()",
+        ),
+        constraint=(
+            "Exact sqrt spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_sqrt under no-grad; negative-domain NaN and signed-zero behavior "
+            "follow the pinned backend."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-043",
+        guidance="Use exact torch.sqrt(tensor) or tensor.sqrt() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/functional-gelu-none-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "exact torch.nn.functional.gelu(tensor) with approximate omitted "
+                "or exact literal keyword approximate='none'"
+            ),
+        ),
+        constraint=(
+            "One positional float32 CPU rank-1/rank-2 tensor and either no "
+            "keywords or exactly the static string literal approximate='none'. "
+            "Both forms lower to fixed fallible tch f_gelu(\"none\") under no-grad; "
+            "the source keyword is never interpolated. approximate='tanh', "
+            "dynamic/other keywords, positional approximate, modules, methods, "
+            "and other dtypes/devices/ranks remain fallback. Backward/training "
+            "use stays out of scope; the helper always returns a no-grad result."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-044",
+        guidance=(
+            "Use torch.nn.functional.gelu(tensor) or pass only the exact literal "
+            "keyword approximate='none' in inference/no-grad code."
         ),
         stability="experimental",
         verified=True,
@@ -618,6 +831,79 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "Keep argmax output at TensorI64Cpu1D: rank-2 with keepdim=False or "
             "rank-1 dim=0 with keepdim=True."
         ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-add-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.add(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.add with exactly two positional tensor operands and no "
+            "keywords. The result follows the certified operator + matrix: same-rank "
+            "rank-1/rank-2 or rank-2/rank-1 trailing broadcast. alpha, out, scalar, "
+            "keyword, and other overloads stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-031",
+        guidance="Call torch.add(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-sub-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.sub(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.sub with two positional tensors and no keywords. "
+            "Operand order is preserved across the existing same-rank and rank-2/rank-1 "
+            "broadcast matrix. alpha, out, scalar, keyword, and alias forms are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-032",
+        guidance="Call torch.sub(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-mul-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.mul(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.mul with two positional tensors and no keywords, using "
+            "the certified operator * same-rank and rank-2/rank-1 broadcast matrix. "
+            "out, scalar, keyword, and other aliases stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-033",
+        guidance="Call torch.mul(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-div-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.div(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.div with two positional tensors and no keywords. "
+            "Operand order is preserved across the certified true-division matrix. "
+            "rounding_mode, out, scalar, keyword, and alias forms stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-034",
+        guidance="Call torch.div(a, b) with two positional TensorF32Cpu1D/2D values.",
         stability="experimental",
         verified=True,
     ),

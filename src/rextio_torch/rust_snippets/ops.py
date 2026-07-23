@@ -11,6 +11,14 @@ LINEAR_NO_BIAS = "__rxttorch_linear_no_bias"
 RELU = "__rxttorch_relu"
 SIGMOID = "__rxttorch_sigmoid"
 TANH = "__rxttorch_tanh"
+ABS = "__rxttorch_abs"
+NEG = "__rxttorch_neg"
+NEGATIVE = "__rxttorch_negative"
+SQUARE = "__rxttorch_square"
+EXP = "__rxttorch_exp"
+LOG = "__rxttorch_log"
+SQRT = "__rxttorch_sqrt"
+GELU_NONE = "__rxttorch_gelu_none"
 MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
 SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
 ADD = "__rxttorch_add"
@@ -76,6 +84,51 @@ def tanh_helper() -> str:
     return r"""fn __rxttorch_tanh(input: &RxtTorchTensor) -> pyo3::PyResult<RxtTorchTensor> {
     let _guard = tch::no_grad_guard();
     let out = input.0.f_tanh().map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+_UNARY_OPERATIONS: dict[str, tuple[str, str]] = {
+    "abs": (ABS, "f_abs"),
+    "neg": (NEG, "f_neg"),
+    "negative": (NEGATIVE, "f_negative"),
+    "square": (SQUARE, "f_square"),
+    "exp": (EXP, "f_exp"),
+    "log": (LOG, "f_log"),
+    "sqrt": (SQRT, "f_sqrt"),
+}
+
+
+def unary_call_name(operation: str) -> str:
+    """Return the fixed helper symbol for one bounded unary operation."""
+    try:
+        return _UNARY_OPERATIONS[operation][0]
+    except KeyError as exc:
+        raise ValueError(f"unsupported rextio-torch unary operation: {operation!r}") from exc
+
+
+def unary_helper(operation: str) -> str:
+    """Return a fallible no-grad helper for one bounded unary operation."""
+    try:
+        call_name, fallible_method = _UNARY_OPERATIONS[operation]
+    except KeyError as exc:
+        raise ValueError(f"unsupported rextio-torch unary operation: {operation!r}") from exc
+    return f"""fn {call_name}(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {{
+    let _guard = tch::no_grad_guard();
+    let out = input.0.{fallible_method}().map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}}"""
+
+
+def gelu_none_helper() -> str:
+    """Return the fixed fallible no-grad GELU ``approximate='none'`` helper."""
+    return r"""fn __rxttorch_gelu_none(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_gelu("none").map_err(__rxttorch_map_err)?;
     Ok(RxtTorchTensor(out))
 }"""
 
@@ -239,17 +292,25 @@ def argmax_helper(dim: int, keepdim: bool, *, expected_rank: int) -> str:
 
 
 __all__ = [
+    "ABS",
     "ADD",
     "ARGMAX_DIM1_KEEPFALSE",
     "DIV",
+    "EXP",
+    "GELU_NONE",
     "LINEAR",
     "LINEAR_NO_BIAS",
+    "LOG",
     "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
     "MUL",
+    "NEG",
+    "NEGATIVE",
     "RELU",
     "SIGMOID",
     "SOFTMAX_DIM1",
+    "SQRT",
+    "SQUARE",
     "SUM_DIM1_KEEPFALSE",
     "SUB",
     "TANH",
@@ -258,6 +319,7 @@ __all__ = [
     "argmax_helper",
     "argmax_dim1_keepfalse_helper",
     "div_helper",
+    "gelu_none_helper",
     "linear_helper",
     "linear_no_bias_helper",
     "matmul_helper",
@@ -273,4 +335,6 @@ __all__ = [
     "sum_dim1_keepfalse_helper",
     "sub_helper",
     "tanh_helper",
+    "unary_call_name",
+    "unary_helper",
 ]

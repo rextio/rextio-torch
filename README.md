@@ -183,15 +183,18 @@ claimed `result_type`.
 | Sigmoid method | `.sigmoid()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-sigmoid-f32-cpu-1d` or `…/tensor-sigmoid-f32-cpu-2d` |
 | Tanh method | `.tanh()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-tanh-f32-cpu-1d` or `…/tensor-tanh-f32-cpu-2d` |
 | Functional activations | Exact `torch.relu(t)`, `torch.sigmoid(t)`, or `torch.tanh(t)`; one positional tensor, no keywords | input **1** or **2** | **same as input** | `…/function-{relu,sigmoid,tanh}-f32-cpu-rank1-2` |
-| Matmul binop | `a @ b` | both **2** | **2** | `rextio-torch/tensor-matmul-f32-cpu-2d` |
-| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | both **2** | **2** | `rextio-torch/tensor-matmul-call-f32-cpu-2d` |
-| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver **2**, other **2** | **2** | same as call form |
+| Unary math | Exact `torch.{abs,neg,negative,square,exp,log,sqrt}(t)` or matching zero-argument tensor method; one tensor and no keywords | input/receiver **1** or **2** | **same as input** | `…/unary-{abs,neg,negative,square,exp,log,sqrt}-f32-cpu-rank1-2` |
+| Exact GELU | `torch.nn.functional.gelu(t)` or `gelu(t, approximate="none")`; one positional tensor and no other options | input **1** or **2** | **same as input** | `…/functional-gelu-none-f32-cpu-rank1-2` |
+| Matmul binop | `a @ b` | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-f32-cpu-{2d,mixed-rank}` |
+| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-call-f32-cpu-{2d,mixed-rank}` |
+| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver/other **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | same as call form |
 | Elementwise `+` (same rank) | `a + b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-add-f32-cpu-same-rank` |
 | Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
 | Elementwise `*` (same rank) | `a * b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-mul-f32-cpu-same-rank` |
 | Elementwise `*` (bias broadcast) | `a * b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast` |
 | Elementwise `-` | `a - b`, same-rank or rank-2/rank-1 trailing broadcast in either operand order | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-sub-f32-cpu-{same-rank,2d-1d-broadcast}` |
 | Elementwise true `/` | `a / b`, with the same rank/broadcast matrix as subtraction; binop only | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-div-f32-cpu-{same-rank,2d-1d-broadcast}` |
+| Functional elementwise arithmetic | Exact `torch.add/sub/mul/div(a, b)`; two positional tensors and no keywords, using the same rank/broadcast matrix as the operators | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/function-{add,sub,mul,div}-f32-cpu-rank1-2` |
 | Mean / sum | Receiver methods or exact `torch.mean` / `torch.sum`; `dim=0|1` once (positional literal or keyword); `keepdim` omitted=False or named bool | rank-2: dim 0/1; rank-1: only dim 0 + keepdim=True | registered float32 rank **1** or **2** only | legacy dim1 rules or `…/{mean,sum}-static-dim-f32-cpu-rank1-2` |
 | Softmax | Receiver method or exact `torch.softmax`; literal dim once; no dtype/keepdim | rank-1 dim 0; rank-2 dim 0/1 | same as input | legacy dim1 rule or `…/softmax-static-dim-f32-cpu-rank1-2` |
 | Argmax | Receiver method or exact `torch.argmax`; literal dim once; keepdim omitted=False or named bool | rank-2 dim 0/1 + keepdim=False; rank-1 dim 0 + keepdim=True | **1 int64** | legacy dim1 rule or `…/argmax-static-dim-i64-cpu-rank1` |
@@ -202,6 +205,8 @@ Native op helpers (all fallible, all under `no_grad`):
 | --- | --- | --- |
 | linear | `__rxttorch_linear` / `__rxttorch_linear_no_bias` | `f_linear(Some(bias))` / `f_linear(None)` |
 | activation method/function | `__rxttorch_{relu,sigmoid,tanh}` | fallible matching tch activation |
+| unary math method/function | `__rxttorch_{abs,neg,negative,square,exp,log,sqrt}` | exact fallible `f_abs`, `f_neg`, `f_negative`, `f_square`, `f_exp`, `f_log`, or `f_sqrt` |
+| exact GELU | `__rxttorch_gelu_none` | fixed fallible `f_gelu("none")`; the source option is never interpolated |
 | mean / sum | `__rxttorch_{mean,sum}_dim{0,1}_keepdim_{true,false}` | `f_mean_dim` / `f_sum_dim_intlist` with fixed literals |
 | `+` | `__rxttorch_add` | `f_add` |
 | `*` | `__rxttorch_mul` | `f_mul` |
@@ -212,11 +217,11 @@ Native op helpers (all fallible, all under `no_grad`):
 | argmax | `__rxttorch_argmax_dim{0,1}_keepdim_{true,false}` (only rank-1 outputs) | `f_argmax` plus exact CPU/int64/rank-1 check |
 
 Coverage symbols declared for the analyzer include
-`torch.nn.functional.linear`, `torch.matmul`,
-`torch.{relu,sigmoid,tanh,mean,sum,softmax,argmax}`, and the corresponding
-receiver methods. Binary `+` / `*` / `-` / `/` / `@` are claimed via binop
-sites, not semantic-changing function aliases such as `torch.div` with
-`rounding_mode`.
+`torch.nn.functional.{linear,gelu}`, `torch.matmul`,
+`torch.{relu,sigmoid,tanh,abs,neg,negative,square,exp,log,sqrt,add,sub,mul,div,mean,sum,softmax,argmax}`,
+and the corresponding receiver methods. Binary `+` / `*` / `-` / `/` / `@`
+are also claimed via binop sites. Functional options that change or widen
+semantics, such as `alpha`, `out`, or `rounding_mode`, remain rejected.
 
 ### Control flow around claimed ops
 
@@ -254,10 +259,12 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Plugin type keys are the registered float32 CPU rank-1/2 keys | `is_tensor_type` / exact type equality per rule |
 | Linear: exact `torch.nn.functional.linear`; three positional tensors (2,2,1), or rank-2 input/weight with bias omitted / positional literal `None` / keyword literal `bias=None` | `claim/linear.py`; tensor-valued keywords are not representable in Core API 1.3 |
 | Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; rank 1/2 and no keywords | `claim/activations.py` |
+| Unary math: receiver zero-arg methods, or exact `torch.abs/neg/negative/square/exp/log/sqrt` with one positional tensor; rank 1/2 and no keywords | `claim/unary.py` |
+| GELU: exact `torch.nn.functional.gelu`; one positional rank-1/2 tensor; `approximate` omitted or exactly the static string literal `"none"`; lower always hardcodes `"none"` | `claim/gelu.py` |
 | Reductions: receiver or exact `torch.mean/sum`; dim literal 0/1 once positionally/keyword; keepdim omitted=False or named bool; output must already map to rank-1/2 | `claim/reductions.py` |
 | Classification: receiver or exact `torch.softmax/argmax`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
-| Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
-| Elementwise arithmetic: binary `+` / `*` / `-` / `/` only; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/function aliases/other ranks rejected | `claim/binops.py` |
+| Matmul `@` / `torch.matmul` / `.matmul`: rank-2/rank-2 or one rank-2 plus one rank-1 operand in either order; call forms disallow keywords; method form takes one positional operand; rank-1/rank-1 stays rejected because it would return rank-0 | `claim/binops.py` |
+| Elementwise arithmetic: binary `+` / `*` / `-` / `/`, or exact `torch.add/sub/mul/div(a, b)` with two positional non-literal tensors and no keywords; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/method/option variants and other ranks rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
 Keyword order for `dim` / `keepdim` does not matter. A positional dim must be
@@ -280,18 +287,20 @@ become silent native claims.
 | --- | --- | --- |
 | Other devices | CUDA, MPS, non-CPU | Outside vocabulary; boundary would reject non-CPU if a native path were reached |
 | Other dtypes | float64, int, etc. | Outside vocabulary; boundary rejects non-float32 at runtime on native paths |
-| Other ranks | rank-0 / rank-3+, matmul with rank-1, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
+| Other ranks | rank-0 / rank-3+, rank-1 × rank-1 matmul, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
 | Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
 | Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
 | Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by Core API 1.3; others reject/fallback |
-| In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
-| Elementwise variants | scalar operands; `torch.add/sub/mul/div`; `.div`; rounding_mode/alpha options | Not claimed; `/` means tensor-tensor true division only |
+| In-place ops | `relu_`, `sigmoid_`, `tanh_`, unary `_` variants, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
+| Unary variants | scalar inputs; `out`; alternate aliases such as `torch.absolute`; method arguments or keywords | Rejected for recognized exact functions/methods or otherwise unclaimed |
+| GELU variants | `approximate="tanh"`, dynamic/invalid/positional approximate, other keywords, `.gelu()`, or `nn.GELU` capture | Static recognized variants are rejected; dynamic values may be filtered by Core to ordinary fallback before plugin claim |
+| Elementwise variants | scalar operands; `.add/.sub/.mul/.div`; aliases such as `torch.subtract`; `alpha`, `out`, or `rounding_mode` options | Rejected for recognized exact functions/options or otherwise unclaimed; `/` and exact `torch.div(a, b)` mean tensor-tensor true division only |
 | Reductions other shapes | whole-tensor reduction, dynamic/duplicate/out-of-range dim, positional keepdim, dtype/out, or rank-0 result | `Rejected` or unclaimed |
 | Classification variations | dtype override, dynamic/duplicate dim, softmax keepdim, rank-2 argmax keepdim=True, rank-1 argmax keepdim=False, rank-3+ | `Rejected` or unclaimed; unavailable int64 rank-2/rank-0 types are not invented |
 | Classification-result arithmetic | `TensorI64Cpu1D` or mixed int64/float32 operands with `+`, `*`, `-`, or `/` | `Rejected`; elementwise arithmetic remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
 | Unsupported broadcast ranks | arithmetic rank combinations other than same-rank or 2d/1d | `Rejected` |
-| Unrelated torch APIs | e.g. `torch.add(..., alpha=...)` | `NotCovered` |
+| Unrelated torch APIs | e.g. `torch.subtract` / `torch.divide` aliases | `NotCovered` |
 | Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
 | Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
 | Bare BinOp method receivers | `(a @ b).relu()` | Core does not offer site; use temps |
@@ -332,6 +341,14 @@ op and remains `verified=False`.
 | Matmul inner dimensions | Fallible `f_matmul` → mapped error | `TchError` → `PyRuntimeError` via `__rxttorch_map_err` |
 | Add / multiply broadcast concrete sizes | Fallible `f_add` / `f_mul` | same mapping |
 | Other op failures | Fallible `f_*` APIs under `no_grad` | same mapping; no `unwrap` / `panic!` / `assert` |
+
+Unary domain values are normal tensor results, not operation failures:
+`log`/`sqrt` can produce NaN, zero can map to signed infinity, and overflow can
+produce infinity. Native certification compares eager/native NaN and infinity
+classes, finite values, and signed zero under the pinned backend. NaN payload
+bits and NaN sign are intentionally not portable cross-platform guarantees.
+Exact GELU uses the same comparison policy (`-∞` produces NaN, `+∞` remains
+infinite, and signed zero is preserved).
 
 Certified e2e tests force **native-only** mode for the boundary rejects they
 exercise, so eager fallback cannot mask float64/wrong-rank failures. Inputs are
@@ -422,10 +439,13 @@ def cpu_surface_followup(
 
 The same serialized real-Cargo project executes this slice plus omitted and
 positional-`None` linear forms, every same-rank/2D↔1D subtraction and division
-order, functional rank-2 argmax with default `keepdim=False`, and rank-1
-argmax with named `keepdim=True`. It checks numerical parity, exact
-dtype/device/rank, no-grad output, non-mutation, native route evidence, and a
-runtime incompatible-broadcast failure.
+order, all six mixed-rank matmul spellings/order combinations, functional
+rank-2 argmax with default `keepdim=False`, and rank-1 argmax with named
+`keepdim=True`. It checks numerical parity, exact dtype/device/rank, no-grad
+output, non-mutation, native route evidence, and runtime incompatible
+matmul/broadcast failures. Direct unary kernels additionally certify NaN/Inf
+domain behavior and signed-zero parity for every exact fallible helper; default
+and explicit-`none` GELU are separately routed and compared.
 
 ### Rejected or not covered (illustrative)
 
@@ -442,15 +462,18 @@ runtime incompatible-broadcast failure.
 # Rejected: duplicate positional and keyword dim
 # t.sum(0, dim=1)
 
-# Rejected: rank-1 matmul
-# a_1d @ b_2d
+# Rejected: rank-1 × rank-1 matmul would produce unregistered rank-0
+# a_1d @ b_1d
 
 # Rejected: exact i64 output type is unavailable
 # matrix.argmax(dim=1, keepdim=True)  # would be int64 rank-2
 # vector.argmax(dim=0)                # would be int64 rank-0
 
-# NotCovered: semantic-changing functional option aliases
+# Rejected: semantic-changing functional option
 # torch.div(a, b, rounding_mode="trunc")
+
+# Rejected: only exact GELU approximation "none" is native
+# torch.nn.functional.gelu(x, approximate="tanh")
 
 # Not offered by Core API 1.3: runtime tensor-valued keyword
 # F.linear(x, weight, bias=bias_tensor)

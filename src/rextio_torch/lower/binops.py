@@ -11,7 +11,13 @@ from rextio_torch.claim.binops import (
     DIV_BROADCAST_2D_1D_RULE,
     DIV_RULES,
     DIV_SAME_RANK_RULE,
+    FUNCTION_ADD_RULE,
+    FUNCTION_DIV_RULE,
+    FUNCTION_MUL_RULE,
+    FUNCTION_SUB_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
     MATMUL_BINOP_RULE,
+    MATMUL_CALL_MIXED_RANK_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
     MUL_BROADCAST_2D_1D_RULE,
@@ -54,6 +60,62 @@ _BROADCAST_TENSOR_TYPES: frozenset[tuple[str, str, str]] = frozenset(
         (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
     }
 )
+_FUNCTION_ELEMENTWISE = {
+    "torch.add": (FUNCTION_ADD_RULE, ADD, add_helper),
+    "torch.sub": (FUNCTION_SUB_RULE, SUB, sub_helper),
+    "torch.mul": (FUNCTION_MUL_RULE, MUL, mul_helper),
+    "torch.div": (FUNCTION_DIV_RULE, DIV, div_helper),
+}
+
+_MATMUL_RESULT_TYPES: dict[tuple[str, str], str] = {
+    (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D): TENSOR_F32_CPU_2D,
+    (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D): TENSOR_F32_CPU_1D,
+    (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D): TENSOR_F32_CPU_1D,
+}
+
+
+def _try_lower_functional_elementwise(
+    claimed: ClaimSite,
+    ctx: LoweringContext,
+) -> LoweredExpr | None:
+    if claimed.kind != "call" or claimed.target not in _FUNCTION_ELEMENTWISE:
+        return None
+    expected_rule, call_name, helper_factory = _FUNCTION_ELEMENTWISE[claimed.target]
+    if claimed.rule_id != expected_rule:
+        raise ValueError(
+            "rextio-torch functional elementwise lower received mismatched rule_id: "
+            f"{claimed.rule_id!r} != {expected_rule!r}"
+        )
+    if (
+        claimed.receiver is not None
+        or ctx.receiver is not None
+        or claimed.keywords
+        or len(claimed.operand_types) != 2
+        or len(claimed.operand_literals) != 2
+        or any(literal.is_literal for literal in claimed.operand_literals)
+        or len(ctx.operands) != 2
+    ):
+        raise ValueError(
+            "rextio-torch functional elementwise lower requires two positional "
+            "non-literal tensor operands"
+        )
+    left, right = claimed.operand_types
+    metadata = (left, right, claimed.result_type)
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch functional elementwise lower requires float32 CPU "
+            f"rank-1/2 operands; got {left!r}, {right!r}"
+        )
+    if metadata not in _SAME_RANK_TENSOR_TYPES | _BROADCAST_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch functional elementwise result metadata changed between "
+            "claim and lower"
+        )
+    left_name, right_name = ctx.operands
+    return LoweredExpr(
+        rust=f"{call_name}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), helper_factory()),
+    )
 
 
 def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
@@ -255,20 +317,29 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
     is_method = claimed.kind == "call" and _method_name(claimed.target) == "matmul"
     if not is_binop and not is_functional and not is_method:
         return None
-    if claimed.keywords or claimed.result_type != TENSOR_F32_CPU_2D:
-        raise ValueError("rextio-torch matmul lower requires no keywords and rank-2 result")
+    if claimed.keywords:
+        raise ValueError("rextio-torch matmul lower requires no keywords")
 
     if is_binop:
-        if claimed.rule_id != MATMUL_BINOP_RULE:
-            raise ValueError(
-                "rextio-torch matmul lower received mismatched rule_id: "
-                f"{claimed.rule_id!r} != {MATMUL_BINOP_RULE!r}"
-            )
         if claimed.receiver is not None or ctx.receiver is not None:
             raise ValueError("rextio-torch binary @ lower cannot carry a receiver")
-        if tuple(claimed.operand_types) != (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D):
+        if len(claimed.operand_types) != 2:
+            raise ValueError("rextio-torch binary @ lower requires two tensor operands")
+        left_type, right_type = claimed.operand_types
+        result_type = _MATMUL_RESULT_TYPES.get((left_type, right_type))
+        expected_rule = (
+            MATMUL_BINOP_RULE
+            if (left_type, right_type) == (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D)
+            else MATMUL_BINOP_MIXED_RANK_RULE
+        )
+        if claimed.rule_id != expected_rule:
             raise ValueError(
-                "rextio-torch binary @ lower requires two TensorF32Cpu2D operands"
+                "rextio-torch matmul lower received mismatched rule_id: "
+                f"{claimed.rule_id!r} != {expected_rule!r}"
+            )
+        if result_type is None or claimed.result_type != result_type:
+            raise ValueError(
+                "rextio-torch binary @ lower received unsupported operand/result metadata"
             )
         if len(ctx.operands) != 2:
             raise ValueError(
@@ -277,19 +348,30 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
             )
         left_name, right_name = ctx.operands
     elif is_functional:
-        if claimed.rule_id != MATMUL_CALL_RULE:
-            raise ValueError(
-                "rextio-torch matmul lower received mismatched rule_id: "
-                f"{claimed.rule_id!r} != {MATMUL_CALL_RULE!r}"
-            )
         if claimed.receiver is not None or ctx.receiver is not None:
             raise ValueError(
                 "rextio-torch functional torch.matmul lower cannot carry a receiver"
             )
-        if tuple(claimed.operand_types) != (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D):
+        if len(claimed.operand_types) != 2:
             raise ValueError(
-                "rextio-torch functional torch.matmul lower requires two "
-                "TensorF32Cpu2D operands"
+                "rextio-torch functional torch.matmul lower requires two tensor operands"
+            )
+        left_type, right_type = claimed.operand_types
+        result_type = _MATMUL_RESULT_TYPES.get((left_type, right_type))
+        expected_rule = (
+            MATMUL_CALL_RULE
+            if (left_type, right_type) == (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D)
+            else MATMUL_CALL_MIXED_RANK_RULE
+        )
+        if claimed.rule_id != expected_rule:
+            raise ValueError(
+                "rextio-torch matmul lower received mismatched rule_id: "
+                f"{claimed.rule_id!r} != {expected_rule!r}"
+            )
+        if result_type is None or claimed.result_type != result_type:
+            raise ValueError(
+                "rextio-torch functional torch.matmul lower received unsupported "
+                "operand/result metadata"
             )
         if len(ctx.operands) != 2:
             raise ValueError(
@@ -298,20 +380,31 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
             )
         left_name, right_name = ctx.operands
     elif is_method:
-        if claimed.rule_id != MATMUL_CALL_RULE:
-            raise ValueError(
-                "rextio-torch matmul lower received mismatched rule_id: "
-                f"{claimed.rule_id!r} != {MATMUL_CALL_RULE!r}"
-            )
         if (
             claimed.receiver is None
-            or claimed.receiver.arg_type != TENSOR_F32_CPU_2D
             or len(claimed.operand_types) != 1
-            or claimed.operand_types[0] != TENSOR_F32_CPU_2D
         ):
             raise ValueError(
-                "rextio-torch method .matmul lower requires a TensorF32Cpu2D "
-                "receiver and one TensorF32Cpu2D operand"
+                "rextio-torch method .matmul lower requires a typed receiver "
+                "and one tensor operand"
+            )
+        left_type = claimed.receiver.arg_type
+        right_type = claimed.operand_types[0]
+        result_type = _MATMUL_RESULT_TYPES.get((left_type, right_type))
+        expected_rule = (
+            MATMUL_CALL_RULE
+            if (left_type, right_type) == (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D)
+            else MATMUL_CALL_MIXED_RANK_RULE
+        )
+        if claimed.rule_id != expected_rule:
+            raise ValueError(
+                "rextio-torch matmul lower received mismatched rule_id: "
+                f"{claimed.rule_id!r} != {expected_rule!r}"
+            )
+        if result_type is None or claimed.result_type != result_type:
+            raise ValueError(
+                "rextio-torch method .matmul lower received unsupported "
+                "receiver/operand/result metadata"
             )
         if ctx.receiver is None or len(ctx.operands) != 1:
             raise ValueError(
@@ -331,6 +424,7 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
     """Lower a previously claimed + / matmul site, or return None."""
     for lane in (
+        _try_lower_functional_elementwise,
         _try_lower_add,
         _try_lower_mul,
         _try_lower_sub,

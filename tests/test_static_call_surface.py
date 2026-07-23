@@ -28,12 +28,19 @@ from rextio_torch.claim.activations import (
     FUNCTION_SIGMOID_RULE,
     FUNCTION_TANH_RULE,
 )
+from rextio_torch.claim.binops import (
+    FUNCTION_ADD_RULE,
+    FUNCTION_DIV_RULE,
+    FUNCTION_MUL_RULE,
+    FUNCTION_SUB_RULE,
+)
 from rextio_torch.claim.classification import (
     ARGMAX_STATIC_RULE,
     SOFTMAX_STATIC_RULE,
 )
 from rextio_torch.claim.reductions import MEAN_STATIC_RULE, SUM_STATIC_RULE
 from rextio_torch.diagnostics import (
+    DIAGNOSTIC_FUNCTION_DIV,
     TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
     TENSOR_I64_CPU_1D,
@@ -545,6 +552,17 @@ def vector_argmax(x: TensorF32Cpu1D) -> TensorI64Cpu1D:
     return torch.argmax(x, 0, keepdim=True)
 
 
+def functional_arithmetic(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    added = torch.add(left, right)
+    subtracted = torch.sub(added, bias)
+    multiplied = torch.mul(bias, subtracted)
+    return torch.div(multiplied, right)
+
+
 def invalid_positional_keepdim(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
     return torch.mean(x, 0, True)
 
@@ -558,6 +576,24 @@ def invalid_rounded_div(
     right: TensorF32Cpu2D,
 ) -> TensorF32Cpu2D:
     return torch.div(left, right, rounding_mode="trunc")
+
+
+def invalid_add_alpha(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+) -> TensorF32Cpu2D:
+    return torch.add(left, right, alpha=2)
+
+
+def invalid_mul_scalar(left: TensorF32Cpu2D) -> TensorF32Cpu2D:
+    return torch.mul(left, 2.0)
+
+
+def invalid_sub_out(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+) -> TensorF32Cpu2D:
+    return torch.sub(left, right, out=left)
 """
 
 
@@ -578,6 +614,12 @@ def test_analyzer_routes_new_exact_function_spellings(tmp_path: Path) -> None:
         ],
         "function_argmax": [FUNCTION_SIGMOID_RULE, ARGMAX_STATIC_RULE],
         "vector_argmax": [ARGMAX_STATIC_RULE],
+        "functional_arithmetic": [
+            FUNCTION_ADD_RULE,
+            FUNCTION_SUB_RULE,
+            FUNCTION_MUL_RULE,
+            FUNCTION_DIV_RULE,
+        ],
     }
     for name, rules in expected.items():
         function = _function(analysis, f"myapp.kernels.{name}")
@@ -589,6 +631,9 @@ def test_analyzer_routes_new_exact_function_spellings(tmp_path: Path) -> None:
         "invalid_positional_keepdim",
         "invalid_rank2_keepdim_argmax",
         "invalid_rounded_div",
+        "invalid_add_alpha",
+        "invalid_mul_scalar",
+        "invalid_sub_out",
     ):
         function = _function(analysis, f"myapp.kernels.{name}")
         assert function.route != f"native-plugin:{PLUGIN_ID}"
@@ -610,7 +655,7 @@ def test_static_rule_records_are_native_verified() -> None:
         assert by_id[rule_id].verified is True
 
 
-def test_functional_div_with_rounding_mode_is_not_claimed() -> None:
+def test_functional_div_with_rounding_mode_is_rejected() -> None:
     site = ClaimSite(
         kind="call",
         target="torch.div",
@@ -620,4 +665,6 @@ def test_functional_div_with_rounding_mode_is_not_claimed() -> None:
         column=0,
         keywords=(_kw("rounding_mode", "trunc"),),
     )
-    assert isinstance(PLUGIN.claim(site, CONFIG), NotCovered)
+    rejected = PLUGIN.claim(site, CONFIG)
+    assert isinstance(rejected, Rejected)
+    assert rejected.diagnostic.code == DIAGNOSTIC_FUNCTION_DIV

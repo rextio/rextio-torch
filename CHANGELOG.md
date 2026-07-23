@@ -5,6 +5,27 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add exact `torch.nn.functional.gelu(x)` and literal
+  `approximate="none"` for float32 CPU rank-1/rank-2 inference. Both forms
+  lower to fixed fallible `f_gelu("none")` under no-grad; `"tanh"`,
+  dynamic/other/positional options, method/module capture, and unsupported
+  types remain fail-closed. Native evidence covers default/explicit parity,
+  NaN/Inf classes, signed zero, and grad-requesting input behavior.
+- Add exact float32 CPU rank-1/rank-2 unary math through
+  `torch.{abs,neg,negative,square,exp,log,sqrt}` and matching zero-argument
+  tensor methods. Each spelling uses its exact fallible tch 0.24 API under
+  no-grad, including distinct `f_neg`/`f_negative`; native certification
+  compares finite values, NaN/Inf classes, signed zero, and non-mutation
+  without promising portable NaN payload bits.
+- Add mixed-rank matrix/vector matmul for `2D × 1D` and `1D × 2D` through
+  `@`, exact `torch.matmul`, and zero-keyword `.matmul`, returning float32 CPU
+  rank-1 through the existing fallible no-grad `f_matmul` helper. Rank-1 ×
+  rank-1 remains fallback because rank-0 is outside the registered vocabulary.
+- Add exact `torch.add/sub/mul/div(a, b)` spellings for two positional
+  float32 CPU rank-1/rank-2 tensors. They reuse the existing same-rank and
+  rank-2/rank-1 trailing-broadcast matrix and fallible no-grad helpers;
+  scalar operands, method/alternate aliases, `alpha`, `out`, and
+  `rounding_mode` remain fail-closed.
 - Add exact functional activation spellings `torch.relu`, `torch.sigmoid`, and
   `torch.tanh` for the existing float32 CPU rank-1/rank-2 surface.
 - Add tensor-tensor `-` and true `/` for same-rank rank-1/rank-2 tensors and

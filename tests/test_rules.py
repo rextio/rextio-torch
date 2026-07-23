@@ -22,16 +22,32 @@ from rextio_torch.claim.binops import (
     MUL_SAME_RANK_RULE,
     DIV_BROADCAST_2D_1D_RULE,
     DIV_SAME_RANK_RULE,
+    FUNCTION_ADD_RULE,
+    FUNCTION_DIV_RULE,
+    FUNCTION_MUL_RULE,
+    FUNCTION_SUB_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
+    MATMUL_CALL_MIXED_RANK_RULE,
     SUB_BROADCAST_2D_1D_RULE,
     SUB_SAME_RANK_RULE,
 )
 from rextio_torch.claim.classification import ARGMAX_STATIC_RULE, SOFTMAX_STATIC_RULE
+from rextio_torch.claim.gelu import GELU_NONE_RULE
 from rextio_torch.claim.linear import LINEAR_NO_BIAS_RULE, LINEAR_RULE
 from rextio_torch.claim.reductions import (
     MEAN_RULE,
     MEAN_STATIC_RULE,
     SUM_RULE,
     SUM_STATIC_RULE,
+)
+from rextio_torch.claim.unary import (
+    UNARY_ABS_RULE,
+    UNARY_EXP_RULE,
+    UNARY_LOG_RULE,
+    UNARY_NEGATIVE_RULE,
+    UNARY_NEG_RULE,
+    UNARY_SQRT_RULE,
+    UNARY_SQUARE_RULE,
 )
 from rextio_torch.rules import torch_rule_records
 
@@ -70,6 +86,20 @@ def test_native_rules_match_claim_constants() -> None:
         SUM_STATIC_RULE,
         SOFTMAX_STATIC_RULE,
         ARGMAX_STATIC_RULE,
+        FUNCTION_ADD_RULE,
+        FUNCTION_SUB_RULE,
+        FUNCTION_MUL_RULE,
+        FUNCTION_DIV_RULE,
+        MATMUL_BINOP_MIXED_RANK_RULE,
+        MATMUL_CALL_MIXED_RANK_RULE,
+        UNARY_ABS_RULE,
+        UNARY_NEG_RULE,
+        UNARY_NEGATIVE_RULE,
+        UNARY_SQUARE_RULE,
+        UNARY_EXP_RULE,
+        UNARY_LOG_RULE,
+        UNARY_SQRT_RULE,
+        GELU_NONE_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
         assert by_id[rule_id].verified is True

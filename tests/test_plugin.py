@@ -99,7 +99,15 @@ def test_covers_alpha_aot_surface() -> None:
     assert coverage.packages == ("torch",)
     assert "torch.nn.functional" in coverage.modules
     assert "torch.nn.functional.linear" in coverage.symbols
+    assert "torch.nn.functional.gelu" in coverage.symbols
     assert "torch.matmul" in coverage.symbols
+    assert "torch.add" in coverage.symbols
+    assert "torch.sub" in coverage.symbols
+    assert "torch.mul" in coverage.symbols
+    assert "torch.div" in coverage.symbols
+    for operation in ("abs", "neg", "negative", "square", "exp", "log", "sqrt"):
+        assert f"torch.{operation}" in coverage.symbols
+        assert f"torch.Tensor.{operation}" in coverage.symbols
     assert "torch.Tensor.relu" in coverage.symbols
     assert "torch.Tensor.sigmoid" in coverage.symbols
     assert "torch.Tensor.tanh" in coverage.symbols

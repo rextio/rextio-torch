@@ -12,12 +12,15 @@ from rextio.plugins.api import (
     ClaimSite,
     KeywordArg,
     LoweringContext,
-    NotCovered,
     ReceiverMeta,
     Rejected,
 )
 
-from rextio_torch.claim.classification import ARGMAX_RULE, SOFTMAX_RULE
+from rextio_torch.claim.classification import (
+    ARGMAX_RULE,
+    SOFTMAX_RULE,
+    SOFTMAX_STATIC_RULE,
+)
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_ARGMAX,
     DIAGNOSTIC_SOFTMAX,
@@ -77,7 +80,6 @@ def test_claims_method_only_classification_head() -> None:
 @pytest.mark.parametrize(
     ("method", "keywords", "diagnostic"),
     [
-        ("softmax", (_literal("dim", 0),), DIAGNOSTIC_SOFTMAX),
         ("softmax", (_literal("dim", 1), _literal("dtype", "float32")), DIAGNOSTIC_SOFTMAX),
         ("argmax", (_literal("dim", 1), _literal("keepdim", True)), DIAGNOSTIC_ARGMAX),
         ("argmax", (_literal("keepdim", False),), DIAGNOSTIC_ARGMAX),
@@ -91,7 +93,7 @@ def test_rejects_classification_near_misses(
     assert result.diagnostic.code == diagnostic
 
 
-def test_dynamic_or_functional_forms_fall_back() -> None:
+def test_dynamic_forms_fall_back_and_functional_forms_claim() -> None:
     dynamic = KeywordArg(
         name="dim", arg_type="int", literal=ClaimLiteral(is_literal=False, value=None)
     )
@@ -105,7 +107,10 @@ def test_dynamic_or_functional_forms_fall_back() -> None:
         column=0,
         keywords=(_literal("dim", 1),),
     )
-    assert isinstance(PLUGIN.claim(functional, CONFIG), NotCovered)
+    assert PLUGIN.claim(functional, CONFIG) == Claimed(
+        rule_id=SOFTMAX_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
 
 
 def test_lower_classification_helpers_revalidate_exact_metadata() -> None:
@@ -134,7 +139,7 @@ def test_lower_classification_helpers_revalidate_exact_metadata() -> None:
 
     malformed = _site("argmax", (_literal("dim", 1), _literal("keepdim", True)))
     malformed = replace(malformed, rule_id=ARGMAX_RULE, result_type=TENSOR_I64_CPU_1D)
-    with pytest.raises(ValueError, match="keepdim=False"):
+    with pytest.raises(ValueError, match="result metadata"):
         PLUGIN.lower(
             malformed,
             LoweringContext(

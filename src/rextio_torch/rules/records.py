@@ -31,6 +31,32 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/functional-linear-none-f32-cpu-2d",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.nn.functional.linear(input, weight) with bias omitted, "
+                "literal positional None, or exact literal keyword bias=None"
+            ),
+        ),
+        constraint=(
+            "Exact canonical functional.linear target with float32 CPU rank-2 "
+            "input and weight. Bias is absent or statically proved literal None; "
+            "result is rank-2 float32 CPU under no-grad. Tensor-valued keyword "
+            "bias/input/weight cannot be represented by Core plugin API 1.3 and "
+            "stays fallback. Other keywords and module forms are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-023",
+        guidance=(
+            "Pass input/weight positionally. Omit bias, pass positional literal "
+            "None, or use the exact literal keyword bias=None."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/tensor-relu-f32-cpu-2d",
         provider="rextio-torch",
         scope=RuleScope(
@@ -328,6 +354,100 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/tensor-sub-f32-cpu-same-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern="elementwise - on same-rank float32 CPU rank-1 or rank-2 tensors",
+        ),
+        constraint=(
+            "Binary - with two float32 CPU tensors of equal rank (1 or 2). "
+            "Result preserves the left operand type. Concrete sizes are not "
+            "statically represented; tch checks same-shape or PyTorch-compatible "
+            "same-rank broadcasting at runtime. Scalar operands stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-019",
+        guidance=(
+            "Write a - b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-sub-f32-cpu-2d-1d-broadcast",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "elementwise - with rank-2/rank-1 trailing broadcast "
+                "(either operand order) on float32 CPU tensors"
+            ),
+        ),
+        constraint=(
+            "Binary - where one operand is float32 CPU rank-2 and the other is "
+            "float32 CPU rank-1. Operand order is preserved because subtraction "
+            "is not commutative. Runtime tch applies PyTorch trailing-dimension "
+            "broadcast rules and rejects incompatible concrete sizes. Result is "
+            "rank-2 float32 CPU."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-020",
+        guidance=(
+            "Write rank2 - rank1 or rank1 - rank2 with TensorF32Cpu2D / "
+            "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-div-f32-cpu-same-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern="true division / on same-rank float32 CPU rank-1 or rank-2 tensors",
+        ),
+        constraint=(
+            "Binary / with two float32 CPU tensors of equal rank (1 or 2). "
+            "Result preserves the left operand type. tch performs PyTorch true "
+            "division, including IEEE-754 zero/NaN/Inf behavior. Scalar operands "
+            "and non-float32 tensors stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-021",
+        guidance=(
+            "Write a / b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "true division / with rank-2/rank-1 trailing broadcast "
+                "(either operand order) on float32 CPU tensors"
+            ),
+        ),
+        constraint=(
+            "Binary / where one operand is float32 CPU rank-2 and the other is "
+            "float32 CPU rank-1. Operand order is preserved because division is "
+            "not commutative. Runtime tch applies PyTorch trailing-dimension "
+            "broadcast rules and rejects incompatible concrete sizes. Result is "
+            "rank-2 float32 CPU."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-022",
+        guidance=(
+            "Write rank2 / rank1 or rank1 / rank2 with TensorF32Cpu2D / "
+            "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/tensor-sum-dim1-f32-cpu-2d",
         provider="rextio-torch",
         scope=RuleScope(
@@ -347,6 +467,156 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         guidance=(
             "Write .sum(dim=1, keepdim=False) with literal keywords on a "
             "TensorF32Cpu2D receiver."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-relu-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.relu(tensor) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.relu with one positional tensor and no keywords. "
+            "Result preserves the float32 CPU rank-1/rank-2 input type. Other "
+            "functional namespaces and in-place forms stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-024",
+        guidance="Call torch.relu(tensor) with one annotated float32 CPU tensor.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-sigmoid-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.sigmoid(tensor) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.sigmoid with one positional tensor and no keywords. "
+            "Result preserves the registered input type; other call shapes stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-025",
+        guidance="Call torch.sigmoid(tensor) with one annotated float32 CPU tensor.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-tanh-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.tanh(tensor) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.tanh with one positional tensor and no keywords. "
+            "Result preserves the registered input type; other call shapes stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-026",
+        guidance="Call torch.tanh(tensor) with one annotated float32 CPU tensor.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/mean-static-dim-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.mean(tensor, dim) or tensor.mean(dim) with static dim/keepdim "
+                "and an already-representable float32 CPU rank-1/rank-2 result"
+            ),
+        ),
+        constraint=(
+            "Exact torch.mean functional form or receiver method. dim is literal 0/1 "
+            "and appears once, positionally or by keyword. keepdim is omitted (False) "
+            "or a named bool literal; positional keepdim and dtype/out options are "
+            "excluded. Rank-2 supports dim 0/1 with either keepdim value. Rank-1 "
+            "supports only dim=0, keepdim=True because scalar rank-0 is unregistered."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-027",
+        guidance=(
+            "Use a literal dim once and keep the result inside TensorF32Cpu1D/2D; "
+            "pass keepdim only as a named bool literal."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/sum-static-dim-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.sum(tensor, dim) or tensor.sum(dim) with static dim/keepdim "
+                "and an already-representable float32 CPU rank-1/rank-2 result"
+            ),
+        ),
+        constraint=(
+            "Same bounded form/type matrix as static mean: literal dim 0/1 once, "
+            "optional named bool keepdim (default False), no positional keepdim or "
+            "dtype/out. Rank-1 keepdim=False remains fallback because rank-0 is absent."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-028",
+        guidance=(
+            "Use a literal dim once and keep the result inside TensorF32Cpu1D/2D; "
+            "pass keepdim only as a named bool literal."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/softmax-static-dim-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.softmax(tensor, dim) or tensor.softmax(dim) with literal "
+                "dim 0/1 on representable float32 CPU rank-1/rank-2 tensors"
+            ),
+        ),
+        constraint=(
+            "Exact torch.softmax functional form or receiver method. dim appears "
+            "once as a literal positional/keyword value. Rank-1 accepts dim=0; "
+            "rank-2 accepts dim=0/1. dtype and every other option are excluded; "
+            "softmax has no keepdim parameter."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-029",
+        guidance="Use torch.softmax(tensor, dim=<literal>) without dtype or keepdim.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/argmax-static-dim-i64-cpu-rank1",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "torch.argmax(tensor, dim) or tensor.argmax(dim) with a literal "
+                "dimension and an exact int64 CPU rank-1 result"
+            ),
+        ),
+        constraint=(
+            "dim appears once as literal 0/1; keepdim is omitted (False) or a "
+            "named bool literal. Rank-2 dim 0/1 is accepted only with keepdim=False. "
+            "Rank-1 dim=0 is accepted only with keepdim=True. Rank-2 keepdim=True "
+            "and rank-1 keepdim=False remain fallback because no exact registered "
+            "int64 rank-2/rank-0 result type exists."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-030",
+        guidance=(
+            "Keep argmax output at TensorI64Cpu1D: rank-2 with keepdim=False or "
+            "rank-1 dim=0 with keepdim=True."
         ),
         stability="experimental",
         verified=True,

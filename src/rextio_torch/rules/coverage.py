@@ -12,6 +12,13 @@ COVERAGE = CoverageDecl(
     symbols=(
         "torch.nn.functional.linear",
         "torch.matmul",
+        "torch.relu",
+        "torch.sigmoid",
+        "torch.tanh",
+        "torch.mean",
+        "torch.sum",
+        "torch.softmax",
+        "torch.argmax",
         "torch.Tensor.relu",
         "torch.Tensor.sigmoid",
         "torch.Tensor.tanh",

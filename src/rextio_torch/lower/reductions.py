@@ -1,36 +1,128 @@
-"""Lower ``.mean`` / ``.sum`` claims after defensive revalidation."""
+"""Lower bounded static-dimension ``mean`` / ``sum`` claims."""
 
 from __future__ import annotations
 
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
-from rextio_torch.claim.reductions import MEAN_RULE, REDUCTION_RULES, SUM_RULE
+from rextio_torch.claim.reductions import (
+    MEAN_RULE,
+    MEAN_STATIC_RULE,
+    REDUCTION_RULES,
+    SUM_RULE,
+    SUM_STATIC_RULE,
+)
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
 from rextio_torch.rust_snippets import (
-    MEAN_DIM1_KEEPFALSE,
-    SUM_DIM1_KEEPFALSE,
     boundary_helpers,
-    mean_dim1_keepfalse_helper,
-    sum_dim1_keepfalse_helper,
+    reduction_call_name,
+    reduction_helper,
 )
 
-_HELPERS: dict[str, tuple[str, str]] = {
-    MEAN_RULE: (MEAN_DIM1_KEEPFALSE, mean_dim1_keepfalse_helper()),
-    SUM_RULE: (SUM_DIM1_KEEPFALSE, sum_dim1_keepfalse_helper()),
+_RULE_METHODS: dict[str, str] = {
+    MEAN_RULE: "mean",
+    MEAN_STATIC_RULE: "mean",
+    SUM_RULE: "sum",
+    SUM_STATIC_RULE: "sum",
 }
 
-_METHOD_BY_RULE: dict[str, str] = {
-    MEAN_RULE: "mean",
-    SUM_RULE: "sum",
+_LEGACY_RULES = frozenset({MEAN_RULE, SUM_RULE})
+_FUNCTION_TARGETS: dict[str, str] = {
+    "torch.mean": "mean",
+    "torch.sum": "sum",
 }
+_F32_TYPES = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
 
 def _method_name(target: str) -> str:
     return target.rpartition(".")[2]
 
 
+def _keyword_literals(claimed: ClaimSite) -> dict[str, object]:
+    values: dict[str, object] = {}
+    expected_types = {"dim": "int", "keepdim": "bool"}
+    for keyword in claimed.keywords:
+        if (
+            keyword.name in values
+            or not keyword.literal.is_literal
+            or (
+                keyword.name in expected_types
+                and keyword.arg_type != expected_types[keyword.name]
+            )
+        ):
+            raise ValueError("rextio-torch reduction lower requires unique literal keywords")
+        values[keyword.name] = keyword.literal.value
+    return values
+
+
+def _form_metadata(
+    claimed: ClaimSite,
+    ctx: LoweringContext,
+    method: str,
+) -> tuple[str, int | None, bool]:
+    """Return input type, positional dim, and whether dim was positional."""
+    if claimed.receiver is None:
+        if _FUNCTION_TARGETS.get(claimed.target) != method or ctx.receiver is not None:
+            raise ValueError(
+                f"rextio-torch functional {method} lower received a non-canonical target/receiver"
+            )
+        base_arity = 1
+        if len(claimed.operand_types) not in {1, 2} or len(ctx.operands) != len(
+            claimed.operand_types
+        ):
+            raise ValueError(
+                f"rextio-torch functional {method} lower requires tensor plus optional dim"
+            )
+        input_type = claimed.operand_types[0]
+        input_name = ctx.operands[0]
+    else:
+        if ctx.receiver is None:
+            raise ValueError(f"rextio-torch method {method} lower requires ctx.receiver")
+        base_arity = 0
+        if len(claimed.operand_types) not in {0, 1} or len(ctx.operands) != len(
+            claimed.operand_types
+        ):
+            raise ValueError(
+                f"rextio-torch method {method} lower accepts at most one positional dim"
+            )
+        input_type = claimed.receiver.arg_type
+        input_name = ctx.receiver
+    if input_type not in _F32_TYPES:
+        raise ValueError(
+            f"rextio-torch {method} lower requires a float32 CPU rank-1/2 input"
+        )
+
+    has_positional_dim = len(claimed.operand_types) == base_arity + 1
+    positional_dim: int | None = None
+    if has_positional_dim:
+        if len(claimed.operand_literals) != len(claimed.operand_types):
+            raise ValueError(
+                f"rextio-torch {method} lower positional literal metadata is not aligned"
+            )
+        dim_index = base_arity
+        literal = claimed.operand_literals[dim_index]
+        if (
+            claimed.operand_types[dim_index] != "int"
+            or not literal.is_literal
+            or not isinstance(literal.value, int)
+            or isinstance(literal.value, bool)
+        ):
+            raise ValueError(
+                f"rextio-torch {method} lower positional dim is not a proved int literal"
+            )
+        positional_dim = literal.value
+    return input_name, positional_dim, has_positional_dim
+
+
+def _expected_result(input_type: str, dim: int, keepdim: bool) -> str | None:
+    if input_type == TENSOR_F32_CPU_2D and dim in {0, 1}:
+        return TENSOR_F32_CPU_2D if keepdim else TENSOR_F32_CPU_1D
+    if input_type == TENSOR_F32_CPU_1D and dim == 0 and keepdim:
+        return TENSOR_F32_CPU_1D
+    return None
+
+
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
-    """Lower a previously claimed mean/sum method site, or return None."""
+    """Lower a proved reduction and independently revalidate every static field."""
     method = _method_name(claimed.target)
     if claimed.kind != "call" or method not in {"mean", "sum"}:
         return None
@@ -39,54 +131,74 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             "rextio-torch reduction lower received mismatched rule_id: "
             f"{claimed.rule_id!r}"
         )
-    if _METHOD_BY_RULE.get(claimed.rule_id or "") != method:
+    if _RULE_METHODS.get(claimed.rule_id or "") != method:
         raise ValueError(
             "rextio-torch reduction lower rule/method mismatch: "
             f"rule_id={claimed.rule_id!r} method={method!r}"
         )
-    receiver = claimed.receiver
+
+    input_name, positional_dim, has_positional_dim = _form_metadata(claimed, ctx, method)
+    input_type = (
+        claimed.receiver.arg_type
+        if claimed.receiver is not None
+        else claimed.operand_types[0]
+    )
+    if input_type not in _F32_TYPES:
+        raise ValueError(f"rextio-torch {method} lower input type changed")
+
+    values = _keyword_literals(claimed)
+    allowed = {"keepdim"} if has_positional_dim else {"dim", "keepdim"}
+    if not set(values) <= allowed:
+        raise ValueError(
+            f"rextio-torch {method} lower received duplicate/unsupported keyword options"
+        )
+    raw_dim: object
+    if has_positional_dim:
+        raw_dim = positional_dim
+    else:
+        if "dim" not in values:
+            raise ValueError(f"rextio-torch {method} lower requires a static dim")
+        raw_dim = values["dim"]
+    keepdim = values.get("keepdim", False)
     if (
-        receiver is None
-        or receiver.arg_type != TENSOR_F32_CPU_2D
-        or claimed.operand_types
-        or claimed.result_type != TENSOR_F32_CPU_1D
-    ):
-        raise ValueError(f"rextio-torch received malformed {method} lower metadata")
-    if len(claimed.keywords) != 2:
-        raise ValueError(
-            f"rextio-torch {method} lower requires exactly two keywords (dim, keepdim)"
-        )
-    values = {kw.name: kw.literal for kw in claimed.keywords}
-    if set(values) != {"dim", "keepdim"}:
-        raise ValueError(
-            f"rextio-torch {method} lower keyword names changed: {sorted(values)!r}"
-        )
-    dim_lit = values["dim"]
-    keepdim_lit = values["keepdim"]
-    if (
-        not dim_lit.is_literal
-        or not isinstance(dim_lit.value, int)
-        or isinstance(dim_lit.value, bool)
-        or dim_lit.value != 1
+        not isinstance(raw_dim, int)
+        or isinstance(raw_dim, bool)
+        or raw_dim not in {0, 1}
+        or not isinstance(keepdim, bool)
     ):
         raise ValueError(
-            f"rextio-torch {method} lower requires dim=1 literal; got {dim_lit.value!r}"
+            f"rextio-torch {method} lower requires dim 0/1 and bool keepdim"
         )
-    if not keepdim_lit.is_literal or keepdim_lit.value is not False:
+    dim = raw_dim
+    expected_result = _expected_result(input_type, dim, keepdim)
+    if expected_result is None or claimed.result_type != expected_result:
         raise ValueError(
-            f"rextio-torch {method} lower requires keepdim=False literal; "
-            f"got {keepdim_lit.value!r}"
+            f"rextio-torch {method} lower result metadata changed between claim and lower"
         )
-    if ctx.receiver is None:
-        raise ValueError(f"rextio-torch {method} lower requires ctx.receiver")
-    rule_id = claimed.rule_id
-    if rule_id is None or rule_id not in _HELPERS:
+
+    if claimed.rule_id in _LEGACY_RULES:
+        if not (
+            claimed.receiver is not None
+            and not has_positional_dim
+            and input_type == TENSOR_F32_CPU_2D
+            and dim == 1
+            and keepdim is False
+            and set(values) == {"dim", "keepdim"}
+        ):
+            raise ValueError(
+                f"rextio-torch legacy {method} lower metadata changed between claim and lower"
+            )
+    elif claimed.rule_id not in {MEAN_STATIC_RULE, SUM_STATIC_RULE}:
         raise ValueError(
-            f"rextio-torch reduction lower missing helper for rule_id: {rule_id!r}"
+            f"rextio-torch reduction lower missing static rule: {claimed.rule_id!r}"
         )
-    call_name, helper = _HELPERS[rule_id]
+
+    call_name = reduction_call_name(method, dim, keepdim)
+    helper = reduction_helper(method, dim, keepdim)
     return LoweredExpr(
-        rust=f"{call_name}(&{ctx.receiver})?",
+        # A positional dim is compile-time metadata only; it is deliberately
+        # not forwarded as a runtime helper operand.
+        rust=f"{call_name}(&{input_name})?",
         helpers=(boundary_helpers(), helper),
     )
 

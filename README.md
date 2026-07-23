@@ -278,6 +278,7 @@ become silent native claims.
 | Elementwise other ops | `-`, `*`, `/`, scalar operands | Not claimed |
 | Reductions other shapes | whole-tensor mean/sum, `dim≠1`, `keepdim=True`, dynamic dim/keepdim, positionals | `Rejected` or unclaimed |
 | Classification variations | functional `torch.softmax`/`torch.argmax`, dtype override, dynamic dim/keepdim, `dim≠1`, `keepdim=True`, rank-3+ logits | `Rejected` or unclaimed |
+| Classification-result arithmetic | `TensorI64Cpu1D + TensorI64Cpu1D` or mixed int64/float32 `+` | `Rejected`; add remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
 | Unsupported broadcast ranks | `+` rank combinations other than same-rank or 2d+1d | `Rejected` |
 | Unrelated torch APIs | e.g. `torch.softmax` | `NotCovered` |

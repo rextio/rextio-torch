@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from rextio.config.schema import RextioConfig
 from rextio.plugins.api import (
     ClaimLiteral,
@@ -33,6 +34,7 @@ from rextio_torch.diagnostics import (
     DIAGNOSTIC_UNSUPPORTED,
     TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
+    TENSOR_I64_CPU_1D,
 )
 from rextio_torch.plugin import plugin
 
@@ -196,6 +198,22 @@ def test_claims_broadcast_add_rank2_rank1() -> None:
     assert PLUGIN.claim(_binop_site("+", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
         rule_id=ADD_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
     )
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    (
+        (TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
+        (TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D),
+        (TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D),
+    ),
+)
+def test_rejects_add_with_classification_result_type(left: str, right: str) -> None:
+    result = PLUGIN.claim(_binop_site("+", left, right), CONFIG)
+    assert isinstance(result, Rejected)
+    assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
 def test_claims_matmul_binop_and_call() -> None:

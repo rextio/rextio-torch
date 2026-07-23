@@ -14,6 +14,9 @@ Changelog and Semantic Versioning conventions.
 - Add `TensorI64Cpu1D` exclusively for that classification result boundary.
   Functional spellings, dtype overrides, dynamic dimensions/keepdim, rank-3+,
   non-CPU tensors, training/autograd, and in-place forms remain fail-closed.
+- Keep the pre-existing add rules explicitly float32-only now that the type
+  vocabulary includes an int64 result: int64+int64 and mixed int64/float32
+  operands are rejected at claim time and independently at lowering.
 - Extend native Cargo certification with numerical, dtype, shape, no-grad,
   non-mutation, and route evidence for the classification head.
 - Update the normal CI triggers to include the active `0.1.2` integration

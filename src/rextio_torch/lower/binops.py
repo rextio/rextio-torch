@@ -12,7 +12,7 @@ from rextio_torch.claim.binops import (
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
 )
-from rextio_torch.diagnostics import TENSOR_F32_CPU_2D, tensor_meta
+from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
 from rextio_torch.rust_snippets import (
     ADD,
     MATMUL,
@@ -24,6 +24,21 @@ from rextio_torch.rust_snippets import (
 
 def _method_name(target: str) -> str:
     return target.rpartition(".")[2]
+
+
+_SAME_RANK_ADD_TYPES: frozenset[tuple[str, str, str]] = frozenset(
+    {
+        (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+    }
+)
+_ADD_F32_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
+_BROADCAST_ADD_TYPES: frozenset[tuple[str, str, str]] = frozenset(
+    {
+        (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D),
+        (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
+    }
+)
 
 
 def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
@@ -44,21 +59,19 @@ def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
     left, right = claimed.operand_types
     if left is None or right is None:
         raise ValueError("rextio-torch add lower requires resolved operand types")
-    left_meta = tensor_meta(left)
-    right_meta = tensor_meta(right)
-    if left_meta is None or right_meta is None:
+    metadata = (left, right, claimed.result_type)
+    if left not in _ADD_F32_TYPES or right not in _ADD_F32_TYPES:
         raise ValueError(
-            f"rextio-torch add lower unknown operand types: {left!r}, {right!r}"
+            "rextio-torch add lower requires documented float32 CPU operand types; "
+            f"got {left!r}, {right!r}"
         )
-    _, _, left_rank = left_meta
-    _, _, right_rank = right_meta
     if claimed.rule_id == ADD_SAME_RANK_RULE:
-        if left_rank != right_rank or claimed.result_type != left:
+        if metadata not in _SAME_RANK_ADD_TYPES:
             raise ValueError(
                 "rextio-torch same-rank add lower metadata changed between claim and lower"
             )
     elif claimed.rule_id == ADD_BROADCAST_2D_1D_RULE:
-        if {left_rank, right_rank} != {1, 2} or claimed.result_type != TENSOR_F32_CPU_2D:
+        if metadata not in _BROADCAST_ADD_TYPES:
             raise ValueError(
                 "rextio-torch broadcast add lower metadata changed between claim and lower"
             )

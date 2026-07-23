@@ -19,7 +19,11 @@ from rextio_torch.claim.binops import (
 )
 from rextio_torch.claim.classification import ARGMAX_RULE, SOFTMAX_RULE
 from rextio_torch.claim.reductions import MEAN_RULE
-from rextio_torch.diagnostics import TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D
+from rextio_torch.diagnostics import (
+    DIAGNOSTIC_UNSUPPORTED,
+    TENSOR_F32_CPU_2D,
+    TENSOR_I64_CPU_1D,
+)
 from rextio_torch.plugin import PLUGIN_ID, plugin
 
 # Temps are required: core does not claim method calls whose receiver is a bare BinOp
@@ -62,12 +66,26 @@ def method_matmul(
 '''
 
 CLASSIFICATION_HEAD_SOURCE = '''
-from rextio_torch.types import TensorF32Cpu2D, TensorI64Cpu1D
+from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D, TensorI64Cpu1D
 
 
 def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = logits.softmax(dim=1)
     return probabilities.argmax(dim=1, keepdim=False)
+
+
+def invalid_i64_add(labels: TensorI64Cpu1D) -> TensorI64Cpu1D:
+    return labels + labels
+
+
+def invalid_mixed_add(labels: TensorI64Cpu1D, scores: TensorF32Cpu1D) -> TensorI64Cpu1D:
+    return labels + scores
+
+
+def invalid_mixed_add_reverse(
+    labels: TensorI64Cpu1D, scores: TensorF32Cpu1D
+) -> TensorF32Cpu1D:
+    return scores + labels
 '''
 
 
@@ -166,3 +184,9 @@ def test_analyzer_classification_head_routes_native_with_i64_result(tmp_path: Pa
     assert not any(d.severity == "error" for d in function.diagnostics)
     assert [claim.rule_id for claim in function.plugin_claims] == [SOFTMAX_RULE, ARGMAX_RULE]
     assert function.plugin_claims[-1].result_type == TENSOR_I64_CPU_1D
+
+    for qualname in ("invalid_i64_add", "invalid_mixed_add", "invalid_mixed_add_reverse"):
+        rejected = _function(analysis, f"myapp.kernels.{qualname}")
+        assert rejected.accepted is False
+        assert not rejected.plugin_claims
+        assert any(d.code == DIAGNOSTIC_UNSUPPORTED for d in rejected.diagnostics)

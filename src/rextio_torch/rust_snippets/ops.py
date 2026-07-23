@@ -66,30 +66,40 @@ def tanh_helper() -> str:
 
 def mean_dim1_keepfalse_helper() -> str:
     """Return the no-grad fallible mean(dim=1, keepdim=False) helper."""
-    return r"""fn __rxttorch_mean_dim1_keepdim_false(
-    input: &RxtTorchTensor,
-) -> pyo3::PyResult<RxtTorchTensor> {
-    let _guard = tch::no_grad_guard();
-    let out = input
-        .0
-        .f_mean_dim(1i64, false, None)
-        .map_err(__rxttorch_map_err)?;
-    Ok(RxtTorchTensor(out))
-}"""
+    return reduction_helper("mean", 1, False)
 
 
 def sum_dim1_keepfalse_helper() -> str:
     """Return the no-grad fallible sum(dim=1, keepdim=False) helper."""
-    return r"""fn __rxttorch_sum_dim1_keepdim_false(
+    return reduction_helper("sum", 1, False)
+
+
+def reduction_call_name(method: str, dim: int, keepdim: bool) -> str:
+    """Return the fixed helper symbol for one proved static reduction."""
+    if method not in {"mean", "sum"} or dim not in {0, 1} or not isinstance(keepdim, bool):
+        raise ValueError("rextio-torch reduction helper requires mean/sum, dim 0/1, bool keepdim")
+    keep_token = "true" if keepdim else "false"
+    return f"__rxttorch_{method}_dim{dim}_keepdim_{keep_token}"
+
+
+def reduction_helper(method: str, dim: int, keepdim: bool) -> str:
+    """Return a fallible no-grad helper for one static mean/sum variant."""
+    call_name = reduction_call_name(method, dim, keepdim)
+    keep_token = "true" if keepdim else "false"
+    if method == "mean":
+        operation = f".f_mean_dim({dim}i64, {keep_token}, None)"
+    else:
+        operation = f".f_sum_dim_intlist({dim}i64, {keep_token}, None)"
+    return f"""fn {call_name}(
     input: &RxtTorchTensor,
-) -> pyo3::PyResult<RxtTorchTensor> {
+) -> pyo3::PyResult<RxtTorchTensor> {{
     let _guard = tch::no_grad_guard();
     let out = input
         .0
-        .f_sum_dim_intlist(1i64, false, None)
+        {operation}
         .map_err(__rxttorch_map_err)?;
     Ok(RxtTorchTensor(out))
-}"""
+}}"""
 
 
 def add_helper() -> str:
@@ -154,29 +164,62 @@ def matmul_helper() -> str:
 
 def softmax_dim1_helper() -> str:
     """Return the no-grad fallible softmax(dim=1) helper."""
-    return r"""fn __rxttorch_softmax_dim1(
+    return softmax_helper(1)
+
+
+def softmax_call_name(dim: int) -> str:
+    """Return the fixed helper symbol for one proved softmax dimension."""
+    if dim not in {0, 1}:
+        raise ValueError("rextio-torch softmax helper requires dim 0 or 1")
+    return f"__rxttorch_softmax_dim{dim}"
+
+
+def softmax_helper(dim: int) -> str:
+    """Return a fallible no-grad softmax helper for one static dimension."""
+    call_name = softmax_call_name(dim)
+    return f"""fn {call_name}(
     input: &RxtTorchTensor,
-) -> pyo3::PyResult<RxtTorchTensor> {
+) -> pyo3::PyResult<RxtTorchTensor> {{
     let _guard = tch::no_grad_guard();
-    let out = input.0.f_softmax(1i64, None).map_err(__rxttorch_map_err)?;
+    let out = input.0.f_softmax({dim}i64, None).map_err(__rxttorch_map_err)?;
     Ok(RxtTorchTensor(out))
-}"""
+}}"""
 
 
 def argmax_dim1_keepfalse_helper() -> str:
     """Return the no-grad fallible argmax(dim=1, keepdim=False) helper."""
-    return r"""fn __rxttorch_argmax_dim1_keepdim_false(
+    return argmax_helper(1, False, expected_rank=1)
+
+
+def argmax_call_name(dim: int, keepdim: bool) -> str:
+    """Return the fixed helper symbol for one proved argmax variant."""
+    if dim not in {0, 1} or not isinstance(keepdim, bool):
+        raise ValueError("rextio-torch argmax helper requires dim 0/1 and bool keepdim")
+    keep_token = "true" if keepdim else "false"
+    return f"__rxttorch_argmax_dim{dim}_keepdim_{keep_token}"
+
+
+def argmax_helper(dim: int, keepdim: bool, *, expected_rank: int) -> str:
+    """Return a fallible no-grad argmax helper with an exact output boundary."""
+    if expected_rank != 1:
+        raise ValueError("rextio-torch currently exposes only int64 CPU rank-1 argmax")
+    call_name = argmax_call_name(dim, keepdim)
+    keep_token = "true" if keepdim else "false"
+    return f"""fn {call_name}(
     input: &RxtTorchTensor,
-) -> pyo3::PyResult<RxtTorchTensor> {
+) -> pyo3::PyResult<RxtTorchTensor> {{
     let _guard = tch::no_grad_guard();
-    let out = input.0.f_argmax(1i64, false).map_err(__rxttorch_map_err)?;
-    if out.device() != tch::Device::Cpu || out.kind() != tch::Kind::Int64 || out.dim() != 1 {
+    let out = input.0.f_argmax({dim}i64, {keep_token}).map_err(__rxttorch_map_err)?;
+    if out.device() != tch::Device::Cpu
+        || out.kind() != tch::Kind::Int64
+        || out.dim() != {expected_rank}
+    {{
         return Err(pyo3::exceptions::PyRuntimeError::new_err(
             "rextio-torch: argmax classification result violated CPU int64 rank-1 boundary",
         ));
-    }
+    }}
     Ok(RxtTorchTensor(out))
-}"""
+}}"""
 
 
 __all__ = [
@@ -194,6 +237,8 @@ __all__ = [
     "SUB",
     "TANH",
     "add_helper",
+    "argmax_call_name",
+    "argmax_helper",
     "argmax_dim1_keepfalse_helper",
     "div_helper",
     "linear_helper",
@@ -201,7 +246,11 @@ __all__ = [
     "mean_dim1_keepfalse_helper",
     "mul_helper",
     "relu_helper",
+    "reduction_call_name",
+    "reduction_helper",
     "sigmoid_helper",
+    "softmax_call_name",
+    "softmax_helper",
     "softmax_dim1_helper",
     "sum_dim1_keepfalse_helper",
     "sub_helper",

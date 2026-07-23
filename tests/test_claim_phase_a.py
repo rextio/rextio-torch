@@ -30,9 +30,8 @@ from rextio_torch.claim.binops import (
     MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
-from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
+from rextio_torch.claim.reductions import MEAN_RULE, MEAN_STATIC_RULE, SUM_RULE
 from rextio_torch.diagnostics import (
-    DIAGNOSTIC_MEAN,
     DIAGNOSTIC_UNSUPPORTED,
     TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
@@ -308,7 +307,7 @@ def test_rejects_wrong_linear_ranks() -> None:
     assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
-def test_rejects_mean_wrong_dim() -> None:
+def test_claims_mean_dim0_keepdim_false() -> None:
     keywords = (
         KeywordArg(name="dim", arg_type="int", literal=ClaimLiteral(is_literal=True, value=0)),
         KeywordArg(
@@ -321,11 +320,13 @@ def test_rejects_mean_wrong_dim() -> None:
         _method_site("mean", TENSOR_F32_CPU_2D, keywords=keywords),
         CONFIG,
     )
-    assert isinstance(result, Rejected)
-    assert result.diagnostic.code == DIAGNOSTIC_MEAN
+    assert result == Claimed(
+        rule_id=MEAN_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
 
 
-def test_rejects_mean_keepdim_true() -> None:
+def test_claims_mean_keepdim_true() -> None:
     keywords = (
         KeywordArg(name="dim", arg_type="int", literal=ClaimLiteral(is_literal=True, value=1)),
         KeywordArg(
@@ -338,8 +339,10 @@ def test_rejects_mean_keepdim_true() -> None:
         _method_site("mean", TENSOR_F32_CPU_2D, keywords=keywords),
         CONFIG,
     )
-    assert isinstance(result, Rejected)
-    assert result.diagnostic.code == DIAGNOSTIC_MEAN
+    assert result == Claimed(
+        rule_id=MEAN_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
 
 
 def test_rejects_matmul_rank1() -> None:
@@ -350,7 +353,7 @@ def test_rejects_matmul_rank1() -> None:
 def test_not_covered_for_unrelated_target() -> None:
     site = ClaimSite(
         kind="call",
-        target="torch.softmax",
+        target="torch.linalg.norm",
         operand_types=(TENSOR_F32_CPU_2D,),
         file_path="",
         line=0,

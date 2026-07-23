@@ -1,7 +1,8 @@
 """Fail-closed claims for tensor ``.relu()`` / ``.sigmoid()`` / ``.tanh()``.
 
 Supports float32 CPU rank-1 and rank-2 method forms with zero arguments.
-Module-style spellings (``torch.relu``) stay outside the Alpha AOT surface.
+The exact functional spellings ``torch.relu`` / ``torch.sigmoid`` /
+``torch.tanh`` accept one positional tensor and no keywords.
 """
 
 from __future__ import annotations
@@ -10,6 +11,9 @@ from rextio.plugins.api import Claimed, ClaimResult, ClaimSite, NotCovered
 
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_RELU,
+    DIAGNOSTIC_FUNCTION_RELU,
+    DIAGNOSTIC_FUNCTION_SIGMOID,
+    DIAGNOSTIC_FUNCTION_TANH,
     DIAGNOSTIC_SIGMOID,
     DIAGNOSTIC_TANH,
     DIAGNOSTIC_UNSUPPORTED,
@@ -26,6 +30,9 @@ SIGMOID_RULE_1D = "rextio-torch/tensor-sigmoid-f32-cpu-1d"
 SIGMOID_RULE_2D = "rextio-torch/tensor-sigmoid-f32-cpu-2d"
 TANH_RULE_1D = "rextio-torch/tensor-tanh-f32-cpu-1d"
 TANH_RULE_2D = "rextio-torch/tensor-tanh-f32-cpu-2d"
+FUNCTION_RELU_RULE = "rextio-torch/function-relu-f32-cpu-rank1-2"
+FUNCTION_SIGMOID_RULE = "rextio-torch/function-sigmoid-f32-cpu-rank1-2"
+FUNCTION_TANH_RULE = "rextio-torch/function-tanh-f32-cpu-rank1-2"
 
 _SUPPORTED_RANKS = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
@@ -50,8 +57,29 @@ _DIAGNOSTICS: dict[str, str] = {
     "tanh": DIAGNOSTIC_TANH,
 }
 
+_FUNCTION_TARGETS: dict[str, str] = {
+    "torch.relu": "relu",
+    "torch.sigmoid": "sigmoid",
+    "torch.tanh": "tanh",
+}
+
+_FUNCTION_RULES: dict[str, str] = {
+    "relu": FUNCTION_RELU_RULE,
+    "sigmoid": FUNCTION_SIGMOID_RULE,
+    "tanh": FUNCTION_TANH_RULE,
+}
+
+_FUNCTION_DIAGNOSTICS: dict[str, str] = {
+    "relu": DIAGNOSTIC_FUNCTION_RELU,
+    "sigmoid": DIAGNOSTIC_FUNCTION_SIGMOID,
+    "tanh": DIAGNOSTIC_FUNCTION_TANH,
+}
+
 ACTIVATION_RULES: frozenset[str] = frozenset(
-    rule for by_rank in _RULES.values() for rule in by_rank.values()
+    {
+        *(rule for by_rank in _RULES.values() for rule in by_rank.values()),
+        *_FUNCTION_RULES.values(),
+    }
 )
 
 
@@ -60,14 +88,37 @@ def _method_name(target: str) -> str:
 
 
 def try_claim(site: ClaimSite) -> ClaimResult | None:
-    """Claim zero-arg activation methods on float32 CPU rank-1/2 receivers."""
+    """Claim bounded method and exact functional activation spellings."""
     method = _method_name(site.target)
     if site.kind != "call" or method not in _RULES:
         return None
     receiver = site.receiver
     if receiver is None:
-        # Module-style torch.relu / torch.sigmoid / torch.tanh stay unclaimed.
-        return NotCovered()
+        functional_method = _FUNCTION_TARGETS.get(site.target)
+        if functional_method is None:
+            return NotCovered()
+        diagnostic = _FUNCTION_DIAGNOSTICS[functional_method]
+        if site.keywords or len(site.operand_types) != 1:
+            return reject(
+                site,
+                diagnostic,
+                f"only {site.target}(tensor) with one positional tensor is supported",
+                f"Call {site.target}(tensor) with one positional argument and no keywords.",
+            )
+        operand_type = site.operand_types[0]
+        if operand_type is None:
+            return NotCovered()
+        if operand_type not in _SUPPORTED_RANKS:
+            return reject(
+                site,
+                DIAGNOSTIC_UNSUPPORTED,
+                f"{site.target} requires float32 CPU rank-1 or rank-2; got {operand_type!r}",
+                "Use TensorF32Cpu1D or TensorF32Cpu2D for the activation operand.",
+            )
+        return Claimed(
+            rule_id=_FUNCTION_RULES[functional_method],
+            result_type=operand_type,
+        )
     diagnostic = _DIAGNOSTICS[method]
     if site.operand_types or site.keywords:
         return reject(
@@ -98,6 +149,9 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
 
 __all__ = [
     "ACTIVATION_RULES",
+    "FUNCTION_RELU_RULE",
+    "FUNCTION_SIGMOID_RULE",
+    "FUNCTION_TANH_RULE",
     "RELU_RULE",
     "RELU_RULE_1D",
     "SIGMOID_RULE_1D",

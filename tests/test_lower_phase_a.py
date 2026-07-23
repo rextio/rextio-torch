@@ -553,7 +553,7 @@ def test_lower_revalidates_mean_keywords() -> None:
         fresh_name=_fresh_name,
         receiver="t",
     )
-    with pytest.raises(ValueError, match="dim=1"):
+    with pytest.raises(ValueError, match="legacy mean"):
         PLUGIN.lower(claimed, ctx)
 
 

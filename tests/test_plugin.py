@@ -45,7 +45,7 @@ def test_entry_point_factory_returns_plugin() -> None:
     obj = plugin()
     assert isinstance(obj, RextioTorchPlugin)
     assert obj.plugin_id == PLUGIN_ID
-    assert obj.api_version == REQUIRED_PLUGIN_API == "1.3"
+    assert obj.api_version == REQUIRED_PLUGIN_API == "1.6"
     assert __version__ == "0.1.2"
 
 
@@ -55,7 +55,7 @@ def test_core_loader_accepts_the_plugin() -> None:
     assert active.id == PLUGIN_ID
     assert active.rules_provided is True
     assert active.lowering_provided is True
-    assert active.api_version == "1.3"
+    assert active.api_version == "1.6"
     assert active.packages == ("torch",)
     assert __version__ in active.name
     assert registry.coverages[0].coverage == COVERAGE
@@ -64,8 +64,8 @@ def test_core_loader_accepts_the_plugin() -> None:
     ]
 
 
-@pytest.mark.parametrize("host_api", ("1.3", "1.4", "1.5"))
-def test_loader_negotiates_api_13_provider_without_artifact_capability(
+@pytest.mark.parametrize("host_api", ("1.6", "1.7"))
+def test_loader_negotiates_api_16_provider_without_artifact_capability(
     monkeypatch: pytest.MonkeyPatch, host_api: str
 ) -> None:
     """Core owns API compatibility; this provider remains host-extension-only."""
@@ -74,14 +74,14 @@ def test_loader_negotiates_api_13_provider_without_artifact_capability(
     monkeypatch.setattr(plugin_api, "PLUGIN_API_VERSION", host_api)
     registry = load_registry()
 
-    assert registry.active[0].api_version == "1.3"
+    assert registry.active[0].api_version == "1.6"
     assert getattr(registry.active[0], "artifact_capability_declared", False) is False
     assert not hasattr(plugin(), "artifact_capability")
 
 
 @pytest.mark.parametrize(
     "host_api",
-    ("1.2", "2.0", "1", "1.3.0", "not-a-version"),
+    ("1.2", "1.5", "2.0", "1", "1.6.0", "not-a-version"),
 )
 def test_provider_registration_rejects_incompatible_host_api(
     monkeypatch: pytest.MonkeyPatch, host_api: str
@@ -146,15 +146,20 @@ def test_type_vocabulary_keys_and_boundary() -> None:
         "rextio-torch/tensor-f32-cpu-2d",
         "rextio-torch/tensor-f32-cpu-1d",
         "rextio-torch/tensor-i64-cpu-1d",
+        "rextio-torch/tensor-f32-cuda0-2d",
+        "rextio-torch/tensor-f32-cuda0-1d",
     }
     for plugin_type in types:
         assert isinstance(plugin_type, PluginType)
         assert plugin_type.rust_type == "RxtTorchTensor"
         assert plugin_type.conversion is not None
         assert plugin_type.conversion.param_rust == "pyo3::Bound<'py, pyo3::types::PyAny>"
-        assert plugin_type.conversion.return_expr == (
-            "__rxttorch_materialize_tensor(py, {value})?"
-        )
+        if "cuda0" in plugin_type.key:
+            assert "__rxttorch_materialize_f32_cuda0_" in plugin_type.conversion.return_expr
+        else:
+            assert plugin_type.conversion.return_expr == (
+                "__rxttorch_materialize_tensor(py, {value})?"
+            )
         assert plugin_type.helpers
         assert "struct RxtTorchTensor" in plugin_type.helpers[0]
         assert "shallow_clone" in plugin_type.helpers[0]
@@ -166,6 +171,8 @@ def test_type_vocabulary_keys_and_boundary() -> None:
         "rextio_torch.types.TensorF32Cpu2D",
         "rextio_torch.types.TensorF32Cpu1D",
         "rextio_torch.types.TensorI64Cpu1D",
+        "rextio_torch.types.TensorF32Cuda0_2D",
+        "rextio_torch.types.TensorF32Cuda0_1D",
     }
 
 
@@ -196,7 +203,7 @@ def test_public_alpha_release_candidate_metadata() -> None:
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" not in project["classifiers"]
     dependencies = project["dependencies"]
-    assert "rextio>=0.1.3,<0.2" in dependencies
+    assert "rextio>=0.1.6,<0.2" in dependencies
     assert "torch==2.11.0" in dependencies
     assert all("git+" not in dep for dep in dependencies)
     assert "rextio-core-next" not in " ".join(dependencies)

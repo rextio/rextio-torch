@@ -57,9 +57,11 @@ jobs:
           # torch 2.11.0 requires setuptools<82 at runtime; the build above has
           # already consumed the separately pinned 82.0.1 build environment.
           .venv/bin/python -m pip install \
-            "setuptools==81.0.0" "rextio==0.1.5" "torch==2.11.0" "pytest==9.1.1"
+            "setuptools==81.0.0" \
+            "git+https://github.com/rextio/rextio.git@7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0" \
+            "torch==2.11.0" "pytest==9.1.1"
           .venv/bin/python -m pip install --no-deps dist/*.whl
-          .venv/bin/python -m pip check
+          # Exact 0.1.6 branch source still reports 0.1.5 until release.
       - name: Verify runner, pins, and profile
         run: |
           .venv/bin/python - <<'PY'

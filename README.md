@@ -7,10 +7,10 @@ PyTorch inference code to Rust expressions backed by
 | Field | Value |
 | --- | --- |
 | Package version | **0.1.2** (unreleased; from `rextio_torch.__about__`) |
-| Release status | **Unreleased 0.1.2 CPU-surface reinforcement**; latest release is **0.1.0 public Alpha** (2026-07-18) |
+| Release status | **Unreleased 0.1.2 CPU reinforcement + build-only CUDA E2 candidate**; latest release is **0.1.0 public Alpha** (2026-07-18) |
 | Distribution | Latest published release: [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
-| Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
-| Product mode | **CPU inference / no-grad only** |
+| Plugin API | **1.6** (`REQUIRED_PLUGIN_API`) |
+| Product mode | Proven CPU inference plus a **Linux x86_64 build-only CUDA candidate**; no CUDA support claim |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
 | Experimental hosts | **Linux x86_64**, **Linux AArch64** — runtime-backed but **not** certified |
 | Availability-gated | **macOS x86_64** — pinned torch 2.11.0 CPython 3.11 wheel absent |
@@ -18,7 +18,8 @@ PyTorch inference code to Rust expressions backed by
 | Deferred | **Windows** — unverified; no support claim |
 
 This README documents the **unreleased 0.1.2 compatibility,
-classification-head, and bounded CPU-surface update** to the
+classification-head, bounded CPU-surface update, and build-only CUDA E2
+candidate** to the
 0.1.0 public native-AOT Alpha support contract. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
@@ -36,15 +37,15 @@ a release gate for this Alpha cut.
 | Component | Exact pin | Why it must match |
 | --- | --- | --- |
 | CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
-| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Core's loader negotiates this provider's declared API **1.3** with compatible hosts; provider registration methods require a parseable host API in major 1 with minor >=3, without enforcing exact equality. |
-| Plugin API | **1.3** | Claim sites, receivers, keyword literals, type vocabulary, and crate deps are API 1.3 contracts. |
+| Rextio package | **`>=0.1.6,<0.2`** | Required for structured device metadata and exact lowering authorization. Until Core 0.1.6 is released, CI pins its reviewed source commit and installs this candidate without dependency resolution. |
+| Plugin API | **1.6** | Adds device-value metadata and lowering authorization to the existing claim/lower contracts. |
 | PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
 | Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
-| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from Rextio 0.1.3's generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
+| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from the Rextio 0.1.6 candidate's generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
 | Certified Rust toolchain | `rustc 1.93.1`, `cargo 1.93.1` on `aarch64-apple-darwin` | The real-Cargo Alpha evidence was reproduced with this local toolchain. This repo has no `rust-toolchain.toml`. |
 | libtorch linkage | **`LIBTORCH_USE_PYTORCH=1`** | Builds against the active Python torch install. |
 | Version-check bypass | **Forbidden** | `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path (stripped in e2e env setup; never set). |
-| Device | **CPU only** | Boundary extract rejects non-CPU tensors at runtime. |
+| Device | **CPU proven; CUDA device 0 build-only** | CPU types retain their old checks. CUDA marker types require already-resident `cuda:0` values and never lower transfers. |
 | Dtype | **float32 only** | Boundary extract rejects non-float32 at runtime. |
 | Mode | **Inference / no-grad** | Every op helper wraps `tch::no_grad_guard()`; certified native outputs have `requires_grad is False` even when inputs request grad. |
 
@@ -59,10 +60,10 @@ a release gate for this Alpha cut.
 3. **CPython 3.11** — the generated native extension must load under the **same**
    CPython 3.11 + torch 2.11.0 environment that built it (PyO3 ABI + tch
    python-extension bridge).
-4. **Rextio 0.1.3+ / provider API 1.3** — claim metadata (receivers, literal
-   keywords, type keys) is not available on older plugin APIs. The provider
-   remains API 1.3 while Core's loader handles compatible host APIs.
-   Registration fails closed for API 1.2, other majors, or malformed host
+4. **Rextio 0.1.6+ / provider API 1.6** — structured device metadata and
+   lowering authorization are not available on older plugin APIs. The provider
+   declares API 1.6 while Core's loader handles compatible later 1.x hosts.
+   Registration fails closed for API 1.5 and older, other majors, or malformed host
    versions before registration can reach fields unavailable on older Core.
 
 Certification and real-Cargo tests configure this environment explicitly.
@@ -110,11 +111,14 @@ Use this only to exercise the pinned environment on Linux. It does **not**
 promote Linux to certified status.
 
 ```bash
-# CPython 3.11 venv with the package + pins (torch==2.11.0, rextio>=0.1.3,<0.2)
+# CPython 3.11 venv with the unreleased source candidate and exact Core evidence
 python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e '.[dev]'
+python -m pip install 'pip==26.1'
+python -m pip install \
+  'git+https://github.com/rextio/rextio.git@7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0' \
+  'torch==2.11.0' 'pytest==9.1.1' 'ruff==0.15.22' 'mypy==2.3.0'
+python -m pip install --no-deps -e .
 
 # Required link mode; version-check bypass is forbidden
 export LIBTORCH_USE_PYTORCH=1
@@ -151,6 +155,8 @@ with a clear reason** — never mask by setting `LIBTORCH_BYPASS_VERSION_CHECK`.
 | `TensorF32Cpu2D` | `rextio-torch/tensor-f32-cpu-2d` | float32 | CPU | 2 |
 | `TensorF32Cpu1D` | `rextio-torch/tensor-f32-cpu-1d` | float32 | CPU | 1 |
 | `TensorI64Cpu1D` | `rextio-torch/tensor-i64-cpu-1d` | int64 | CPU | 1 (classification result only) |
+| `TensorF32Cuda0_2D` | `rextio-torch/tensor-f32-cuda0-2d` | float32 | CUDA device 0 | 2 (build-only) |
+| `TensorF32Cuda0_1D` | `rextio-torch/tensor-f32-cuda0-1d` | float32 | CUDA device 0 | 1 (build-only) |
 
 Marker classes intentionally **import neither torch nor Rextio**. Runtime values
 remain ordinary `torch.Tensor` objects; the analyzer resolves the dotted
@@ -167,11 +173,36 @@ Boundary unpack/wrap uses tch’s python-extension bridge (another ref-counted
 handle, **no storage copy**). `Clone` uses `shallow_clone()` — in-place ops are
 excluded because shallow clones alias storage.
 
+### Build-only CUDA E2 candidate
+
+The CUDA candidate is frozen to Linux x86_64, CPython 3.11, PyTorch/libtorch
+2.11.0, tch 0.24.0, `LIBTORCH_USE_PYTORCH=1`, float32 rank-1/rank-2
+`cuda:0`, and inference/no-grad. It accepts only named-intermediate
+`rank2 @ rank2 -> rank2 + rank1 bias -> rank2.relu() ->
+rank2.mean(dim=1) -> rank1`. Lowering requires the exact
+`rextio-device-cuda/cuda-libtorch-linux-x86_64` authorization.
+
+This is `support_claim=false`. CI runs actual Core orchestration with the real
+provider implementation fed by a fixed synthetic probe report, then compiles
+but never loads or runs the generated CUDA Rust slice. It does not inspect
+host hardware or prove real NVIDIA execution, one-libtorch-image/ABI identity,
+numerical equivalence, stream behavior, or performance. `.cuda()`/`.to()`,
+CPU/CUDA mixing, reverse/same-rank add, mixed-rank CUDA matmul, functional CUDA
+spellings, other devices, training/autograd, Windows, and macOS remain
+excluded. See [the complete frozen CUDA contract](docs/cuda-build-only-0.1.2.md).
+
+CUDA input and output boundaries also fail closed on non-strided layouts.
+Because tch 0.24 has no general layout getter, native checks use its exposed
+`is_sparse()` / `is_mkldnn()` flags and both Python boundaries additionally
+require the pinned PyTorch 2.11.0 `tensor.layout` to render as
+`torch.strided`; this catches sparse CSR/CSC/BSR/BSC without claiming a
+version-independent tch layout query.
+
 ---
 
 ## Exactly supported Python forms and result ranks
 
-Claims require API 1.3 metadata that proves the form (operand / receiver type
+Claims require API 1.6 metadata that proves the form (operand / receiver type
 keys, call target, static keyword literals). Result ranks are those of the
 claimed `result_type`.
 
@@ -228,7 +259,7 @@ semantics, such as `alpha`, `out`, or `rounding_mode`, remain rejected.
 Python `for` / `if` with Rextio-lowerable scalar `int` / `bool` conditions become
 Rust control flow around the native tch helpers (certified control-flow
 vertical slice). Tensor comparisons and tensor-data-dependent conditions are
-**not** claimable by plugin API 1.3 and remain on the Python fallback.
+**not** claimable by the current plugin API 1.6 surface and remain on the Python fallback.
 
 **Core receiver limitation (not a plugin gap):** Rextio core does not offer
 method calls whose receiver is a **bare BinOp** to plugins. Write named temps:
@@ -257,7 +288,7 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Check | Enforcement |
 | --- | --- |
 | Plugin type keys are the registered float32 CPU rank-1/2 keys | `is_tensor_type` / exact type equality per rule |
-| Linear: exact `torch.nn.functional.linear`; three positional tensors (2,2,1), or rank-2 input/weight with bias omitted / positional literal `None` / keyword literal `bias=None` | `claim/linear.py`; tensor-valued keywords are not representable in Core API 1.3 |
+| Linear: exact `torch.nn.functional.linear`; three positional tensors (2,2,1), or rank-2 input/weight with bias omitted / positional literal `None` / keyword literal `bias=None` | `claim/linear.py`; tensor-valued keywords remain unrepresentable in the Core API 1.6 ClaimSite contract |
 | Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; rank 1/2 and no keywords | `claim/activations.py` |
 | Unary math: receiver zero-arg methods, or exact `torch.abs/neg/negative/square/exp/log/sqrt` with one positional tensor; rank 1/2 and no keywords | `claim/unary.py` |
 | GELU: exact `torch.nn.functional.gelu`; one positional rank-1/2 tensor; `approximate` omitted or exactly the static string literal `"none"`; lower always hardcodes `"none"` | `claim/gelu.py` |
@@ -285,12 +316,12 @@ become silent native claims.
 
 | Category | Examples / notes | Claim outcome (when offered as a torch site) |
 | --- | --- | --- |
-| Other devices | CUDA, MPS, non-CPU | Outside vocabulary; boundary would reject non-CPU if a native path were reached |
+| Other devices | CUDA other than the exact build-only `cuda:0` slice; MPS and other accelerators | Outside the accepted vocabulary/slice; mixed devices and transfers are rejected |
 | Other dtypes | float64, int, etc. | Outside vocabulary; boundary rejects non-float32 at runtime on native paths |
 | Other ranks | rank-0 / rank-3+, rank-1 × rank-1 matmul, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
 | Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
 | Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
-| Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by Core API 1.3; others reject/fallback |
+| Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by the Core API 1.6 ClaimSite contract; others reject/fallback |
 | In-place ops | `relu_`, `sigmoid_`, `tanh_`, unary `_` variants, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
 | Unary variants | scalar inputs; `out`; alternate aliases such as `torch.absolute`; method arguments or keywords | Rejected for recognized exact functions/methods or otherwise unclaimed |
 | GELU variants | `approximate="tanh"`, dynamic/invalid/positional approximate, other keywords, `.gelu()`, or `nn.GELU` capture | Static recognized variants are rejected; dynamic values may be filtered by Core to ordinary fallback before plugin claim |
@@ -302,7 +333,7 @@ become silent native claims.
 | Unsupported broadcast ranks | arithmetic rank combinations other than same-rank or 2d/1d | `Rejected` |
 | Unrelated torch APIs | e.g. `torch.subtract` / `torch.divide` aliases | `NotCovered` |
 | Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
-| Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
+| Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under the current API 1.6 surface |
 | Bare BinOp method receivers | `(a @ b).relu()` | Core does not offer site; use temps |
 | Version bypass | `LIBTORCH_BYPASS_VERSION_CHECK` | Forbidden build path |
 | Custom operators | user ops outside the table above | Uncovered |
@@ -475,7 +506,7 @@ and explicit-`none` GELU are separately routed and compared.
 # Rejected: only exact GELU approximation "none" is native
 # torch.nn.functional.gelu(x, approximate="tanh")
 
-# Not offered by Core API 1.3: runtime tensor-valued keyword
+# Not offered by the current Core API 1.6 ClaimSite contract: runtime tensor-valued keyword
 # F.linear(x, weight, bias=bias_tensor)
 
 # Not offered by core to plugins: bare BinOp receiver
@@ -492,15 +523,38 @@ and explicit-`none` GELU are separately routed and compared.
 
 ## Install
 
-Install the exact public Alpha in a CPython 3.11 environment. A source checkout
-remains useful for development and for running the focused contract tests.
+The public PyPI command installs the released **0.1.0 / plugin API 1.3 CPU
+Alpha**. It does not install this branch's CUDA candidate:
 
 ```bash
-# CPython 3.11 only; requires rextio 0.1.3+ and torch 2.11.0
-python3.11 -m pip install 'rextio-torch>=0.1.0,<0.2'
+python3.11 -m pip install 'rextio-torch==0.1.0'
+```
 
-# Development checkout alternative
-python3.11 -m pip install -e '.[dev]'
+The unreleased **0.1.2 / plugin API 1.6** source candidate requires the exact
+reviewed Core source until Core 0.1.6 is released. Its metadata intentionally
+keeps the future `rextio>=0.1.6` floor, so install it without dependency
+resolution after installing the pinned Core commit:
+
+```bash
+python3.11 -m pip install \
+  'git+https://github.com/rextio/rextio.git@7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0' \
+  'torch==2.11.0' 'pytest==9.1.1' 'ruff==0.15.22' 'mypy==2.3.0'
+python3.11 -m pip install --no-deps -e .
+```
+
+The reviewed 0.1.2 evidence pins are Core
+`7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0` and CUDA provider
+`a5fb427e91710b65f54ee5b8e33706c45840cf9c`. The provider is not a mandatory
+package dependency; install it only for the maintainer CUDA orchestration/build
+gate:
+
+```bash
+python3.11 -m pip install --no-deps \
+  'git+https://github.com/rextio/rextio-device-cuda.git@a5fb427e91710b65f54ee5b8e33706c45840cf9c'
+export LIBTORCH_USE_PYTORCH=1
+unset LIBTORCH_BYPASS_VERSION_CHECK
+python3.11 scripts/build_cuda_candidate.py \
+  --output /tmp/rextio-torch-cuda-build-only
 ```
 
 Plugin discovery and `rextio_torch.types` import **without** importing torch.

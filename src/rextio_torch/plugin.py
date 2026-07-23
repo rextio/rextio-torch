@@ -1,7 +1,8 @@
 """The rextio-torch plugin object and entry-point factory.
 
-Implements plugin API 1.3: describe/covers, annotation vocabulary, claim/lower,
-and the exact ``tch =0.24.0`` crate pin with ``python-extension``. This module
+Implements plugin API 1.6: describe/covers, device-aware annotation vocabulary,
+claim/lower, and the exact ``tch =0.24.0`` crate pin with
+``python-extension``. This module
 never imports torch; user-facing types are also import-free.
 
 Import-time contract: this module (and therefore the package root and
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from rextio.plugins.models import RextioPlugin
 
 PLUGIN_ID = "rextio-torch"
-REQUIRED_PLUGIN_API = "1.3"
+REQUIRED_PLUGIN_API = "1.6"
 
 __all__ = ["PLUGIN_ID", "REQUIRED_PLUGIN_API", "RextioTorchPlugin", "plugin"]
 
@@ -48,18 +49,18 @@ def _require_compatible_host_api() -> None:
         len(parts) == 2
         and all(part.isdecimal() for part in parts)
         and int(parts[0]) == 1
-        and int(parts[1]) >= 3
+        and int(parts[1]) >= 6
     )
     if not compatible:
         raise RuntimeError(
-            "rextio-torch provider API 1.3 requires a compatible Rextio "
-            "plugin host API in major 1 with minor >= 3; this environment "
+            "rextio-torch provider API 1.6 requires a compatible Rextio "
+            "plugin host API in major 1 with minor >= 6; this environment "
             f"advertises PLUGIN_API_VERSION={PLUGIN_API_VERSION!r}"
         )
 
 
 class RextioTorchPlugin:
-    """Plugin API 1.3 provider for the Alpha AOT float32 CPU inference surface."""
+    """Plugin API 1.6 provider for bounded CPU and CUDA build-only surfaces."""
 
     plugin_id = PLUGIN_ID
     api_version = REQUIRED_PLUGIN_API
@@ -95,7 +96,7 @@ class RextioTorchPlugin:
         return torch_rule_records()
 
     def type_vocabulary(self) -> tuple[PluginType, ...]:
-        """Return the annotation vocabulary this plugin adds to the analyzer."""
+        """Return the CPU and bounded build-only CUDA annotation vocabulary."""
         _require_compatible_host_api()
         from rextio_torch.plugin_types import plugin_types
 

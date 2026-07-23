@@ -1,5 +1,11 @@
 # rextio-torch 0.1.0 implementation plan
 
+> Historical 0.1.0 plan: its CPU-only and plugin-API-1.3 statements describe
+> the released baseline, not the current unreleased branch. The bounded 0.1.2
+> CUDA build-only candidate is defined by
+> [cuda-build-only-0.1.2.md](cuda-build-only-0.1.2.md) and remains
+> `support_claim=false`.
+
 Status: public Alpha 0.1.0 released 2026-07-18
 
 **Alpha AOT status:** Phase A vertical slice remains **real-Cargo certified**.
@@ -222,12 +228,15 @@ raise through the fallible tch path.
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
 
-## Linux experimental smoke (not certification)
+## Historical 0.1.0 Linux experimental smoke (not current 0.1.2 setup)
 
-Maintainers may run the portable pin contract on Linux without weakening AOT
-pins:
+The commands below describe the released 0.1.0/API-1.3 baseline only.
+Maintainers testing the current 0.1.2 candidate must instead follow the exact
+Core/provider commit instructions in the README Install section and
+`cuda-build-only-0.1.2.md`.
 
-1. CPython 3.11 venv, `pip install -e '.[dev]'` (torch 2.11.0, rextio API 1.3).
+1. Historical CPython 3.11 venv with the 0.1.0 dependency set (torch 2.11.0,
+   rextio API 1.3).
 2. `export LIBTORCH_USE_PYTORCH=1` and ensure `LIBTORCH_BYPASS_VERSION_CHECK` is
    unset.
 3. Focused unit tests: `pytest -q tests --ignore=tests/e2e`.

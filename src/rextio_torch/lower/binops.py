@@ -8,22 +8,32 @@ from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
     ADD_RULES,
     ADD_SAME_RANK_RULE,
+    DIV_BROADCAST_2D_1D_RULE,
+    DIV_RULES,
+    DIV_SAME_RANK_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
     MUL_BROADCAST_2D_1D_RULE,
     MUL_RULES,
     MUL_SAME_RANK_RULE,
+    SUB_BROADCAST_2D_1D_RULE,
+    SUB_RULES,
+    SUB_SAME_RANK_RULE,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
 from rextio_torch.rust_snippets import (
     ADD,
+    DIV,
     MATMUL,
     MUL,
+    SUB,
     add_helper,
     boundary_helpers,
+    div_helper,
     matmul_helper,
     mul_helper,
+    sub_helper,
 )
 
 
@@ -139,6 +149,106 @@ def _try_lower_mul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
     )
 
 
+def _try_lower_sub(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
+    if claimed.kind != "binop" or claimed.target != "-":
+        return None
+    if claimed.rule_id not in SUB_RULES:
+        raise ValueError(
+            "rextio-torch subtraction lower received mismatched rule_id: "
+            f"{claimed.rule_id!r}"
+        )
+    if (
+        len(claimed.operand_types) != 2
+        or claimed.keywords
+        or claimed.receiver is not None
+        or ctx.receiver is not None
+    ):
+        raise ValueError("rextio-torch subtraction lower requires two positional tensor operands")
+    if len(ctx.operands) != 2:
+        raise ValueError(
+            "rextio-torch subtraction lower requires two ctx.operands; "
+            f"got {len(ctx.operands)}"
+        )
+    left, right = claimed.operand_types
+    if left is None or right is None:
+        raise ValueError("rextio-torch subtraction lower requires resolved operand types")
+    metadata = (left, right, claimed.result_type)
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch subtraction lower requires documented float32 CPU operand types; "
+            f"got {left!r}, {right!r}"
+        )
+    if claimed.rule_id == SUB_SAME_RANK_RULE:
+        if metadata not in _SAME_RANK_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch same-rank subtraction metadata changed between claim and lower"
+            )
+    elif claimed.rule_id == SUB_BROADCAST_2D_1D_RULE:
+        if metadata not in _BROADCAST_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch broadcast subtraction metadata changed between claim and lower"
+            )
+    else:
+        raise ValueError(
+            f"rextio-torch subtraction lower unexpected rule_id: {claimed.rule_id!r}"
+        )
+    left_name, right_name = ctx.operands
+    return LoweredExpr(
+        rust=f"{SUB}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), sub_helper()),
+    )
+
+
+def _try_lower_div(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
+    if claimed.kind != "binop" or claimed.target != "/":
+        return None
+    if claimed.rule_id not in DIV_RULES:
+        raise ValueError(
+            "rextio-torch division lower received mismatched rule_id: "
+            f"{claimed.rule_id!r}"
+        )
+    if (
+        len(claimed.operand_types) != 2
+        or claimed.keywords
+        or claimed.receiver is not None
+        or ctx.receiver is not None
+    ):
+        raise ValueError("rextio-torch division lower requires two positional tensor operands")
+    if len(ctx.operands) != 2:
+        raise ValueError(
+            "rextio-torch division lower requires two ctx.operands; "
+            f"got {len(ctx.operands)}"
+        )
+    left, right = claimed.operand_types
+    if left is None or right is None:
+        raise ValueError("rextio-torch division lower requires resolved operand types")
+    metadata = (left, right, claimed.result_type)
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch division lower requires documented float32 CPU operand types; "
+            f"got {left!r}, {right!r}"
+        )
+    if claimed.rule_id == DIV_SAME_RANK_RULE:
+        if metadata not in _SAME_RANK_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch same-rank division metadata changed between claim and lower"
+            )
+    elif claimed.rule_id == DIV_BROADCAST_2D_1D_RULE:
+        if metadata not in _BROADCAST_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch broadcast division metadata changed between claim and lower"
+            )
+    else:
+        raise ValueError(
+            f"rextio-torch division lower unexpected rule_id: {claimed.rule_id!r}"
+        )
+    left_name, right_name = ctx.operands
+    return LoweredExpr(
+        rust=f"{DIV}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), div_helper()),
+    )
+
+
 def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
     is_binop = claimed.kind == "binop" and claimed.target == "@"
     is_functional = claimed.kind == "call" and claimed.target == MATMUL_CALL_TARGET
@@ -220,7 +330,13 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
 
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
     """Lower a previously claimed + / matmul site, or return None."""
-    for lane in (_try_lower_add, _try_lower_mul, _try_lower_matmul):
+    for lane in (
+        _try_lower_add,
+        _try_lower_mul,
+        _try_lower_sub,
+        _try_lower_div,
+        _try_lower_matmul,
+    ):
         result = lane(claimed, ctx)
         if result is not None:
             return result

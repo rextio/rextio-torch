@@ -328,6 +328,100 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/tensor-sub-f32-cpu-same-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern="elementwise - on same-rank float32 CPU rank-1 or rank-2 tensors",
+        ),
+        constraint=(
+            "Binary - with two float32 CPU tensors of equal rank (1 or 2). "
+            "Result preserves the left operand type. Concrete sizes are not "
+            "statically represented; tch checks same-shape or PyTorch-compatible "
+            "same-rank broadcasting at runtime. Scalar operands stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-019",
+        guidance=(
+            "Write a - b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
+        ),
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-sub-f32-cpu-2d-1d-broadcast",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "elementwise - with rank-2/rank-1 trailing broadcast "
+                "(either operand order) on float32 CPU tensors"
+            ),
+        ),
+        constraint=(
+            "Binary - where one operand is float32 CPU rank-2 and the other is "
+            "float32 CPU rank-1. Operand order is preserved because subtraction "
+            "is not commutative. Runtime tch applies PyTorch trailing-dimension "
+            "broadcast rules and rejects incompatible concrete sizes. Result is "
+            "rank-2 float32 CPU."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-020",
+        guidance=(
+            "Write rank2 - rank1 or rank1 - rank2 with TensorF32Cpu2D / "
+            "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
+        ),
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-div-f32-cpu-same-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern="true division / on same-rank float32 CPU rank-1 or rank-2 tensors",
+        ),
+        constraint=(
+            "Binary / with two float32 CPU tensors of equal rank (1 or 2). "
+            "Result preserves the left operand type. tch performs PyTorch true "
+            "division, including IEEE-754 zero/NaN/Inf behavior. Scalar operands "
+            "and non-float32 tensors stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-021",
+        guidance=(
+            "Write a / b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
+        ),
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "true division / with rank-2/rank-1 trailing broadcast "
+                "(either operand order) on float32 CPU tensors"
+            ),
+        ),
+        constraint=(
+            "Binary / where one operand is float32 CPU rank-2 and the other is "
+            "float32 CPU rank-1. Operand order is preserved because division is "
+            "not commutative. Runtime tch applies PyTorch trailing-dimension "
+            "broadcast rules and rejects incompatible concrete sizes. Result is "
+            "rank-2 float32 CPU."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-022",
+        guidance=(
+            "Write rank2 / rank1 or rank1 / rank2 with TensorF32Cpu2D / "
+            "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
+        ),
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
         id="rextio-torch/tensor-sum-dim1-f32-cpu-2d",
         provider="rextio-torch",
         scope=RuleScope(

@@ -14,6 +14,8 @@ MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
 SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
 ADD = "__rxttorch_add"
 MUL = "__rxttorch_mul"
+SUB = "__rxttorch_sub"
+DIV = "__rxttorch_div"
 MATMUL = "__rxttorch_matmul"
 SOFTMAX_DIM1 = "__rxttorch_softmax_dim1"
 ARGMAX_DIM1_KEEPFALSE = "__rxttorch_argmax_dim1_keepdim_false"
@@ -114,6 +116,30 @@ def mul_helper() -> str:
 }"""
 
 
+def sub_helper() -> str:
+    """Return the no-grad fallible elementwise subtraction helper."""
+    return r"""fn __rxttorch_sub(
+    left: &RxtTorchTensor,
+    right: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = left.0.f_sub(&right.0).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
+def div_helper() -> str:
+    """Return the no-grad fallible elementwise true-division helper."""
+    return r"""fn __rxttorch_div(
+    left: &RxtTorchTensor,
+    right: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = left.0.f_div(&right.0).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
 def matmul_helper() -> str:
     """Return the no-grad fallible rank-2 matmul helper."""
     return r"""fn __rxttorch_matmul(
@@ -156,6 +182,7 @@ def argmax_dim1_keepfalse_helper() -> str:
 __all__ = [
     "ADD",
     "ARGMAX_DIM1_KEEPFALSE",
+    "DIV",
     "LINEAR",
     "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
@@ -164,9 +191,11 @@ __all__ = [
     "SIGMOID",
     "SOFTMAX_DIM1",
     "SUM_DIM1_KEEPFALSE",
+    "SUB",
     "TANH",
     "add_helper",
     "argmax_dim1_keepfalse_helper",
+    "div_helper",
     "linear_helper",
     "matmul_helper",
     "mean_dim1_keepfalse_helper",
@@ -175,5 +204,6 @@ __all__ = [
     "sigmoid_helper",
     "softmax_dim1_helper",
     "sum_dim1_keepfalse_helper",
+    "sub_helper",
     "tanh_helper",
 ]

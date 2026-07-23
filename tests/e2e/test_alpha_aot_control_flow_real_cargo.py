@@ -403,7 +403,12 @@ def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
         from torch_app.kernels import multiply_surface as multiply_boundary
 
         with pytest.raises(RuntimeError):
-            multiply_boundary(mul_left, mul_right, torch.ones(2), mul_vector)
+            multiply_boundary(
+                torch.ones((2, 2)),
+                torch.ones((2, 2)),
+                torch.ones(3),
+                torch.ones(3),
+            )
 
     # Grad-requesting inputs still yield no-grad native output.
     x_g = x_snap.detach().clone().requires_grad_(True)

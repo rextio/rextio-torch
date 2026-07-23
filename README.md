@@ -211,7 +211,7 @@ Native op helpers (all fallible, all under `no_grad`):
 
 Coverage symbols declared for the analyzer include
 `torch.nn.functional.linear`, `torch.matmul`, and method forms
-`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul,softmax,argmax}`. Binary `+` / `@` are claimed
+`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul,softmax,argmax}`. Binary `+` / `*` / `@` are claimed
 via binop sites (not module symbols alone).
 
 ### Control flow around claimed ops
@@ -252,7 +252,7 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Activations: method form only (receiver present), zero args/keywords, rank 1 or 2 | `claim/activations.py` — module-style `torch.relu` etc. → `NotCovered` |
 | Reductions: method form, **no** positionals, keywords exactly `{dim, keepdim}` with **literal** `dim=1` and `keepdim=False`, receiver rank 2 | `claim/reductions.py` |
 | Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
-| Add: binary `+` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
+| Elementwise add / multiply: binary `+` / `*` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
 Keyword order for `dim` / `keepdim` does not matter; values must still be static
@@ -418,8 +418,8 @@ claim/lower layer but is not a separate real-Cargo fixture.
 # Not offered by core to plugins: bare BinOp receiver
 # (a @ b + bias).relu()
 
-# Not claimed: in-place / other elementwise / views
-# x.relu_();  x * y;  x.transpose(0, 1)
+# Not claimed: in-place / unsupported elementwise forms / views
+# x.relu_();  x * 2.0;  x.transpose(0, 1)
 
 # Accepted classification head: int64 rank-1 labels
 # logits.softmax(dim=1).argmax(dim=1, keepdim=False)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Experimental Linux smoke for rextio-torch 0.1.0 Alpha.
+# Experimental Linux smoke for the unreleased rextio-torch 0.1.1 Alpha hotfix.
 #
 # Exercises the pinned native-AOT contract on Linux x86_64 or aarch64.
 # This is NOT certification. Certified host remains macOS arm64.
@@ -103,15 +103,15 @@ if version != "2.11.0":
     )
 PY
 
-echo "== rextio plugin API 1.3 =="
+echo "== rextio plugin API compatibility =="
 "$PYTHON" - <<'PY'
 from rextio.plugins.api import PLUGIN_API_VERSION
 from rextio_torch.plugin import REQUIRED_PLUGIN_API, plugin
 
 print(f"PLUGIN_API_VERSION={PLUGIN_API_VERSION}")
 print(f"REQUIRED_PLUGIN_API={REQUIRED_PLUGIN_API}")
-if PLUGIN_API_VERSION != REQUIRED_PLUGIN_API:
-    raise SystemExit("error: Rextio plugin API must be exactly 1.3")
+if PLUGIN_API_VERSION not in {"1.3", "1.4"}:
+    raise SystemExit("error: Rextio plugin API must be compatible with provider API 1.3")
 deps = plugin().crate_dependencies()
 assert deps[0].name == "tch" and deps[0].version == "=0.24.0"
 assert deps[0].features == ("python-extension",)

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, alpha/native-aot-0.1.0]
+    branches: [main, 0.1.1]
   pull_request:
-    branches: [main]
+    branches: [main, 0.1.1]
   workflow_dispatch:
 
 concurrency:
@@ -36,7 +36,7 @@ jobs:
         run: |
           python -m pip install "pip==26.1"
           python -m pip install \
-            "rextio==0.1.3" \
+            "rextio==0.1.5" \
             "pytest==9.1.1" \
             "ruff==0.15.22" \
             "mypy==2.3.0"
@@ -47,6 +47,33 @@ jobs:
         run: mypy
       - name: Unit and contract tests
         run: python -m pytest -q tests --ignore=tests/e2e
+
+  core-compatibility:
+    name: Core compatibility (rextio ${{ matrix.rextio }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        rextio: ["0.1.3", "0.1.4", "0.1.5"]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install the selected Core and contract-test dependencies
+        run: |
+          python -m pip install "pip==26.1"
+          python -m pip install \
+            "rextio==${{ matrix.rextio }}" \
+            "pytest==9.1.1"
+          python -m pip install --no-deps -e .
+      - name: Exercise plugin registration compatibility
+        run: python -m pytest -q tests/test_plugin.py
 
   platform-contract:
     name: Platform contract (${{ matrix.os }} / ${{ matrix.arch }})
@@ -156,7 +183,7 @@ jobs:
           # torch 2.11.0 requires setuptools<82 at runtime; the build above has
           # already consumed the separately pinned 82.0.1 build environment.
           .venv/bin/python -m pip install \
-            "setuptools==81.0.0" "rextio==0.1.3" "torch==2.11.0" "pytest==9.1.1"
+            "setuptools==81.0.0" "rextio==0.1.5" "torch==2.11.0" "pytest==9.1.1"
           .venv/bin/python -m pip install --no-deps dist/*.whl
           .venv/bin/python -m pip check
       - name: Verify runner, pins, and profile
@@ -247,7 +274,7 @@ jobs:
           python -m venv /tmp/rextio-torch-sdist-tests
           audit_python=/tmp/rextio-torch-sdist-tests/bin/python
           "$audit_python" -m pip install "pip==26.1"
-          "$audit_python" -m pip install "rextio==0.1.3" "pytest==9.1.1"
+          "$audit_python" -m pip install "rextio==0.1.5" "pytest==9.1.1"
           extracted_root="$(find /tmp/rextio-torch-sdist-audit \
             -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$extracted_root"
@@ -264,11 +291,11 @@ jobs:
         run: |
           python -m venv /tmp/rextio-torch-wheel
           /tmp/rextio-torch-wheel/bin/python -m pip install "pip==26.1"
-          /tmp/rextio-torch-wheel/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-wheel/bin/python -m pip install "rextio==0.1.5"
           /tmp/rextio-torch-wheel/bin/python -m pip install --no-deps dist/*.whl
           python -m venv /tmp/rextio-torch-sdist
           /tmp/rextio-torch-sdist/bin/python -m pip install "pip==26.1"
-          /tmp/rextio-torch-sdist/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-sdist/bin/python -m pip install "rextio==0.1.5"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
             "setuptools==82.0.1" "wheel==0.47.0"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
@@ -278,7 +305,7 @@ jobs:
           from importlib.metadata import distribution, entry_points
 
           dist = distribution("rextio-torch")
-          assert dist.version == "0.1.0"
+          assert dist.version == "0.1.1"
           requires = set(dist.requires or ())
           assert "torch==2.11.0" in requires
           factory = next(
@@ -291,12 +318,13 @@ jobs:
   ci-gate:
     name: CI gate
     if: always()
-    needs: [quality, platform-contract, native-e2e, package]
+    needs: [quality, core-compatibility, platform-contract, native-e2e, package]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every blocking lane
         run: |
           test "${{ needs.quality.result }}" = "success"
+          test "${{ needs.core-compatibility.result }}" = "success"
           test "${{ needs.platform-contract.result }}" = "success"
           test "${{ needs.native-e2e.result }}" = "success"
           test "${{ needs.package.result }}" = "success"

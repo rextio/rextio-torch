@@ -5,7 +5,13 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
-No changes yet.
+- Compatibility hotfix for Core 0.1.5 / plugin API 1.4 hosts: provider methods
+  no longer require the host's `PLUGIN_API_VERSION` to equal the provider's
+  declared API 1.3; Core's loader owns compatibility negotiation.
+- Retain the declared provider API at 1.3 and the existing `rextio`, PyTorch,
+  and `tch` pins. No standalone-artifact capability is declared.
+- Reject standalone/non-PyO3 lowering contexts while retaining compatibility
+  with legacy contexts that omit `backend`.
 
 ## [0.1.0] - 2026-07-18 (public Alpha)
 

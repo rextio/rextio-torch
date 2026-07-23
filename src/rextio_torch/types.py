@@ -19,9 +19,13 @@ class TensorF32Cpu1D:
     """A float32 CPU rank-1 tensor (plugin type ``rextio-torch/tensor-f32-cpu-1d``)."""
 
 
+class TensorI64Cpu1D:
+    """An int64 CPU rank-1 tensor (classification-head result only)."""
+
+
 def __getattr__(name: str) -> Any:
     """Reject misspelled annotation names with the normal module error."""
     raise AttributeError(name)
 
 
-__all__ = ["TensorF32Cpu1D", "TensorF32Cpu2D"]
+__all__ = ["TensorF32Cpu1D", "TensorF32Cpu2D", "TensorI64Cpu1D"]

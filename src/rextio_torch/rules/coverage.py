@@ -17,6 +17,8 @@ COVERAGE = CoverageDecl(
         "torch.Tensor.tanh",
         "torch.Tensor.mean",
         "torch.Tensor.sum",
+        "torch.Tensor.softmax",
+        "torch.Tensor.argmax",
         "torch.Tensor.matmul",
     ),
 )

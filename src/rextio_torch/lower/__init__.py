@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
-from rextio_torch.lower import activations, binops, linear, reductions
+from rextio_torch.lower import activations, binops, classification, linear, reductions
 
 __all__ = ["lower"]
 
@@ -20,7 +20,7 @@ def lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr:
             "rextio-torch supports PyO3 host-extension lowering only; "
             "standalone artifacts are unsupported"
         )
-    for lane in (linear, activations, reductions, binops):
+    for lane in (linear, activations, reductions, classification, binops):
         result = lane.try_lower(claimed, ctx)
         if result is not None:
             return result

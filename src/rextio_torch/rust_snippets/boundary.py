@@ -66,6 +66,35 @@ fn __rxttorch_extract_f32_cpu_1d(
     __rxttorch_extract_f32_cpu(py, value, 1)
 }
 
+fn __rxttorch_extract_i64_cpu_1d(
+    _py: pyo3::Python<'_>,
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let ptr = value.as_ptr();
+    let tensor = unsafe { tch::Tensor::pyobject_unpack(ptr as *mut _) }
+        .map_err(__rxttorch_map_err)?
+        .ok_or_else(|| {
+            pyo3::exceptions::PyTypeError::new_err("rextio-torch: expected a torch.Tensor")
+        })?;
+    if tensor.device() != tch::Device::Cpu {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a CPU tensor",
+        ));
+    }
+    if tensor.kind() != tch::Kind::Int64 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected an int64 tensor",
+        ));
+    }
+    let rank = tensor.dim() as i64;
+    if rank != 1 {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "rextio-torch: expected rank-1 tensor, got rank {}", rank
+        )));
+    }
+    Ok(RxtTorchTensor(tensor))
+}
+
 fn __rxttorch_materialize_tensor(
     py: pyo3::Python<'_>,
     value: RxtTorchTensor,

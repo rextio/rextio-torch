@@ -5,6 +5,22 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+## [0.1.2] - Unreleased
+
+- Add the inference-only rank-2 classification-head method chain:
+  `.softmax(dim=1).argmax(dim=1, keepdim=False)`. The emitted tch 0.24.0
+  helpers run under `no_grad`, and the final result is checked/materialized as
+  an int64 CPU rank-1 tensor.
+- Add `TensorI64Cpu1D` exclusively for that classification result boundary.
+  Functional spellings, dtype overrides, dynamic dimensions/keepdim, rank-3+,
+  non-CPU tensors, training/autograd, and in-place forms remain fail-closed.
+- Extend native Cargo certification with numerical, dtype, shape, no-grad,
+  non-mutation, and route evidence for the classification head.
+- Update the normal CI triggers to include the active `0.1.2` integration
+  branch. The package remains unreleased: no tag or publication is implied.
+
+## [0.1.1] - Unreleased integration baseline
+
 - Compatibility hotfix for Core 0.1.5 / plugin API 1.4 hosts: provider methods
   no longer require the host's `PLUGIN_API_VERSION` to equal the provider's
   declared API 1.3; Core's loader owns compatibility negotiation.

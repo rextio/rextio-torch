@@ -9,13 +9,17 @@ PLUGIN_ID = "rextio-torch"
 
 TENSOR_F32_CPU_1D = "rextio-torch/tensor-f32-cpu-1d"
 TENSOR_F32_CPU_2D = "rextio-torch/tensor-f32-cpu-2d"
+TENSOR_I64_CPU_1D = "rextio-torch/tensor-i64-cpu-1d"
 
-TENSOR_TYPE_KEYS: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
+TENSOR_TYPE_KEYS: frozenset[str] = frozenset(
+    {TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D}
+)
 
 # type key -> (dtype token, device token, rank)
 _TENSOR_META: dict[str, tuple[str, str, int]] = {
     TENSOR_F32_CPU_1D: ("f32", "cpu", 1),
     TENSOR_F32_CPU_2D: ("f32", "cpu", 2),
+    TENSOR_I64_CPU_1D: ("i64", "cpu", 1),
 }
 
 # Per-rule diagnostic codes (must be unique across RuleRecord entries).
@@ -33,6 +37,8 @@ DIAGNOSTIC_ADD_SAME_RANK = "RXTP-TORCH-011"
 DIAGNOSTIC_ADD_BROADCAST = "RXTP-TORCH-012"
 DIAGNOSTIC_SUM = "RXTP-TORCH-013"
 DIAGNOSTIC_MATMUL_CALL = "RXTP-TORCH-014"
+DIAGNOSTIC_SOFTMAX = "RXTP-TORCH-015"
+DIAGNOSTIC_ARGMAX = "RXTP-TORCH-016"
 
 # Shared claim-time family codes for activation/binop shape rejections.
 DIAGNOSTIC_SIGMOID = DIAGNOSTIC_SIGMOID_2D
@@ -85,15 +91,18 @@ __all__ = [
     "DIAGNOSTIC_SIGMOID",
     "DIAGNOSTIC_SIGMOID_1D",
     "DIAGNOSTIC_SIGMOID_2D",
+    "DIAGNOSTIC_SOFTMAX",
     "DIAGNOSTIC_SUM",
     "DIAGNOSTIC_TANH",
     "DIAGNOSTIC_TANH_1D",
     "DIAGNOSTIC_TANH_2D",
     "DIAGNOSTIC_UNSUPPORTED",
+    "DIAGNOSTIC_ARGMAX",
     "PLUGIN_ID",
     "RUNTIME_ERRORS",
     "TENSOR_F32_CPU_1D",
     "TENSOR_F32_CPU_2D",
+    "TENSOR_I64_CPU_1D",
     "TENSOR_TYPE_KEYS",
     "is_tensor_type",
     "reject",

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, 0.1.1]
+    branches: [main, 0.1.2]
   pull_request:
-    branches: [main, 0.1.1]
+    branches: [main, 0.1.2]
   workflow_dispatch:
 
 concurrency:
@@ -305,7 +305,7 @@ jobs:
           from importlib.metadata import distribution, entry_points
 
           dist = distribution("rextio-torch")
-          assert dist.version == "0.1.1"
+          assert dist.version == "0.1.2"
           requires = set(dist.requires or ())
           assert "torch==2.11.0" in requires
           factory = next(

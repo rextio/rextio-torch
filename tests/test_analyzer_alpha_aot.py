@@ -17,8 +17,9 @@ from rextio_torch.claim.binops import (
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
 )
+from rextio_torch.claim.classification import ARGMAX_RULE, SOFTMAX_RULE
 from rextio_torch.claim.reductions import MEAN_RULE
-from rextio_torch.diagnostics import TENSOR_F32_CPU_2D
+from rextio_torch.diagnostics import TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D
 from rextio_torch.plugin import PLUGIN_ID, plugin
 
 # Temps are required: core does not claim method calls whose receiver is a bare BinOp
@@ -58,6 +59,15 @@ def method_matmul(
     right: TensorF32Cpu2D,
 ) -> TensorF32Cpu2D:
     return left.matmul(right)
+'''
+
+CLASSIFICATION_HEAD_SOURCE = '''
+from rextio_torch.types import TensorF32Cpu2D, TensorI64Cpu1D
+
+
+def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
+    probabilities = logits.softmax(dim=1)
+    return probabilities.argmax(dim=1, keepdim=False)
 '''
 
 
@@ -140,3 +150,19 @@ def test_analyzer_alpha_control_flow_routes_native(tmp_path: Path) -> None:
     assert method.plugin_claims[0].target.rpartition(".")[2] == "matmul"
     assert method.plugin_claims[0].receiver is not None
     assert method.plugin_claims[0].receiver.arg_type == TENSOR_F32_CPU_2D
+
+
+def test_analyzer_classification_head_routes_native_with_i64_result(tmp_path: Path) -> None:
+    registry = _registry()
+    analysis = analyze_project(
+        _write_module(tmp_path, CLASSIFICATION_HEAD_SOURCE),
+        active_plugins=registry.active,
+        plugin_registry=registry,
+        plugin_config=RextioConfig(),
+    )
+    function = _function(analysis, "myapp.kernels.classify")
+    assert function.accepted is True
+    assert function.route == f"native-plugin:{PLUGIN_ID}"
+    assert not any(d.severity == "error" for d in function.diagnostics)
+    assert [claim.rule_id for claim in function.plugin_claims] == [SOFTMAX_RULE, ARGMAX_RULE]
+    assert function.plugin_claims[-1].result_type == TENSOR_I64_CPU_1D

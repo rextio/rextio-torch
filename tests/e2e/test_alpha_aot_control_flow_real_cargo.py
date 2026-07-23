@@ -38,7 +38,7 @@ VENV_PYTHON = PLUGIN_ROOT / ".venv" / "bin" / "python"
 
 # Named temps: core cannot claim method calls whose receiver is a bare BinOp.
 KERNELS = """
-from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D
+from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D, TensorI64Cpu1D
 import torch
 
 
@@ -73,6 +73,11 @@ def expanded_surface(
     reduced = hidden.sum(dim=1, keepdim=False)
     reduced = reduced + offset
     return reduced.relu().sigmoid().tanh()
+
+
+def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
+    probabilities = logits.softmax(dim=1)
+    return probabilities.argmax(dim=1, keepdim=False)
 """
 
 
@@ -188,6 +193,10 @@ def _eager_expanded_surface(x, weight, offset):
     reduced = hidden.sum(dim=1, keepdim=False)
     reduced = reduced + offset
     return reduced.relu().sigmoid().tanh()
+
+
+def _eager_classify(logits):
+    return logits.softmax(dim=1).argmax(dim=1, keepdim=False)
 
 
 def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
@@ -349,6 +358,59 @@ def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
 
     assert torch.equal(w_ok, w_snap)
     assert torch.equal(b_ok, b_snap)
+
+
+def test_classification_head_real_cargo(project: CertifiedProject) -> None:
+    """The method-only softmax→argmax head materializes int64 CPU rank-1 output."""
+    torch = _import_torch()
+    record = _route_of(project, "torch_app.kernels.classify")
+    assert record["native_status"] == "accepted"
+    assert record["route"] == "native-plugin:rextio-torch"
+    claims = record.get("plugin_claims") or []
+    assert [claim["rule_id"] for claim in claims] == [
+        "rextio-torch/tensor-softmax-dim1-f32-cpu-2d",
+        "rextio-torch/tensor-argmax-dim1-keepfalse-i64-cpu-1d",
+    ]
+    assert claims[-1]["result_type"] == "rextio-torch/tensor-i64-cpu-1d"
+
+    rust = (project.project_root / ".rextio" / "generated" / "rust" / "src" / "lib.rs").read_text(
+        encoding="utf-8"
+    )
+    assert "__rxttorch_softmax_dim1" in rust
+    assert "__rxttorch_argmax_dim1_keepdim_false" in rust
+    assert "f_softmax(1i64, None)" in rust
+    assert "f_argmax(1i64, false)" in rust
+
+    logits = torch.tensor(
+        [[-3.0, 2.0, 2.0], [0.5, 0.4, 0.6], [100.0, -100.0, 1.0]], dtype=torch.float32
+    )
+    logits_snap = logits.detach().clone()
+    checker = project.equivalence_checker(
+        "torch_app.kernels.classify",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    native_out = checker(logits)
+    eager = _eager_classify(logits_snap)
+    assert _tensor_equal(native_out, eager)
+    assert type(native_out) is torch.Tensor
+    assert native_out.device.type == "cpu"
+    assert native_out.dtype == torch.int64
+    assert native_out.dim() == 1
+    assert tuple(native_out.shape) == (3,)
+    assert native_out.requires_grad is False
+    assert torch.equal(logits, logits_snap)
+
+    logits_grad = logits_snap.detach().clone().requires_grad_(True)
+    with _native_mode(project, "native"):
+        from torch_app.kernels import classify
+
+        native_grad_out = classify(logits_grad)
+    assert native_grad_out.requires_grad is False
+    assert native_grad_out.dtype == torch.int64
+    assert torch.equal(native_grad_out, eager)
+    assert torch.equal(logits_grad.detach(), logits_snap)
 
 
 class _native_mode:

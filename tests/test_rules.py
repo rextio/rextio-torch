@@ -39,6 +39,15 @@ from rextio_torch.claim.reductions import (
     SUM_RULE,
     SUM_STATIC_RULE,
 )
+from rextio_torch.claim.unary import (
+    UNARY_ABS_RULE,
+    UNARY_EXP_RULE,
+    UNARY_LOG_RULE,
+    UNARY_NEGATIVE_RULE,
+    UNARY_NEG_RULE,
+    UNARY_SQRT_RULE,
+    UNARY_SQUARE_RULE,
+)
 from rextio_torch.rules import torch_rule_records
 
 
@@ -82,6 +91,13 @@ def test_native_rules_match_claim_constants() -> None:
         FUNCTION_DIV_RULE,
         MATMUL_BINOP_MIXED_RANK_RULE,
         MATMUL_CALL_MIXED_RANK_RULE,
+        UNARY_ABS_RULE,
+        UNARY_NEG_RULE,
+        UNARY_NEGATIVE_RULE,
+        UNARY_SQUARE_RULE,
+        UNARY_EXP_RULE,
+        UNARY_LOG_RULE,
+        UNARY_SQRT_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
         assert by_id[rule_id].verified is True

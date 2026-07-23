@@ -289,6 +289,137 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/unary-abs-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.abs(tensor) or zero-argument tensor.abs()",
+        ),
+        constraint=(
+            "One positional float32 CPU rank-1/rank-2 tensor for torch.abs, or "
+            "a zero-argument .abs() receiver of the same types; no keywords. "
+            "Result preserves type and executes through fallible tch f_abs under "
+            "no-grad. Scalar, out, in-place, and alternate aliases stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-037",
+        guidance="Use exact torch.abs(tensor) or tensor.abs() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-neg-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.neg(tensor) or zero-argument tensor.neg()",
+        ),
+        constraint=(
+            "Exact neg spelling on one float32 CPU rank-1/rank-2 tensor, with "
+            "no keywords or method arguments. Result preserves type and uses "
+            "fallible tch f_neg under no-grad; in-place/scalar/out forms remain fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-038",
+        guidance="Use exact torch.neg(tensor) or tensor.neg() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-negative-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.negative(tensor) or zero-argument tensor.negative()",
+        ),
+        constraint=(
+            "Exact negative spelling on one float32 CPU rank-1/rank-2 tensor, "
+            "with no keywords or method arguments. Result preserves type and "
+            "uses the distinct fallible tch f_negative path under no-grad."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-039",
+        guidance=(
+            "Use exact torch.negative(tensor) or tensor.negative() without keywords."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-square-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.square(tensor) or zero-argument tensor.square()",
+        ),
+        constraint=(
+            "Exact square spelling on one float32 CPU rank-1/rank-2 tensor, with "
+            "no keywords or method arguments. Result preserves type and uses "
+            "fallible tch f_square under no-grad."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-040",
+        guidance="Use exact torch.square(tensor) or tensor.square() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-exp-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.exp(tensor) or zero-argument tensor.exp()",
+        ),
+        constraint=(
+            "Exact exp spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_exp under no-grad; IEEE overflow/underflow remains backend behavior."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-041",
+        guidance="Use exact torch.exp(tensor) or tensor.exp() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-log-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.log(tensor) or zero-argument tensor.log()",
+        ),
+        constraint=(
+            "Exact log spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_log under no-grad; domain NaN and zero-to-infinity behavior is "
+            "the pinned backend contract rather than an operation error."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-042",
+        guidance="Use exact torch.log(tensor) or tensor.log() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/unary-sqrt-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="exact torch.sqrt(tensor) or zero-argument tensor.sqrt()",
+        ),
+        constraint=(
+            "Exact sqrt spelling on one float32 CPU rank-1/rank-2 tensor, with no "
+            "keywords or method arguments. Result preserves type and uses fallible "
+            "tch f_sqrt under no-grad; negative-domain NaN and signed-zero behavior "
+            "follow the pinned backend."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-043",
+        guidance="Use exact torch.sqrt(tensor) or tensor.sqrt() without keywords.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/unsupported-tensor-surface",
         provider="rextio-torch",
         scope=RuleScope(

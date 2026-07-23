@@ -155,6 +155,34 @@ def mixed_rank_matmul(
     return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
 
 
+def unary_abs(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.abs(x)
+
+
+def unary_neg(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return x.neg()
+
+
+def unary_negative(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.negative(x)
+
+
+def unary_square(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return x.square()
+
+
+def unary_exp(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.exp(x)
+
+
+def unary_log(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return x.log()
+
+
+def unary_sqrt(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.sqrt(x)
+
+
 def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = torch.softmax(logits, 0)
     return torch.argmax(probabilities, dim=1)
@@ -336,6 +364,39 @@ def _eager_mixed_rank_matmul(matrix, left_vector, right_vector):
     method_mv = matrix.matmul(right_vector)
     method_vm = left_vector.matmul(matrix)
     return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
+
+
+def _eager_unary(name: str, value):
+    torch = _import_torch()
+    operations = {
+        "unary_abs": torch.abs,
+        "unary_neg": lambda tensor: tensor.neg(),
+        "unary_negative": torch.negative,
+        "unary_square": lambda tensor: tensor.square(),
+        "unary_exp": torch.exp,
+        "unary_log": lambda tensor: tensor.log(),
+        "unary_sqrt": torch.sqrt,
+    }
+    return operations[name](value)
+
+
+def _assert_special_value_equivalence(actual: object, expected: object) -> None:
+    """Compare IEEE classes and signed zero without promising NaN payload bits."""
+    torch = _import_torch()
+    assert type(actual) is torch.Tensor
+    assert type(expected) is torch.Tensor
+    assert torch.equal(torch.isnan(actual), torch.isnan(expected))
+    assert torch.equal(torch.isposinf(actual), torch.isposinf(expected))
+    assert torch.equal(torch.isneginf(actual), torch.isneginf(expected))
+    zero_mask = expected == 0
+    assert torch.equal(torch.signbit(actual[zero_mask]), torch.signbit(expected[zero_mask]))
+    finite_mask = torch.isfinite(expected)
+    assert torch.allclose(
+        actual[finite_mask],
+        expected[finite_mask],
+        rtol=1e-5,
+        atol=1e-6,
+    )
 
 
 def _eager_functional_classify(logits):
@@ -703,6 +764,23 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         "rextio-torch/tensor-matmul-call-f32-cpu-mixed-rank"
     ) == 4
 
+    unary_contracts = (
+        ("unary_abs", "rextio-torch/unary-abs-f32-cpu-rank1-2"),
+        ("unary_neg", "rextio-torch/unary-neg-f32-cpu-rank1-2"),
+        ("unary_negative", "rextio-torch/unary-negative-f32-cpu-rank1-2"),
+        ("unary_square", "rextio-torch/unary-square-f32-cpu-rank1-2"),
+        ("unary_exp", "rextio-torch/unary-exp-f32-cpu-rank1-2"),
+        ("unary_log", "rextio-torch/unary-log-f32-cpu-rank1-2"),
+        ("unary_sqrt", "rextio-torch/unary-sqrt-f32-cpu-rank1-2"),
+    )
+    for qualname, rule_id in unary_contracts:
+        unary_record = _route_of(project, f"torch_app.kernels.{qualname}")
+        assert unary_record["native_status"] == "accepted"
+        assert unary_record["route"] == "native-plugin:rextio-torch"
+        unary_claims = unary_record.get("plugin_claims") or []
+        assert [claim["rule_id"] for claim in unary_claims] == [rule_id]
+        assert unary_claims[0]["result_type"] == "rextio-torch/tensor-f32-cpu-1d"
+
     functional_record = _route_of(
         project, "torch_app.kernels.functional_classify"
     )
@@ -732,11 +810,28 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         "__rxttorch_mean_dim1_keepdim_true",
         "__rxttorch_softmax_dim0",
         "__rxttorch_argmax_dim0_keepdim_true",
+        "__rxttorch_abs",
+        "__rxttorch_neg",
+        "__rxttorch_negative",
+        "__rxttorch_square",
+        "__rxttorch_exp",
+        "__rxttorch_log",
+        "__rxttorch_sqrt",
     ):
         assert symbol in rust
     assert "f_linear(&weight.0, Option::<&tch::Tensor>::None)" in rust
     assert "f_sub" in rust
     assert "f_div" in rust
+    for fallible_method in (
+        "f_abs",
+        "f_neg",
+        "f_negative",
+        "f_square",
+        "f_exp",
+        "f_log",
+        "f_sqrt",
+    ):
+        assert f".{fallible_method}()" in rust
     assert "no_grad_guard" in rust
 
     torch.manual_seed(23)
@@ -852,6 +947,49 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
     assert mixed_out.requires_grad is False
     for actual, snapshot in zip(mixed_args, mixed_snap, strict=True):
         assert _tensor_equal(actual, snapshot)
+
+    unary_input = torch.tensor(
+        [
+            float("-inf"),
+            -3.0,
+            -1.0,
+            -0.0,
+            0.0,
+            1.0,
+            3.0,
+            float("inf"),
+            float("nan"),
+        ],
+        dtype=torch.float32,
+    )
+    for qualname, _rule_id in unary_contracts:
+        unary_snapshot = unary_input.detach().clone()
+        unary_checker = project.equivalence_checker(
+            f"torch_app.kernels.{qualname}",
+            equals=_tensor_equal,
+            args_equals=_args_unmutated,
+            copy_args=_copy_tensor_args,
+        )
+        unary_out = unary_checker(unary_input)
+        unary_eager = _eager_unary(qualname, unary_snapshot)
+        assert _tensor_equal(unary_out, unary_eager)
+        _assert_special_value_equivalence(unary_out, unary_eager)
+        assert unary_out.device.type == "cpu"
+        assert unary_out.dtype == torch.float32
+        assert tuple(unary_out.shape) == (9,)
+        assert unary_out.requires_grad is False
+        assert _tensor_equal(unary_input, unary_snapshot)
+
+    with _native_mode(project, "native"):
+        from torch_app import kernels as native_kernels
+
+        for qualname, _rule_id in unary_contracts:
+            grad_input = unary_input.detach().clone().requires_grad_(True)
+            unary_grad_out = getattr(native_kernels, qualname)(grad_input)
+            unary_eager = _eager_unary(qualname, unary_input)
+            _assert_special_value_equivalence(unary_grad_out, unary_eager)
+            assert unary_grad_out.requires_grad is False
+            assert _tensor_equal(grad_input.detach(), unary_input)
 
     with _native_mode(project, "native"):
         from torch_app.kernels import mixed_rank_matmul

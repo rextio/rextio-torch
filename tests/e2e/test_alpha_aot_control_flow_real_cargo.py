@@ -2,10 +2,10 @@
 
 Certifies that scalar runtime control flow lowers to Rust control flow around
 native tch helpers. A second function in the same serialized Cargo project
-exercises functional/method matmul, same-rank add, sum, tanh, and rank-1
-activation chaining, without paying for another build. Evidence includes native
-routes, numeric equivalence, dtype/device/rank, no-grad, non-mutation, and
-fail-closed boundary rejects.
+exercises functional/method matmul, same-rank add/multiply, sum, tanh, and
+rank-1 activation chaining, without paying for another build. Evidence includes
+native routes, numeric equivalence, dtype/device/rank, no-grad, non-mutation,
+and fail-closed boundary rejects.
 
 Build env requires CPython 3.11 + torch 2.11.0 via ``LIBTORCH_USE_PYTORCH=1``
 (never ``LIBTORCH_BYPASS_VERSION_CHECK``).
@@ -73,6 +73,18 @@ def expanded_surface(
     reduced = hidden.sum(dim=1, keepdim=False)
     reduced = reduced + offset
     return reduced.relu().sigmoid().tanh()
+
+
+def multiply_surface(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    vector: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    same_rank_2d = left * right
+    same_rank_1d = bias * vector
+    broadcast_forward = same_rank_2d * same_rank_1d
+    return same_rank_1d * broadcast_forward
 
 
 def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
@@ -199,6 +211,13 @@ def _eager_classify(logits):
     return logits.softmax(dim=1).argmax(dim=1, keepdim=False)
 
 
+def _eager_multiply_surface(left, right, bias, vector):
+    same_rank_2d = left * right
+    same_rank_1d = bias * vector
+    broadcast_forward = same_rank_2d * same_rank_1d
+    return same_rank_1d * broadcast_forward
+
+
 def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
     """Serialized build: control-flow native route, equivalence, contracts, rejects."""
     torch = _import_torch()
@@ -323,6 +342,73 @@ def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
     assert torch.equal(x_exp_g.detach(), x_snap)
     assert torch.equal(w_exp_g.detach(), w_snap)
     assert torch.equal(offset_g.detach(), offset_snap)
+
+    multiply_record = _route_of(project, "torch_app.kernels.multiply_surface")
+    assert multiply_record["native_status"] == "accepted"
+    assert multiply_record["route"] == "native-plugin:rextio-torch"
+    multiply_rules = [claim["rule_id"] for claim in multiply_record.get("plugin_claims") or []]
+    assert multiply_rules.count("rextio-torch/tensor-mul-f32-cpu-same-rank") == 2
+    assert multiply_rules.count("rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast") == 2
+    assert "__rxttorch_mul" in rust
+    assert "f_mul" in rust
+
+    mul_left = torch.tensor(
+        [[-0.0, float("inf"), float("nan")], [2.0, -3.0, 4.0]], dtype=torch.float32
+    )
+    mul_right = torch.tensor(
+        [[2.0, -1.0, 1.0], [0.5, -2.0, float("inf")]], dtype=torch.float32
+    )
+    mul_bias = torch.tensor([1.0, -1.0, 0.0], dtype=torch.float32)
+    mul_vector = torch.tensor([1.0, 1.0, -2.0], dtype=torch.float32)
+    mul_left_snap = mul_left.detach().clone()
+    mul_right_snap = mul_right.detach().clone()
+    mul_bias_snap = mul_bias.detach().clone()
+    mul_vector_snap = mul_vector.detach().clone()
+    multiply_checker = project.equivalence_checker(
+        "torch_app.kernels.multiply_surface",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    multiply_out = multiply_checker(mul_left, mul_right, mul_bias, mul_vector)
+    multiply_eager = _eager_multiply_surface(
+        mul_left_snap, mul_right_snap, mul_bias_snap, mul_vector_snap
+    )
+    assert _tensor_equal(multiply_out, multiply_eager)
+    assert multiply_out.device.type == "cpu"
+    assert multiply_out.dtype == torch.float32
+    assert multiply_out.dim() == 2
+    assert multiply_out.requires_grad is False
+    assert _tensor_equal(mul_left, mul_left_snap)
+    assert _tensor_equal(mul_right, mul_right_snap)
+    assert _tensor_equal(mul_bias, mul_bias_snap)
+    assert _tensor_equal(mul_vector, mul_vector_snap)
+    assert torch.equal(torch.signbit(multiply_out), torch.signbit(multiply_eager))
+
+    mul_left_g = mul_left_snap.detach().clone().requires_grad_(True)
+    mul_right_g = mul_right_snap.detach().clone().requires_grad_(True)
+    mul_bias_g = mul_bias_snap.detach().clone().requires_grad_(True)
+    mul_vector_g = mul_vector_snap.detach().clone().requires_grad_(True)
+    with _native_mode(project, "native"):
+        from torch_app.kernels import multiply_surface
+
+        multiply_grad_out = multiply_surface(mul_left_g, mul_right_g, mul_bias_g, mul_vector_g)
+    assert multiply_grad_out.requires_grad is False
+    assert _tensor_equal(multiply_grad_out, multiply_eager)
+    assert _tensor_equal(mul_left_g.detach(), mul_left_snap)
+    assert _tensor_equal(mul_right_g.detach(), mul_right_snap)
+
+    # Concrete broadcast sizes are intentionally a runtime libtorch contract.
+    with _native_mode(project, "native"):
+        from torch_app.kernels import multiply_surface as multiply_boundary
+
+        with pytest.raises(RuntimeError):
+            multiply_boundary(
+                torch.ones((2, 2)),
+                torch.ones((2, 2)),
+                torch.ones(3),
+                torch.ones(3),
+            )
 
     # Grad-requesting inputs still yield no-grad native output.
     x_g = x_snap.detach().clone().requires_grad_(True)

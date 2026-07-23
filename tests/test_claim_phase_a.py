@@ -26,6 +26,8 @@ from rextio_torch.claim.binops import (
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
 from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
@@ -200,6 +202,21 @@ def test_claims_broadcast_add_rank2_rank1() -> None:
     )
 
 
+def test_claims_same_rank_and_broadcast_multiply() -> None:
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=MUL_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=MUL_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_1D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=MUL_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=MUL_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+
+
 @pytest.mark.parametrize(
     ("left", "right"),
     (
@@ -214,6 +231,46 @@ def test_rejects_add_with_classification_result_type(left: str, right: str) -> N
     result = PLUGIN.claim(_binop_site("+", left, right), CONFIG)
     assert isinstance(result, Rejected)
     assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    (
+        (TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
+        (TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D),
+        (TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D),
+    ),
+)
+def test_rejects_multiply_with_classification_result_type(left: str, right: str) -> None:
+    result = PLUGIN.claim(_binop_site("*", left, right), CONFIG)
+    assert isinstance(result, Rejected)
+    assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
+
+
+def test_multiply_claims_no_call_aliases_or_scalar_forms() -> None:
+    for target, receiver in (("torch.mul", None), ("tensor.mul", TENSOR_F32_CPU_1D)):
+        result = PLUGIN.claim(
+            ClaimSite(
+                kind="call",
+                target=target,
+                operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+                file_path="",
+                line=0,
+                column=0,
+                receiver=(
+                    ReceiverMeta(arg_type=receiver, expr_kind="name", is_safe=True)
+                    if receiver is not None
+                    else None
+                ),
+            ),
+            CONFIG,
+        )
+        assert isinstance(result, NotCovered)
+    scalar = PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, "int"), CONFIG)
+    assert isinstance(scalar, Rejected)
+    assert scalar.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
 def test_claims_matmul_binop_and_call() -> None:

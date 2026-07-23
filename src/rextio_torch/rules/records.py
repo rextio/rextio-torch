@@ -228,7 +228,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-010",
         guidance=(
             "Keep the Alpha AOT surface on float32 CPU rank-1/2 tensors with "
-            "claimed linear, activations, matmul, elementwise +, and literal "
+            "claimed linear, activations, matmul, elementwise +/*, and literal "
             "mean/sum forms; other dtypes, devices, ranks, and dynamic literals "
             "remain on the fallback."
         ),
@@ -276,6 +276,52 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-012",
         guidance=(
             "Write rank2 + rank1 (or rank1 + rank2) with TensorF32Cpu2D / "
+            "TensorF32Cpu1D annotations for trailing bias broadcast."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-mul-f32-cpu-same-rank",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern="elementwise * on same-rank float32 CPU rank-1 or rank-2 tensors",
+        ),
+        constraint=(
+            "Binary * with two float32 CPU tensors of equal rank (1 or 2). "
+            "Result preserves the left operand type. Concrete sizes are not "
+            "statically represented; tch checks same-shape or PyTorch-compatible "
+            "same-rank broadcasting at runtime. Scalar operands stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-017",
+        guidance=(
+            "Write a * b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="binop",
+            pattern=(
+                "elementwise * with rank-2 * rank-1 trailing bias broadcast "
+                "(either order) on float32 CPU tensors"
+            ),
+        ),
+        constraint=(
+            "Binary * where one operand is float32 CPU rank-2 and the other is "
+            "float32 CPU rank-1. Runtime tch applies PyTorch trailing-dimension "
+            "broadcast rules and rejects incompatible concrete sizes. Result is "
+            "rank-2 float32 CPU. Other rank combinations stay unclaimed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-018",
+        guidance=(
+            "Write rank2 * rank1 (or rank1 * rank2) with TensorF32Cpu2D / "
             "TensorF32Cpu1D annotations for trailing bias broadcast."
         ),
         stability="experimental",

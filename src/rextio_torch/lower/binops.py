@@ -1,4 +1,4 @@
-"""Lower elementwise ``+`` and rank-2 matmul claims after defensive revalidation."""
+"""Lower elementwise binary ops and rank-2 matmul claims after revalidation."""
 
 from __future__ import annotations
 
@@ -11,14 +11,19 @@ from rextio_torch.claim.binops import (
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_RULES,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
 from rextio_torch.rust_snippets import (
     ADD,
     MATMUL,
+    MUL,
     add_helper,
     boundary_helpers,
     matmul_helper,
+    mul_helper,
 )
 
 
@@ -26,14 +31,14 @@ def _method_name(target: str) -> str:
     return target.rpartition(".")[2]
 
 
-_SAME_RANK_ADD_TYPES: frozenset[tuple[str, str, str]] = frozenset(
+_SAME_RANK_TENSOR_TYPES: frozenset[tuple[str, str, str]] = frozenset(
     {
         (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
         (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
     }
 )
-_ADD_F32_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
-_BROADCAST_ADD_TYPES: frozenset[tuple[str, str, str]] = frozenset(
+_F32_TENSOR_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
+_BROADCAST_TENSOR_TYPES: frozenset[tuple[str, str, str]] = frozenset(
     {
         (TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D),
         (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
@@ -60,18 +65,18 @@ def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
     if left is None or right is None:
         raise ValueError("rextio-torch add lower requires resolved operand types")
     metadata = (left, right, claimed.result_type)
-    if left not in _ADD_F32_TYPES or right not in _ADD_F32_TYPES:
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
         raise ValueError(
             "rextio-torch add lower requires documented float32 CPU operand types; "
             f"got {left!r}, {right!r}"
         )
     if claimed.rule_id == ADD_SAME_RANK_RULE:
-        if metadata not in _SAME_RANK_ADD_TYPES:
+        if metadata not in _SAME_RANK_TENSOR_TYPES:
             raise ValueError(
                 "rextio-torch same-rank add lower metadata changed between claim and lower"
             )
     elif claimed.rule_id == ADD_BROADCAST_2D_1D_RULE:
-        if metadata not in _BROADCAST_ADD_TYPES:
+        if metadata not in _BROADCAST_TENSOR_TYPES:
             raise ValueError(
                 "rextio-torch broadcast add lower metadata changed between claim and lower"
             )
@@ -81,6 +86,56 @@ def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
     return LoweredExpr(
         rust=f"{ADD}(&{a}, &{b})?",
         helpers=(boundary_helpers(), add_helper()),
+    )
+
+
+def _try_lower_mul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
+    if claimed.kind != "binop" or claimed.target != "*":
+        return None
+    if claimed.rule_id not in MUL_RULES:
+        raise ValueError(
+            "rextio-torch multiply lower received mismatched rule_id: "
+            f"{claimed.rule_id!r}"
+        )
+    if (
+        len(claimed.operand_types) != 2
+        or claimed.keywords
+        or claimed.receiver is not None
+        or ctx.receiver is not None
+    ):
+        raise ValueError("rextio-torch multiply lower requires two positional tensor operands")
+    if len(ctx.operands) != 2:
+        raise ValueError(
+            "rextio-torch multiply lower requires two ctx.operands; "
+            f"got {len(ctx.operands)}"
+        )
+    left, right = claimed.operand_types
+    if left is None or right is None:
+        raise ValueError("rextio-torch multiply lower requires resolved operand types")
+    metadata = (left, right, claimed.result_type)
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch multiply lower requires documented float32 CPU operand types; "
+            f"got {left!r}, {right!r}"
+        )
+    if claimed.rule_id == MUL_SAME_RANK_RULE:
+        if metadata not in _SAME_RANK_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch same-rank multiply lower metadata changed between claim and lower"
+            )
+    elif claimed.rule_id == MUL_BROADCAST_2D_1D_RULE:
+        if metadata not in _BROADCAST_TENSOR_TYPES:
+            raise ValueError(
+                "rextio-torch broadcast multiply lower metadata changed between claim and lower"
+            )
+    else:
+        raise ValueError(
+            f"rextio-torch multiply lower unexpected rule_id: {claimed.rule_id!r}"
+        )
+    a, b = ctx.operands
+    return LoweredExpr(
+        rust=f"{MUL}(&{a}, &{b})?",
+        helpers=(boundary_helpers(), mul_helper()),
     )
 
 
@@ -165,7 +220,7 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
 
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
     """Lower a previously claimed + / matmul site, or return None."""
-    for lane in (_try_lower_add, _try_lower_matmul):
+    for lane in (_try_lower_add, _try_lower_mul, _try_lower_matmul):
         result = lane(claimed, ctx)
         if result is not None:
             return result

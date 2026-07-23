@@ -186,6 +186,8 @@ claimed `result_type`.
 | Matmul method | `a.matmul(b)` — one positional; no keywords | receiver **2**, other **2** | **2** | same as call form |
 | Elementwise `+` (same rank) | `a + b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-add-f32-cpu-same-rank` |
 | Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
+| Elementwise `*` (same rank) | `a * b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-mul-f32-cpu-same-rank` |
+| Elementwise `*` (bias broadcast) | `a * b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast` |
 | Mean | `.mean(dim=1, keepdim=False)` — **only** those two **literal** keywords; no positionals | receiver **2** | **1** | `rextio-torch/tensor-mean-dim1-f32-cpu-2d` |
 | Sum | `.sum(dim=1, keepdim=False)` — same literal guards as mean | receiver **2** | **1** | `rextio-torch/tensor-sum-dim1-f32-cpu-2d` |
 | Classification softmax | `.softmax(dim=1)` — **only** literal `dim=1`; no dtype keyword or functional spelling | receiver **2** | **2** | `rextio-torch/tensor-softmax-dim1-f32-cpu-2d` |
@@ -202,13 +204,14 @@ Native op helpers (all fallible, all under `no_grad`):
 | `.mean(…)` | `__rxttorch_mean_dim1_keepdim_false` | `f_mean_dim(1, false, None)` |
 | `.sum(…)` | `__rxttorch_sum_dim1_keepdim_false` | `f_sum_dim_intlist(1, false, None)` |
 | `+` | `__rxttorch_add` | `f_add` |
+| `*` | `__rxttorch_mul` | `f_mul` |
 | matmul / `@` | `__rxttorch_matmul` | `f_matmul` |
 | `.softmax(dim=1)` | `__rxttorch_softmax_dim1` | `f_softmax(1, None)` |
 | `.argmax(dim=1, keepdim=False)` | `__rxttorch_argmax_dim1_keepdim_false` | `f_argmax(1, false)` |
 
 Coverage symbols declared for the analyzer include
 `torch.nn.functional.linear`, `torch.matmul`, and method forms
-`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul,softmax,argmax}`. Binary `+` / `@` are claimed
+`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul,softmax,argmax}`. Binary `+` / `*` / `@` are claimed
 via binop sites (not module symbols alone).
 
 ### Control flow around claimed ops
@@ -249,7 +252,7 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Activations: method form only (receiver present), zero args/keywords, rank 1 or 2 | `claim/activations.py` — module-style `torch.relu` etc. → `NotCovered` |
 | Reductions: method form, **no** positionals, keywords exactly `{dim, keepdim}` with **literal** `dim=1` and `keepdim=False`, receiver rank 2 | `claim/reductions.py` |
 | Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
-| Add: binary `+` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
+| Elementwise add / multiply: binary `+` / `*` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
 Keyword order for `dim` / `keepdim` does not matter; values must still be static
@@ -275,12 +278,12 @@ become silent native claims.
 | Modules | arbitrary `nn.Module`, module-style activations (`torch.relu`, …) | Uncovered / not claimed |
 | Linear variants | keywords, optional bias omission, method linear | `Rejected` or not the linear lane |
 | In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
-| Elementwise other ops | `-`, `*`, `/`, scalar operands | Not claimed |
+| Elementwise other ops | `-`, `/`, scalar operands | Not claimed |
 | Reductions other shapes | whole-tensor mean/sum, `dim≠1`, `keepdim=True`, dynamic dim/keepdim, positionals | `Rejected` or unclaimed |
 | Classification variations | functional `torch.softmax`/`torch.argmax`, dtype override, dynamic dim/keepdim, `dim≠1`, `keepdim=True`, rank-3+ logits | `Rejected` or unclaimed |
-| Classification-result arithmetic | `TensorI64Cpu1D + TensorI64Cpu1D` or mixed int64/float32 `+` | `Rejected`; add remains float32-only |
+| Classification-result arithmetic | `TensorI64Cpu1D` or mixed int64/float32 operands with `+` or `*` | `Rejected`; elementwise arithmetic remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
-| Unsupported broadcast ranks | `+` rank combinations other than same-rank or 2d+1d | `Rejected` |
+| Unsupported broadcast ranks | `+` or `*` rank combinations other than same-rank or 2d+1d | `Rejected` |
 | Unrelated torch APIs | e.g. `torch.softmax` | `NotCovered` |
 | Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
 | Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
@@ -320,7 +323,7 @@ op and remains `verified=False`.
 | Boundary: dtype is float32 | `ValueError` | `rextio-torch: expected a float32 tensor` |
 | Boundary: rank matches annotation | `ValueError` | `rextio-torch: expected rank-N tensor, got rank M` |
 | Matmul inner dimensions | Fallible `f_matmul` → mapped error | `TchError` → `PyRuntimeError` via `__rxttorch_map_err` |
-| Add / broadcast concrete sizes | Fallible `f_add` | same mapping |
+| Add / multiply broadcast concrete sizes | Fallible `f_add` / `f_mul` | same mapping |
 | Other op failures | Fallible `f_*` APIs under `no_grad` | same mapping; no `unwrap` / `panic!` / `assert` |
 
 Certified e2e tests force **native-only** mode for the boundary rejects they
@@ -415,8 +418,8 @@ claim/lower layer but is not a separate real-Cargo fixture.
 # Not offered by core to plugins: bare BinOp receiver
 # (a @ b + bias).relu()
 
-# Not claimed: in-place / other elementwise / views
-# x.relu_();  x * y;  x.transpose(0, 1)
+# Not claimed: in-place / unsupported elementwise forms / views
+# x.relu_();  x * 2.0;  x.transpose(0, 1)
 
 # Accepted classification head: int64 rank-1 labels
 # logits.softmax(dim=1).argmax(dim=1, keepdim=False)

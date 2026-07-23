@@ -1,4 +1,4 @@
-"""Fail-closed claims for elementwise ``+`` and rank-2 matmul (``@`` / ``torch.matmul``)."""
+"""Fail-closed claims for elementwise binary ops and rank-2 matmul."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from rextio.plugins.api import Claimed, ClaimResult, ClaimSite, NotCovered
 
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_ADD,
+    DIAGNOSTIC_MUL,
     DIAGNOSTIC_MATMUL,
     DIAGNOSTIC_MATMUL_CALL,
     DIAGNOSTIC_UNSUPPORTED,
@@ -17,13 +18,16 @@ from rextio_torch.diagnostics import (
 
 ADD_SAME_RANK_RULE = "rextio-torch/tensor-add-f32-cpu-same-rank"
 ADD_BROADCAST_2D_1D_RULE = "rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast"
+MUL_SAME_RANK_RULE = "rextio-torch/tensor-mul-f32-cpu-same-rank"
+MUL_BROADCAST_2D_1D_RULE = "rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast"
 MATMUL_BINOP_RULE = "rextio-torch/tensor-matmul-f32-cpu-2d"
 MATMUL_CALL_RULE = "rextio-torch/tensor-matmul-call-f32-cpu-2d"
 MATMUL_CALL_TARGET = "torch.matmul"
 
 ADD_RULES: frozenset[str] = frozenset({ADD_SAME_RANK_RULE, ADD_BROADCAST_2D_1D_RULE})
+MUL_RULES: frozenset[str] = frozenset({MUL_SAME_RANK_RULE, MUL_BROADCAST_2D_1D_RULE})
 
-_ADD_F32_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
+_F32_TENSOR_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
 
 def _method_name(target: str) -> str:
@@ -57,7 +61,7 @@ def _try_claim_add(site: ClaimSite) -> ClaimResult | None:
             "operand types are outside the float32 CPU rank-1/2 tensor surface",
             "Annotate both operands with TensorF32Cpu1D or TensorF32Cpu2D.",
         )
-    if left not in _ADD_F32_TYPES or right not in _ADD_F32_TYPES:
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
         return reject(
             site,
             DIAGNOSTIC_UNSUPPORTED,
@@ -67,13 +71,59 @@ def _try_claim_add(site: ClaimSite) -> ClaimResult | None:
     if left == right:
         return Claimed(rule_id=ADD_SAME_RANK_RULE, result_type=left)
     # Trailing bias broadcast: rank-2 + rank-1 (either order) → rank-2.
-    if {left, right} == _ADD_F32_TYPES:
+    if {left, right} == _F32_TENSOR_TYPES:
         return Claimed(rule_id=ADD_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D)
     return reject(
         site,
         DIAGNOSTIC_ADD,
         f"unsupported + operand types {left!r} and {right!r}",
         "Supported forms: same-rank + and rank-2 + rank-1 trailing bias broadcast.",
+    )
+
+
+def _try_claim_mul(site: ClaimSite) -> ClaimResult | None:
+    if site.kind != "binop" or site.target != "*":
+        return None
+    if site.receiver is not None or site.keywords:
+        return reject(
+            site,
+            DIAGNOSTIC_MUL,
+            "only binary * between two tensor operands is supported",
+            "Write a * b with two float32 CPU tensors; no method or keyword forms.",
+        )
+    if len(site.operand_types) != 2:
+        return reject(
+            site,
+            DIAGNOSTIC_MUL,
+            "elementwise * requires exactly two operands",
+            "Write a * b with two annotated tensor operands.",
+        )
+    left, right = site.operand_types
+    if left is None or right is None:
+        return NotCovered()
+    if not is_tensor_type(left) or not is_tensor_type(right):
+        return reject(
+            site,
+            DIAGNOSTIC_UNSUPPORTED,
+            "operand types are outside the float32 CPU rank-1/2 tensor surface",
+            "Annotate both operands with TensorF32Cpu1D or TensorF32Cpu2D.",
+        )
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        return reject(
+            site,
+            DIAGNOSTIC_UNSUPPORTED,
+            f"* requires float32 CPU rank-1/2 operands; got {left!r}, {right!r}",
+            "Use TensorF32Cpu1D or TensorF32Cpu2D for both multiply operands.",
+        )
+    if left == right:
+        return Claimed(rule_id=MUL_SAME_RANK_RULE, result_type=left)
+    if {left, right} == _F32_TENSOR_TYPES:
+        return Claimed(rule_id=MUL_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D)
+    return reject(
+        site,
+        DIAGNOSTIC_MUL,
+        f"unsupported * operand types {left!r} and {right!r}",
+        "Supported forms: same-rank * and rank-2 * rank-1 trailing bias broadcast.",
     )
 
 
@@ -191,7 +241,7 @@ def _claim_matmul_pair(
 
 def try_claim(site: ClaimSite) -> ClaimResult | None:
     """Claim supported + / matmul sites, else None when not this lane."""
-    for lane in (_try_claim_add, _try_claim_matmul_binop, _try_claim_matmul_call):
+    for lane in (_try_claim_add, _try_claim_mul, _try_claim_matmul_binop, _try_claim_matmul_call):
         result = lane(site)
         if result is not None:
             return result
@@ -205,5 +255,8 @@ __all__ = [
     "MATMUL_BINOP_RULE",
     "MATMUL_CALL_RULE",
     "MATMUL_CALL_TARGET",
+    "MUL_BROADCAST_2D_1D_RULE",
+    "MUL_RULES",
+    "MUL_SAME_RANK_RULE",
     "try_claim",
 ]

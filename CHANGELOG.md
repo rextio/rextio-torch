@@ -5,6 +5,13 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add binary elementwise `a * b` for float32 CPU rank-1/rank-2 tensors: same
+  rank and rank-2/rank-1 trailing broadcast in either order. It is binop-only;
+  scalar operands, `torch.mul`, `.mul`, int64 classification results, and all
+  other dtypes/devices/ranks remain fail-closed.
+- Lower multiplication through a fallible `tch::Tensor::f_mul` helper under
+  `no_grad`, with claim/lower metadata revalidation and real-Cargo coverage.
+
 ## [0.1.2] - Unreleased
 
 - Add the inference-only rank-2 classification-head method chain:

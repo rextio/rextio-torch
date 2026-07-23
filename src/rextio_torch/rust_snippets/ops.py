@@ -13,6 +13,7 @@ TANH = "__rxttorch_tanh"
 MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
 SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
 ADD = "__rxttorch_add"
+MUL = "__rxttorch_mul"
 MATMUL = "__rxttorch_matmul"
 SOFTMAX_DIM1 = "__rxttorch_softmax_dim1"
 ARGMAX_DIM1_KEEPFALSE = "__rxttorch_argmax_dim1_keepdim_false"
@@ -101,6 +102,18 @@ def add_helper() -> str:
 }"""
 
 
+def mul_helper() -> str:
+    """Return the no-grad fallible elementwise multiply helper (includes broadcast)."""
+    return r"""fn __rxttorch_mul(
+    left: &RxtTorchTensor,
+    right: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = left.0.f_mul(&right.0).map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
+
+
 def matmul_helper() -> str:
     """Return the no-grad fallible rank-2 matmul helper."""
     return r"""fn __rxttorch_matmul(
@@ -146,6 +159,7 @@ __all__ = [
     "LINEAR",
     "MATMUL",
     "MEAN_DIM1_KEEPFALSE",
+    "MUL",
     "RELU",
     "SIGMOID",
     "SOFTMAX_DIM1",
@@ -156,6 +170,7 @@ __all__ = [
     "linear_helper",
     "matmul_helper",
     "mean_dim1_keepfalse_helper",
+    "mul_helper",
     "relu_helper",
     "sigmoid_helper",
     "softmax_dim1_helper",

@@ -15,6 +15,8 @@ from rextio_torch.claim.binops import (
     ADD_SAME_RANK_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.linear import LINEAR_RULE
 from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
@@ -40,6 +42,8 @@ def test_native_rules_match_claim_constants() -> None:
         MATMUL_CALL_RULE,
         ADD_SAME_RANK_RULE,
         ADD_BROADCAST_2D_1D_RULE,
+        MUL_SAME_RANK_RULE,
+        MUL_BROADCAST_2D_1D_RULE,
         SUM_RULE,
     ):
         assert by_id[rule_id].outcome == "native"

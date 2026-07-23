@@ -32,6 +32,7 @@ from rextio_torch.claim.binops import (
     SUB_SAME_RANK_RULE,
 )
 from rextio_torch.claim.classification import ARGMAX_STATIC_RULE, SOFTMAX_STATIC_RULE
+from rextio_torch.claim.gelu import GELU_NONE_RULE
 from rextio_torch.claim.linear import LINEAR_NO_BIAS_RULE, LINEAR_RULE
 from rextio_torch.claim.reductions import (
     MEAN_RULE,
@@ -98,6 +99,7 @@ def test_native_rules_match_claim_constants() -> None:
         UNARY_EXP_RULE,
         UNARY_LOG_RULE,
         UNARY_SQRT_RULE,
+        GELU_NONE_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
         assert by_id[rule_id].verified is True

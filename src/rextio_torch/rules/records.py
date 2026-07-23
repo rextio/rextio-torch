@@ -420,6 +420,34 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/functional-gelu-none-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern=(
+                "exact torch.nn.functional.gelu(tensor) with approximate omitted "
+                "or exact literal keyword approximate='none'"
+            ),
+        ),
+        constraint=(
+            "One positional float32 CPU rank-1/rank-2 tensor and either no "
+            "keywords or exactly the static string literal approximate='none'. "
+            "Both forms lower to fixed fallible tch f_gelu(\"none\") under no-grad; "
+            "the source keyword is never interpolated. approximate='tanh', "
+            "dynamic/other keywords, positional approximate, modules, methods, "
+            "and other dtypes/devices/ranks remain fallback. Backward/training "
+            "use stays out of scope; the helper always returns a no-grad result."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-044",
+        guidance=(
+            "Use torch.nn.functional.gelu(tensor) or pass only the exact literal "
+            "keyword approximate='none' in inference/no-grad code."
+        ),
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/unsupported-tensor-surface",
         provider="rextio-torch",
         scope=RuleScope(

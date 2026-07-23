@@ -18,6 +18,7 @@ SQUARE = "__rxttorch_square"
 EXP = "__rxttorch_exp"
 LOG = "__rxttorch_log"
 SQRT = "__rxttorch_sqrt"
+GELU_NONE = "__rxttorch_gelu_none"
 MEAN_DIM1_KEEPFALSE = "__rxttorch_mean_dim1_keepdim_false"
 SUM_DIM1_KEEPFALSE = "__rxttorch_sum_dim1_keepdim_false"
 ADD = "__rxttorch_add"
@@ -119,6 +120,17 @@ def unary_helper(operation: str) -> str:
     let out = input.0.{fallible_method}().map_err(__rxttorch_map_err)?;
     Ok(RxtTorchTensor(out))
 }}"""
+
+
+def gelu_none_helper() -> str:
+    """Return the fixed fallible no-grad GELU ``approximate='none'`` helper."""
+    return r"""fn __rxttorch_gelu_none(
+    input: &RxtTorchTensor,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let _guard = tch::no_grad_guard();
+    let out = input.0.f_gelu("none").map_err(__rxttorch_map_err)?;
+    Ok(RxtTorchTensor(out))
+}"""
 
 
 def mean_dim1_keepfalse_helper() -> str:
@@ -285,6 +297,7 @@ __all__ = [
     "ARGMAX_DIM1_KEEPFALSE",
     "DIV",
     "EXP",
+    "GELU_NONE",
     "LINEAR",
     "LINEAR_NO_BIAS",
     "LOG",
@@ -306,6 +319,7 @@ __all__ = [
     "argmax_helper",
     "argmax_dim1_keepfalse_helper",
     "div_helper",
+    "gelu_none_helper",
     "linear_helper",
     "linear_no_bias_helper",
     "matmul_helper",

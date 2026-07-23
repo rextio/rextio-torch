@@ -99,6 +99,7 @@ def test_covers_alpha_aot_surface() -> None:
     assert coverage.packages == ("torch",)
     assert "torch.nn.functional" in coverage.modules
     assert "torch.nn.functional.linear" in coverage.symbols
+    assert "torch.nn.functional.gelu" in coverage.symbols
     assert "torch.matmul" in coverage.symbols
     assert "torch.add" in coverage.symbols
     assert "torch.sub" in coverage.symbols

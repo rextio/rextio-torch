@@ -5,6 +5,12 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add exact `torch.nn.functional.gelu(x)` and literal
+  `approximate="none"` for float32 CPU rank-1/rank-2 inference. Both forms
+  lower to fixed fallible `f_gelu("none")` under no-grad; `"tanh"`,
+  dynamic/other/positional options, method/module capture, and unsupported
+  types remain fail-closed. Native evidence covers default/explicit parity,
+  NaN/Inf classes, signed zero, and grad-requesting input behavior.
 - Add exact float32 CPU rank-1/rank-2 unary math through
   `torch.{abs,neg,negative,square,exp,log,sqrt}` and matching zero-argument
   tensor methods. Each spelling uses its exact fallible tch 0.24 API under

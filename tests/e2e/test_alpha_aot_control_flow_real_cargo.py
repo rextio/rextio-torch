@@ -183,6 +183,14 @@ def unary_sqrt(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
     return torch.sqrt(x)
 
 
+def gelu_default(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.nn.functional.gelu(x)
+
+
+def gelu_explicit_none(x: TensorF32Cpu1D) -> TensorF32Cpu1D:
+    return torch.nn.functional.gelu(x, approximate="none")
+
+
 def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = torch.softmax(logits, 0)
     return torch.argmax(probabilities, dim=1)
@@ -397,6 +405,13 @@ def _assert_special_value_equivalence(actual: object, expected: object) -> None:
         rtol=1e-5,
         atol=1e-6,
     )
+
+
+def _eager_gelu(value, *, explicit_none: bool):
+    functional = _import_torch().nn.functional
+    if explicit_none:
+        return functional.gelu(value, approximate="none")
+    return functional.gelu(value)
 
 
 def _eager_functional_classify(logits):
@@ -781,6 +796,20 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         assert [claim["rule_id"] for claim in unary_claims] == [rule_id]
         assert unary_claims[0]["result_type"] == "rextio-torch/tensor-f32-cpu-1d"
 
+    gelu_contracts = (
+        ("gelu_default", False),
+        ("gelu_explicit_none", True),
+    )
+    for qualname, _explicit_none in gelu_contracts:
+        gelu_record = _route_of(project, f"torch_app.kernels.{qualname}")
+        assert gelu_record["native_status"] == "accepted"
+        assert gelu_record["route"] == "native-plugin:rextio-torch"
+        gelu_claims = gelu_record.get("plugin_claims") or []
+        assert [claim["rule_id"] for claim in gelu_claims] == [
+            "rextio-torch/functional-gelu-none-f32-cpu-rank1-2"
+        ]
+        assert gelu_claims[0]["result_type"] == "rextio-torch/tensor-f32-cpu-1d"
+
     functional_record = _route_of(
         project, "torch_app.kernels.functional_classify"
     )
@@ -817,6 +846,7 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         "__rxttorch_exp",
         "__rxttorch_log",
         "__rxttorch_sqrt",
+        "__rxttorch_gelu_none",
     ):
         assert symbol in rust
     assert "f_linear(&weight.0, Option::<&tch::Tensor>::None)" in rust
@@ -832,6 +862,8 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         "f_sqrt",
     ):
         assert f".{fallible_method}()" in rust
+    assert '.f_gelu("none")' in rust
+    assert '.f_gelu("tanh")' not in rust
     assert "no_grad_guard" in rust
 
     torch.manual_seed(23)
@@ -989,6 +1021,35 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
             unary_eager = _eager_unary(qualname, unary_input)
             _assert_special_value_equivalence(unary_grad_out, unary_eager)
             assert unary_grad_out.requires_grad is False
+            assert _tensor_equal(grad_input.detach(), unary_input)
+
+    for qualname, explicit_none in gelu_contracts:
+        gelu_snapshot = unary_input.detach().clone()
+        gelu_checker = project.equivalence_checker(
+            f"torch_app.kernels.{qualname}",
+            equals=_tensor_equal,
+            args_equals=_args_unmutated,
+            copy_args=_copy_tensor_args,
+        )
+        gelu_out = gelu_checker(unary_input)
+        gelu_eager = _eager_gelu(gelu_snapshot, explicit_none=explicit_none)
+        assert _tensor_equal(gelu_out, gelu_eager)
+        _assert_special_value_equivalence(gelu_out, gelu_eager)
+        assert gelu_out.device.type == "cpu"
+        assert gelu_out.dtype == torch.float32
+        assert tuple(gelu_out.shape) == (9,)
+        assert gelu_out.requires_grad is False
+        assert _tensor_equal(unary_input, gelu_snapshot)
+
+    with _native_mode(project, "native"):
+        from torch_app import kernels as native_kernels
+
+        for qualname, explicit_none in gelu_contracts:
+            grad_input = unary_input.detach().clone().requires_grad_(True)
+            gelu_grad_out = getattr(native_kernels, qualname)(grad_input)
+            gelu_eager = _eager_gelu(unary_input, explicit_none=explicit_none)
+            _assert_special_value_equivalence(gelu_grad_out, gelu_eager)
+            assert gelu_grad_out.requires_grad is False
             assert _tensor_equal(grad_input.detach(), unary_input)
 
     with _native_mode(project, "native"):

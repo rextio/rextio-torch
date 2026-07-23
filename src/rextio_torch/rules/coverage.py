@@ -11,6 +11,7 @@ COVERAGE = CoverageDecl(
     modules=("torch", "torch.nn", "torch.nn.functional"),
     symbols=(
         "torch.nn.functional.linear",
+        "torch.nn.functional.gelu",
         "torch.matmul",
         "torch.relu",
         "torch.sigmoid",

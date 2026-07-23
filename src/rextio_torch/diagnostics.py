@@ -10,9 +10,17 @@ PLUGIN_ID = "rextio-torch"
 TENSOR_F32_CPU_1D = "rextio-torch/tensor-f32-cpu-1d"
 TENSOR_F32_CPU_2D = "rextio-torch/tensor-f32-cpu-2d"
 TENSOR_I64_CPU_1D = "rextio-torch/tensor-i64-cpu-1d"
+TENSOR_F32_CUDA0_1D = "rextio-torch/tensor-f32-cuda0-1d"
+TENSOR_F32_CUDA0_2D = "rextio-torch/tensor-f32-cuda0-2d"
 
 TENSOR_TYPE_KEYS: frozenset[str] = frozenset(
-    {TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D}
+    {
+        TENSOR_F32_CPU_1D,
+        TENSOR_F32_CPU_2D,
+        TENSOR_I64_CPU_1D,
+        TENSOR_F32_CUDA0_1D,
+        TENSOR_F32_CUDA0_2D,
+    }
 )
 
 # type key -> (dtype token, device token, rank)
@@ -20,6 +28,8 @@ _TENSOR_META: dict[str, tuple[str, str, int]] = {
     TENSOR_F32_CPU_1D: ("f32", "cpu", 1),
     TENSOR_F32_CPU_2D: ("f32", "cpu", 2),
     TENSOR_I64_CPU_1D: ("i64", "cpu", 1),
+    TENSOR_F32_CUDA0_1D: ("f32", "cuda:0", 1),
+    TENSOR_F32_CUDA0_2D: ("f32", "cuda:0", 2),
 }
 
 # Per-rule diagnostic codes (must be unique across RuleRecord entries).
@@ -67,6 +77,11 @@ DIAGNOSTIC_UNARY_EXP = "RXTP-TORCH-041"
 DIAGNOSTIC_UNARY_LOG = "RXTP-TORCH-042"
 DIAGNOSTIC_UNARY_SQRT = "RXTP-TORCH-043"
 DIAGNOSTIC_GELU_NONE = "RXTP-TORCH-044"
+DIAGNOSTIC_CUDA_MATMUL = "RXTP-TORCH-045"
+DIAGNOSTIC_CUDA_BIAS_ADD = "RXTP-TORCH-046"
+DIAGNOSTIC_CUDA_RELU = "RXTP-TORCH-047"
+DIAGNOSTIC_CUDA_MEAN = "RXTP-TORCH-048"
+DIAGNOSTIC_CUDA_E2 = "RXTP-TORCH-049"
 
 # Shared claim-time family codes for activation/binop shape rejections.
 DIAGNOSTIC_SIGMOID = DIAGNOSTIC_SIGMOID_2D
@@ -113,6 +128,11 @@ __all__ = [
     "DIAGNOSTIC_ADD",
     "DIAGNOSTIC_ADD_BROADCAST",
     "DIAGNOSTIC_ADD_SAME_RANK",
+    "DIAGNOSTIC_CUDA_BIAS_ADD",
+    "DIAGNOSTIC_CUDA_E2",
+    "DIAGNOSTIC_CUDA_MATMUL",
+    "DIAGNOSTIC_CUDA_MEAN",
+    "DIAGNOSTIC_CUDA_RELU",
     "DIAGNOSTIC_LINEAR",
     "DIAGNOSTIC_LINEAR_NO_BIAS",
     "DIAGNOSTIC_MATMUL",
@@ -164,6 +184,8 @@ __all__ = [
     "RUNTIME_ERRORS",
     "TENSOR_F32_CPU_1D",
     "TENSOR_F32_CPU_2D",
+    "TENSOR_F32_CUDA0_1D",
+    "TENSOR_F32_CUDA0_2D",
     "TENSOR_I64_CPU_1D",
     "TENSOR_TYPE_KEYS",
     "is_tensor_type",

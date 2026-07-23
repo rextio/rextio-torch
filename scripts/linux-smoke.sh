@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Experimental Linux smoke for the unreleased rextio-torch 0.1.1 Alpha hotfix.
+# Experimental Linux smoke for the unreleased rextio-torch 0.1.2 candidate.
 #
 # Exercises the pinned native-AOT contract on Linux x86_64 or aarch64.
 # This is NOT certification. Certified host remains macOS arm64.
@@ -38,7 +38,7 @@ done
 
 if [[ ! -x "${VIRTUAL_ENV:-}/bin/python" && ! -x ".venv/bin/python" ]]; then
   echo "error: need an active venv or ./.venv with CPython 3.11 + editable install" >&2
-  echo "hint: python3.11 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'" >&2
+  echo "hint: follow README.md 'Linux experimental verification recipe' (exact Core commit, then this repo --no-deps)" >&2
   exit 1
 fi
 

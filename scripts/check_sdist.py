@@ -26,6 +26,7 @@ def _repository_files() -> tuple[Path, ...]:
             "--",
             "benchmarks",
             "docs",
+            "scripts/build_cuda_candidate.py",
             "scripts/check_sdist.py",
             "scripts/linux-smoke.sh",
             "tests",

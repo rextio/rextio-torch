@@ -3,7 +3,7 @@
 from rextio.plugins.api import CoverageDecl
 
 # ``symbols`` is descriptive (capability manifest). Method forms and binops
-# are claimed via plugin API 1.3 receiver/operand type matching rather than
+# are claimed via plugin API 1.3+ receiver/operand type matching rather than
 # module-qualified symbols alone; functional linear and torch.matmul are the
 # explicit module-call forms.
 COVERAGE = CoverageDecl(

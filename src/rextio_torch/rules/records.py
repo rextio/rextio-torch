@@ -950,6 +950,59 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         stability="experimental",
         verified=True,
     ),
+    RuleRecord(
+        id="rextio-torch/cuda0-matmul-f32-2d",
+        provider="rextio-torch",
+        scope=RuleScope(kind="binop", pattern="rank-2 CUDA device-0 float32 @"),
+        constraint=(
+            "Exactly TensorF32Cuda0_2D @ TensorF32Cuda0_2D under the selected "
+            "rextio-device-cuda cuda-libtorch-linux-x86_64 authorization."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-045",
+        guidance="Use two float32 rank-2 tensors already resident on cuda:0.",
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/cuda0-bias-add-f32-2d-1d",
+        provider="rextio-torch",
+        scope=RuleScope(kind="binop", pattern="rank-2 + rank-1 CUDA device-0 bias add"),
+        constraint=(
+            "Exactly TensorF32Cuda0_2D + TensorF32Cuda0_1D. Reverse order, "
+            "same-rank addition, transfers, and mixed devices are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-046",
+        guidance="Keep the cuda:0 rank-2 matrix first and cuda:0 rank-1 bias second.",
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/cuda0-relu-f32-2d",
+        provider="rextio-torch",
+        scope=RuleScope(kind="call", pattern="zero-argument CUDA device-0 rank-2 .relu()"),
+        constraint="Method form only on TensorF32Cuda0_2D; functional and in-place forms excluded.",
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-047",
+        guidance="Call .relu() on an already-resident cuda:0 rank-2 tensor.",
+        stability="experimental",
+        verified=False,
+    ),
+    RuleRecord(
+        id="rextio-torch/cuda0-mean-dim1-f32-2d",
+        provider="rextio-torch",
+        scope=RuleScope(kind="call", pattern="CUDA device-0 rank-2 .mean(dim=1)"),
+        constraint=(
+            "Method form on TensorF32Cuda0_2D with literal dim=1 and omitted or "
+            "literal False keepdim, producing TensorF32Cuda0_1D."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-048",
+        guidance="Call .mean(dim=1) with a literal dimension on the cuda:0 rank-2 value.",
+        stability="experimental",
+        verified=False,
+    ),
 )
 
 

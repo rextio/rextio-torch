@@ -5,6 +5,24 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add a Linux x86_64 **build-only**, `support_claim=false` CUDA E2 candidate
+  under plugin API 1.6 and Core `rextio>=0.1.6`. New import-free
+  `TensorF32Cuda0_2D` / `TensorF32Cuda0_1D` annotations carry exact
+  libtorch-runtime device metadata and require the
+  `rextio-device-cuda/cuda-libtorch-linux-x86_64` authorization.
+- Limit CUDA lowering to rank-2 matmul, rank-2 + rank-1 bias, rank-2 ReLU, and
+  literal `mean(dim=1, keepdim=False)` under no-grad. Boundary extraction and
+  rank-specific return materialization verify CUDA device 0, float32, and
+  rank without a CPU transfer or storage copy. They also require strided
+  layout using tch 0.24's sparse/MKLDNN flags plus the exact pinned-PyTorch
+  layout property at both Python boundaries.
+- Add GPU-free analyzer/claim/lower/boundary tests and a Linux x86_64 Cargo
+  build lane against CPython 3.11, PyTorch/libtorch 2.11.0, and tch 0.24.0.
+  The lane runs actual Core profile/provider/authorization/codegen
+  orchestration with the real CUDA provider and a fixed synthetic probe report,
+  then compiles the generated cdylib once. It never loads or executes CUDA and
+  provides no real-GPU, one-libtorch-image/ABI, numerical, performance, or
+  release certification.
 - Add exact `torch.nn.functional.gelu(x)` and literal
   `approximate="none"` for float32 CPU rank-1/rank-2 inference. Both forms
   lower to fixed fallible `f_gelu("none")` under no-grad; `"tanh"`,

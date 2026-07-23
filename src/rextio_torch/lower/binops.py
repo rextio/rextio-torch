@@ -11,6 +11,10 @@ from rextio_torch.claim.binops import (
     DIV_BROADCAST_2D_1D_RULE,
     DIV_RULES,
     DIV_SAME_RANK_RULE,
+    FUNCTION_ADD_RULE,
+    FUNCTION_DIV_RULE,
+    FUNCTION_MUL_RULE,
+    FUNCTION_SUB_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
@@ -54,6 +58,56 @@ _BROADCAST_TENSOR_TYPES: frozenset[tuple[str, str, str]] = frozenset(
         (TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D),
     }
 )
+_FUNCTION_ELEMENTWISE = {
+    "torch.add": (FUNCTION_ADD_RULE, ADD, add_helper),
+    "torch.sub": (FUNCTION_SUB_RULE, SUB, sub_helper),
+    "torch.mul": (FUNCTION_MUL_RULE, MUL, mul_helper),
+    "torch.div": (FUNCTION_DIV_RULE, DIV, div_helper),
+}
+
+
+def _try_lower_functional_elementwise(
+    claimed: ClaimSite,
+    ctx: LoweringContext,
+) -> LoweredExpr | None:
+    if claimed.kind != "call" or claimed.target not in _FUNCTION_ELEMENTWISE:
+        return None
+    expected_rule, call_name, helper_factory = _FUNCTION_ELEMENTWISE[claimed.target]
+    if claimed.rule_id != expected_rule:
+        raise ValueError(
+            "rextio-torch functional elementwise lower received mismatched rule_id: "
+            f"{claimed.rule_id!r} != {expected_rule!r}"
+        )
+    if (
+        claimed.receiver is not None
+        or ctx.receiver is not None
+        or claimed.keywords
+        or len(claimed.operand_types) != 2
+        or len(claimed.operand_literals) != 2
+        or any(literal.is_literal for literal in claimed.operand_literals)
+        or len(ctx.operands) != 2
+    ):
+        raise ValueError(
+            "rextio-torch functional elementwise lower requires two positional "
+            "non-literal tensor operands"
+        )
+    left, right = claimed.operand_types
+    metadata = (left, right, claimed.result_type)
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch functional elementwise lower requires float32 CPU "
+            f"rank-1/2 operands; got {left!r}, {right!r}"
+        )
+    if metadata not in _SAME_RANK_TENSOR_TYPES | _BROADCAST_TENSOR_TYPES:
+        raise ValueError(
+            "rextio-torch functional elementwise result metadata changed between "
+            "claim and lower"
+        )
+    left_name, right_name = ctx.operands
+    return LoweredExpr(
+        rust=f"{call_name}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), helper_factory()),
+    )
 
 
 def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
@@ -331,6 +385,7 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
     """Lower a previously claimed + / matmul site, or return None."""
     for lane in (
+        _try_lower_functional_elementwise,
         _try_lower_add,
         _try_lower_mul,
         _try_lower_sub,

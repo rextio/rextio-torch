@@ -129,6 +129,18 @@ def arithmetic_followup(
     return combined_sub / (broadcast_div_forward + broadcast_div_reverse)
 
 
+def functional_arithmetic_aliases(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    vector: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    added = torch.add(left, right)
+    subtracted = torch.sub(added, bias)
+    multiplied = torch.mul(vector, subtracted)
+    return torch.div(multiplied, right)
+
+
 def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = torch.softmax(logits, 0)
     return torch.argmax(probabilities, dim=1)
@@ -291,6 +303,14 @@ def _eager_arithmetic_followup(left, right, bias, vector):
     broadcast_div_reverse = same_div_1d / same_div_2d
     combined_sub = broadcast_sub_forward - broadcast_sub_reverse
     return combined_sub / (broadcast_div_forward + broadcast_div_reverse)
+
+
+def _eager_functional_arithmetic_aliases(left, right, bias, vector):
+    torch = _import_torch()
+    added = torch.add(left, right)
+    subtracted = torch.sub(added, bias)
+    multiplied = torch.mul(vector, subtracted)
+    return torch.div(multiplied, right)
 
 
 def _eager_functional_classify(logits):
@@ -629,6 +649,22 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
         == 2
     )
 
+    alias_record = _route_of(
+        project,
+        "torch_app.kernels.functional_arithmetic_aliases",
+    )
+    assert alias_record["native_status"] == "accepted"
+    assert alias_record["route"] == "native-plugin:rextio-torch"
+    alias_rules = [
+        claim["rule_id"] for claim in alias_record.get("plugin_claims") or []
+    ]
+    assert alias_rules == [
+        "rextio-torch/function-add-f32-cpu-rank1-2",
+        "rextio-torch/function-sub-f32-cpu-rank1-2",
+        "rextio-torch/function-mul-f32-cpu-rank1-2",
+        "rextio-torch/function-div-f32-cpu-rank1-2",
+    ]
+
     functional_record = _route_of(
         project, "torch_app.kernels.functional_classify"
     )
@@ -736,6 +772,22 @@ def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
     assert arithmetic_out.dtype == torch.float32
     assert tuple(arithmetic_out.shape) == (2, 3)
     assert arithmetic_out.requires_grad is False
+    for actual, snapshot in zip(arithmetic_args, arithmetic_snap, strict=True):
+        assert _tensor_equal(actual, snapshot)
+
+    alias_checker = project.equivalence_checker(
+        "torch_app.kernels.functional_arithmetic_aliases",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    alias_out = alias_checker(*arithmetic_args)
+    alias_eager = _eager_functional_arithmetic_aliases(*arithmetic_snap)
+    assert _tensor_equal(alias_out, alias_eager)
+    assert alias_out.device.type == "cpu"
+    assert alias_out.dtype == torch.float32
+    assert tuple(alias_out.shape) == (2, 3)
+    assert alias_out.requires_grad is False
     for actual, snapshot in zip(arithmetic_args, arithmetic_snap, strict=True):
         assert _tensor_equal(actual, snapshot)
 

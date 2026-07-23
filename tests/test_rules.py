@@ -22,6 +22,10 @@ from rextio_torch.claim.binops import (
     MUL_SAME_RANK_RULE,
     DIV_BROADCAST_2D_1D_RULE,
     DIV_SAME_RANK_RULE,
+    FUNCTION_ADD_RULE,
+    FUNCTION_DIV_RULE,
+    FUNCTION_MUL_RULE,
+    FUNCTION_SUB_RULE,
     SUB_BROADCAST_2D_1D_RULE,
     SUB_SAME_RANK_RULE,
 )
@@ -70,6 +74,10 @@ def test_native_rules_match_claim_constants() -> None:
         SUM_STATIC_RULE,
         SOFTMAX_STATIC_RULE,
         ARGMAX_STATIC_RULE,
+        FUNCTION_ADD_RULE,
+        FUNCTION_SUB_RULE,
+        FUNCTION_MUL_RULE,
+        FUNCTION_DIV_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
         assert by_id[rule_id].verified is True

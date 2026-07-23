@@ -622,6 +622,79 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/function-add-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.add(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.add with exactly two positional tensor operands and no "
+            "keywords. The result follows the certified operator + matrix: same-rank "
+            "rank-1/rank-2 or rank-2/rank-1 trailing broadcast. alpha, out, scalar, "
+            "keyword, and other overloads stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-031",
+        guidance="Call torch.add(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-sub-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.sub(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.sub with two positional tensors and no keywords. "
+            "Operand order is preserved across the existing same-rank and rank-2/rank-1 "
+            "broadcast matrix. alpha, out, scalar, keyword, and alias forms are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-032",
+        guidance="Call torch.sub(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-mul-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.mul(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.mul with two positional tensors and no keywords, using "
+            "the certified operator * same-rank and rank-2/rank-1 broadcast matrix. "
+            "out, scalar, keyword, and other aliases stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-033",
+        guidance="Call torch.mul(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/function-div-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.div(a, b) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact target torch.div with two positional tensors and no keywords. "
+            "Operand order is preserved across the certified true-division matrix. "
+            "rounding_mode, out, scalar, keyword, and alias forms stay fallback."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-034",
+        guidance="Call torch.div(a, b) with two positional TensorF32Cpu1D/2D values.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/tensor-softmax-dim1-f32-cpu-2d",
         provider="rextio-torch",
         scope=RuleScope(

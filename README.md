@@ -192,6 +192,7 @@ claimed `result_type`.
 | Elementwise `*` (bias broadcast) | `a * b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast` |
 | Elementwise `-` | `a - b`, same-rank or rank-2/rank-1 trailing broadcast in either operand order | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-sub-f32-cpu-{same-rank,2d-1d-broadcast}` |
 | Elementwise true `/` | `a / b`, with the same rank/broadcast matrix as subtraction; binop only | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-div-f32-cpu-{same-rank,2d-1d-broadcast}` |
+| Functional elementwise arithmetic | Exact `torch.add/sub/mul/div(a, b)`; two positional tensors and no keywords, using the same rank/broadcast matrix as the operators | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/function-{add,sub,mul,div}-f32-cpu-rank1-2` |
 | Mean / sum | Receiver methods or exact `torch.mean` / `torch.sum`; `dim=0|1` once (positional literal or keyword); `keepdim` omitted=False or named bool | rank-2: dim 0/1; rank-1: only dim 0 + keepdim=True | registered float32 rank **1** or **2** only | legacy dim1 rules or `…/{mean,sum}-static-dim-f32-cpu-rank1-2` |
 | Softmax | Receiver method or exact `torch.softmax`; literal dim once; no dtype/keepdim | rank-1 dim 0; rank-2 dim 0/1 | same as input | legacy dim1 rule or `…/softmax-static-dim-f32-cpu-rank1-2` |
 | Argmax | Receiver method or exact `torch.argmax`; literal dim once; keepdim omitted=False or named bool | rank-2 dim 0/1 + keepdim=False; rank-1 dim 0 + keepdim=True | **1 int64** | legacy dim1 rule or `…/argmax-static-dim-i64-cpu-rank1` |
@@ -213,10 +214,10 @@ Native op helpers (all fallible, all under `no_grad`):
 
 Coverage symbols declared for the analyzer include
 `torch.nn.functional.linear`, `torch.matmul`,
-`torch.{relu,sigmoid,tanh,mean,sum,softmax,argmax}`, and the corresponding
-receiver methods. Binary `+` / `*` / `-` / `/` / `@` are claimed via binop
-sites, not semantic-changing function aliases such as `torch.div` with
-`rounding_mode`.
+`torch.{relu,sigmoid,tanh,add,sub,mul,div,mean,sum,softmax,argmax}`, and the
+corresponding receiver methods. Binary `+` / `*` / `-` / `/` / `@` are also
+claimed via binop sites. Functional arithmetic options that change or widen
+semantics, such as `alpha`, `out`, or `rounding_mode`, remain rejected.
 
 ### Control flow around claimed ops
 
@@ -257,7 +258,7 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Reductions: receiver or exact `torch.mean/sum`; dim literal 0/1 once positionally/keyword; keepdim omitted=False or named bool; output must already map to rank-1/2 | `claim/reductions.py` |
 | Classification: receiver or exact `torch.softmax/argmax`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
 | Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
-| Elementwise arithmetic: binary `+` / `*` / `-` / `/` only; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/function aliases/other ranks rejected | `claim/binops.py` |
+| Elementwise arithmetic: binary `+` / `*` / `-` / `/`, or exact `torch.add/sub/mul/div(a, b)` with two positional non-literal tensors and no keywords; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/method/option variants and other ranks rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
 Keyword order for `dim` / `keepdim` does not matter. A positional dim must be
@@ -285,13 +286,13 @@ become silent native claims.
 | Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
 | Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by Core API 1.3; others reject/fallback |
 | In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
-| Elementwise variants | scalar operands; `torch.add/sub/mul/div`; `.div`; rounding_mode/alpha options | Not claimed; `/` means tensor-tensor true division only |
+| Elementwise variants | scalar operands; `.add/.sub/.mul/.div`; aliases such as `torch.subtract`; `alpha`, `out`, or `rounding_mode` options | Rejected for recognized exact functions/options or otherwise unclaimed; `/` and exact `torch.div(a, b)` mean tensor-tensor true division only |
 | Reductions other shapes | whole-tensor reduction, dynamic/duplicate/out-of-range dim, positional keepdim, dtype/out, or rank-0 result | `Rejected` or unclaimed |
 | Classification variations | dtype override, dynamic/duplicate dim, softmax keepdim, rank-2 argmax keepdim=True, rank-1 argmax keepdim=False, rank-3+ | `Rejected` or unclaimed; unavailable int64 rank-2/rank-0 types are not invented |
 | Classification-result arithmetic | `TensorI64Cpu1D` or mixed int64/float32 operands with `+`, `*`, `-`, or `/` | `Rejected`; elementwise arithmetic remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
 | Unsupported broadcast ranks | arithmetic rank combinations other than same-rank or 2d/1d | `Rejected` |
-| Unrelated torch APIs | e.g. `torch.add(..., alpha=...)` | `NotCovered` |
+| Unrelated torch APIs | e.g. `torch.subtract` / `torch.divide` aliases | `NotCovered` |
 | Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
 | Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
 | Bare BinOp method receivers | `(a @ b).relu()` | Core does not offer site; use temps |
@@ -449,7 +450,7 @@ runtime incompatible-broadcast failure.
 # matrix.argmax(dim=1, keepdim=True)  # would be int64 rank-2
 # vector.argmax(dim=0)                # would be int64 rank-0
 
-# NotCovered: semantic-changing functional option aliases
+# Rejected: semantic-changing functional option
 # torch.div(a, b, rounding_mode="trunc")
 
 # Not offered by Core API 1.3: runtime tensor-valued keyword

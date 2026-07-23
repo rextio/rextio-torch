@@ -7,6 +7,10 @@ from rextio.plugins.api import Claimed, ClaimResult, ClaimSite, NotCovered
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_ADD,
     DIAGNOSTIC_DIV,
+    DIAGNOSTIC_FUNCTION_ADD,
+    DIAGNOSTIC_FUNCTION_DIV,
+    DIAGNOSTIC_FUNCTION_MUL,
+    DIAGNOSTIC_FUNCTION_SUB,
     DIAGNOSTIC_MUL,
     DIAGNOSTIC_MATMUL,
     DIAGNOSTIC_MATMUL_CALL,
@@ -29,6 +33,10 @@ DIV_BROADCAST_2D_1D_RULE = "rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast"
 MATMUL_BINOP_RULE = "rextio-torch/tensor-matmul-f32-cpu-2d"
 MATMUL_CALL_RULE = "rextio-torch/tensor-matmul-call-f32-cpu-2d"
 MATMUL_CALL_TARGET = "torch.matmul"
+FUNCTION_ADD_RULE = "rextio-torch/function-add-f32-cpu-rank1-2"
+FUNCTION_SUB_RULE = "rextio-torch/function-sub-f32-cpu-rank1-2"
+FUNCTION_MUL_RULE = "rextio-torch/function-mul-f32-cpu-rank1-2"
+FUNCTION_DIV_RULE = "rextio-torch/function-div-f32-cpu-rank1-2"
 
 ADD_RULES: frozenset[str] = frozenset({ADD_SAME_RANK_RULE, ADD_BROADCAST_2D_1D_RULE})
 MUL_RULES: frozenset[str] = frozenset({MUL_SAME_RANK_RULE, MUL_BROADCAST_2D_1D_RULE})
@@ -36,10 +44,71 @@ SUB_RULES: frozenset[str] = frozenset({SUB_SAME_RANK_RULE, SUB_BROADCAST_2D_1D_R
 DIV_RULES: frozenset[str] = frozenset({DIV_SAME_RANK_RULE, DIV_BROADCAST_2D_1D_RULE})
 
 _F32_TENSOR_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
+_FUNCTION_ELEMENTWISE: dict[str, tuple[str, str]] = {
+    "torch.add": (FUNCTION_ADD_RULE, DIAGNOSTIC_FUNCTION_ADD),
+    "torch.sub": (FUNCTION_SUB_RULE, DIAGNOSTIC_FUNCTION_SUB),
+    "torch.mul": (FUNCTION_MUL_RULE, DIAGNOSTIC_FUNCTION_MUL),
+    "torch.div": (FUNCTION_DIV_RULE, DIAGNOSTIC_FUNCTION_DIV),
+}
 
 
 def _method_name(target: str) -> str:
     return target.rpartition(".")[2]
+
+
+def _elementwise_result_type(left: str, right: str) -> str | None:
+    """Return the existing operator matrix result for two float32 CPU tensors."""
+    if left not in _F32_TENSOR_TYPES or right not in _F32_TENSOR_TYPES:
+        return None
+    if left == right:
+        return left
+    if {left, right} == _F32_TENSOR_TYPES:
+        return TENSOR_F32_CPU_2D
+    return None
+
+
+def _try_claim_functional_elementwise(site: ClaimSite) -> ClaimResult | None:
+    if site.kind != "call" or site.target not in _FUNCTION_ELEMENTWISE:
+        return None
+    rule_id, diagnostic = _FUNCTION_ELEMENTWISE[site.target]
+    if (
+        site.receiver is not None
+        or site.keywords
+        or len(site.operand_types) != 2
+        or len(site.operand_literals) != 2
+        or any(literal.is_literal for literal in site.operand_literals)
+    ):
+        return reject(
+            site,
+            diagnostic,
+            "functional elementwise calls require exactly two positional tensor operands",
+            (
+                f"Call {site.target}(a, b) with two float32 CPU tensors; "
+                "omit scalar operands, alpha/out/rounding_mode, and every keyword."
+            ),
+        )
+    left, right = site.operand_types
+    if left is None or right is None:
+        return NotCovered()
+    if not is_tensor_type(left) or not is_tensor_type(right):
+        return reject(
+            site,
+            DIAGNOSTIC_UNSUPPORTED,
+            "operand types are outside the float32 CPU rank-1/2 tensor surface",
+            "Annotate both operands with TensorF32Cpu1D or TensorF32Cpu2D.",
+        )
+    result_type = _elementwise_result_type(left, right)
+    if result_type is None:
+        return reject(
+            site,
+            diagnostic,
+            f"unsupported functional elementwise operand types {left!r} and {right!r}",
+            (
+                "Use same-rank float32 CPU tensors or the existing rank-2/rank-1 "
+                "trailing-broadcast matrix."
+            ),
+        )
+    return Claimed(rule_id=rule_id, result_type=result_type)
 
 
 def _try_claim_add(site: ClaimSite) -> ClaimResult | None:
@@ -342,6 +411,7 @@ def _claim_matmul_pair(
 def try_claim(site: ClaimSite) -> ClaimResult | None:
     """Claim supported tensor binops/calls, else None when not this lane."""
     for lane in (
+        _try_claim_functional_elementwise,
         _try_claim_add,
         _try_claim_mul,
         _try_claim_sub,
@@ -362,6 +432,10 @@ __all__ = [
     "DIV_BROADCAST_2D_1D_RULE",
     "DIV_RULES",
     "DIV_SAME_RANK_RULE",
+    "FUNCTION_ADD_RULE",
+    "FUNCTION_DIV_RULE",
+    "FUNCTION_MUL_RULE",
+    "FUNCTION_SUB_RULE",
     "MATMUL_BINOP_RULE",
     "MATMUL_CALL_RULE",
     "MATMUL_CALL_TARGET",

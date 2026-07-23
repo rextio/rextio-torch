@@ -15,6 +15,11 @@ def lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr:
     Independently revalidates authoritative claim metadata and fails closed
     with ``ValueError`` (not ``assert``) so guards survive ``python -O``.
     """
+    if getattr(ctx, "backend", "pyo3") != "pyo3":
+        raise ValueError(
+            "rextio-torch supports PyO3 host-extension lowering only; "
+            "standalone artifacts are unsupported"
+        )
     for lane in (linear, activations, reductions, binops):
         result = lane.try_lower(claimed, ctx)
         if result is not None:

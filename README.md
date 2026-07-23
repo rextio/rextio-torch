@@ -6,9 +6,9 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.0** (from `rextio_torch.__about__`) |
-| Release status | **0.1.0 public Alpha**, released **2026-07-18** |
-| Distribution | [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
+| Package version | **0.1.1** (unreleased; from `rextio_torch.__about__`) |
+| Release status | **Unreleased compatibility hotfix**; latest release is **0.1.0 public Alpha** (2026-07-18) |
+| Distribution | Latest published release: [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
 | Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
 | Product mode | **CPU inference / no-grad only** |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -17,7 +17,8 @@ PyTorch inference code to Rust expressions backed by
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README is the **0.1.0 public native-AOT Alpha support contract**. Every
+This README documents the **unreleased 0.1.1 compatibility update** to the
+0.1.0 public native-AOT Alpha support contract. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
 exercise them. Unsupported sites must stay on the ordinary Python fallback or
@@ -34,7 +35,7 @@ a release gate for this Alpha cut.
 | Component | Exact pin | Why it must match |
 | --- | --- | --- |
 | CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
-| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Registration/contract calls fail unless core advertises plugin API exactly **1.3**. |
+| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Core's loader negotiates this provider's declared API **1.3** with compatible hosts; provider registration methods require a parseable host API in major 1 with minor >=3, without enforcing exact equality. |
 | Plugin API | **1.3** | Claim sites, receivers, keyword literals, type vocabulary, and crate deps are API 1.3 contracts. |
 | PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
 | Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
@@ -57,8 +58,11 @@ a release gate for this Alpha cut.
 3. **CPython 3.11** — the generated native extension must load under the **same**
    CPython 3.11 + torch 2.11.0 environment that built it (PyO3 ABI + tch
    python-extension bridge).
-4. **Rextio 0.1.3+ / API 1.3** — claim metadata (receivers, literal keywords,
-   type keys) is not available on older plugin APIs.
+4. **Rextio 0.1.3+ / provider API 1.3** — claim metadata (receivers, literal
+   keywords, type keys) is not available on older plugin APIs. The provider
+   remains API 1.3 while Core's loader handles compatible host APIs.
+   Registration fails closed for API 1.2, other majors, or malformed host
+   versions before registration can reach fields unavailable on older Core.
 
 Certification and real-Cargo tests configure this environment explicitly.
 **Host OS is not a runtime claim gate in this plugin:** the source does not
@@ -416,7 +420,7 @@ remains useful for development and for running the focused contract tests.
 
 ```bash
 # CPython 3.11 only; requires rextio 0.1.3+ and torch 2.11.0
-python3.11 -m pip install 'rextio-torch==0.1.0'
+python3.11 -m pip install 'rextio-torch>=0.1.0,<0.2'
 
 # Development checkout alternative
 python3.11 -m pip install -e '.[dev]'
@@ -483,7 +487,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Package metadata identifies version **0.1.0** as Development Status Alpha.
+- Unreleased package metadata identifies version **0.1.1** as Development Status Alpha.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

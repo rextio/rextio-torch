@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from rextio.plugins.api import (
@@ -78,6 +80,35 @@ def test_lower_linear_emits_fallible_no_grad_helper() -> None:
     assert "no_grad_guard" in linear_helper()
     assert "unwrap(" not in linear_helper()
     assert "panic!" not in linear_helper()
+
+
+def test_lower_defaults_legacy_contexts_to_pyo3_and_rejects_standalone() -> None:
+    claimed = ClaimSite(
+        kind="call",
+        target=LINEAR_TARGET,
+        operand_types=(TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D),
+        file_path="",
+        line=0,
+        column=0,
+        rule_id=LINEAR_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    legacy_ctx = cast(
+        LoweringContext,
+        SimpleNamespace(operands=("x", "w", "b"), fresh_name=_fresh_name),
+    )
+    assert PLUGIN.lower(claimed, legacy_ctx).rust == f"{LINEAR}(&x, &w, &b)?"
+
+    standalone_ctx = cast(
+        LoweringContext,
+        SimpleNamespace(
+            backend="standalone-rust",
+            operands=("x", "w", "b"),
+            fresh_name=_fresh_name,
+        ),
+    )
+    with pytest.raises(ValueError, match="PyO3"):
+        PLUGIN.lower(claimed, standalone_ctx)
 
 
 def test_lower_relu_uses_receiver() -> None:

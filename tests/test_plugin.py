@@ -6,6 +6,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+import pytest
 from rextio.config.schema import PluginConfig, RextioConfig
 from rextio.plugins.api import (
     PLUGIN_DIAGNOSTIC_CODE_PATTERN,
@@ -45,7 +46,7 @@ def test_entry_point_factory_returns_plugin() -> None:
     assert isinstance(obj, RextioTorchPlugin)
     assert obj.plugin_id == PLUGIN_ID
     assert obj.api_version == REQUIRED_PLUGIN_API == "1.3"
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.1.1"
 
 
 def test_core_loader_accepts_the_plugin() -> None:
@@ -61,6 +62,21 @@ def test_core_loader_accepts_the_plugin() -> None:
     assert [record.id for record in registry.rule_records] == [
         record.id for record in torch_rule_records()
     ]
+
+
+@pytest.mark.parametrize("host_api", ("1.3", "1.4"))
+def test_loader_negotiates_api_13_provider_without_artifact_capability(
+    monkeypatch: pytest.MonkeyPatch, host_api: str
+) -> None:
+    """Core owns API compatibility; this provider remains host-extension-only."""
+    import rextio.plugins.api as plugin_api
+
+    monkeypatch.setattr(plugin_api, "PLUGIN_API_VERSION", host_api)
+    registry = load_registry()
+
+    assert registry.active[0].api_version == "1.3"
+    assert getattr(registry.active[0], "artifact_capability_declared", False) is False
+    assert not hasattr(plugin(), "artifact_capability")
 
 
 def test_covers_alpha_aot_surface() -> None:

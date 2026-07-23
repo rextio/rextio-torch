@@ -25,7 +25,11 @@ def _has_positional_none(site: ClaimSite) -> bool:
     if len(site.operand_types) != 3 or len(site.operand_literals) != 3:
         return False
     literal = site.operand_literals[2]
-    return literal.is_literal and literal.value is None
+    return (
+        site.operand_types[2] == "None"
+        and literal.is_literal
+        and literal.value is None
+    )
 
 
 def _has_keyword_none(site: ClaimSite) -> bool:
@@ -34,8 +38,20 @@ def _has_keyword_none(site: ClaimSite) -> bool:
     keyword = site.keywords[0]
     return (
         keyword.name == "bias"
+        and keyword.arg_type == "None"
         and keyword.literal.is_literal
         and keyword.literal.value is None
+    )
+
+
+def _has_contradictory_positional_none(site: ClaimSite) -> bool:
+    if len(site.operand_types) != 3 or len(site.operand_literals) != 3:
+        return False
+    literal = site.operand_literals[2]
+    return (
+        site.operand_types[2] != "None"
+        and literal.is_literal
+        and literal.value is None
     )
 
 
@@ -71,6 +87,14 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
         return Claimed(
             rule_id=LINEAR_NO_BIAS_RULE,
             result_type=TENSOR_F32_CPU_2D,
+        )
+
+    if _has_contradictory_positional_none(site):
+        return reject(
+            site,
+            DIAGNOSTIC_LINEAR_NO_BIAS,
+            "positional bias metadata contradicts literal None",
+            "Use a real tensor bias or a literal None whose static type is exactly None.",
         )
 
     if site.keywords or len(operands) != 3:

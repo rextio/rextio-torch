@@ -90,6 +90,53 @@ def multiply_surface(
 def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
     probabilities = logits.softmax(dim=1)
     return probabilities.argmax(dim=1, keepdim=False)
+
+
+def cpu_surface_followup(
+    x: TensorF32Cpu2D,
+    weight: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    divisor: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    omitted = torch.nn.functional.linear(x, weight)
+    positional_none = torch.nn.functional.linear(omitted, weight, None)
+    hidden = torch.nn.functional.linear(positional_none, weight, bias=None)
+    activated = torch.relu(hidden)
+    gated = torch.sigmoid(activated)
+    shifted = gated - bias
+    scaled = shifted / divisor
+    totals = torch.sum(scaled, 0, keepdim=True)
+    averaged = torch.mean(totals, 1, keepdim=True)
+    probabilities = torch.softmax(averaged, 1)
+    return torch.tanh(probabilities)
+
+
+def arithmetic_followup(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    vector: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    same_sub_2d = left - right
+    same_sub_1d = bias - vector
+    broadcast_sub_forward = same_sub_2d - same_sub_1d
+    broadcast_sub_reverse = same_sub_1d - same_sub_2d
+    same_div_2d = left / right
+    same_div_1d = bias / vector
+    broadcast_div_forward = same_div_2d / same_div_1d
+    broadcast_div_reverse = same_div_1d / same_div_2d
+    combined_sub = broadcast_sub_forward - broadcast_sub_reverse
+    return combined_sub / (broadcast_div_forward + broadcast_div_reverse)
+
+
+def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
+    probabilities = torch.softmax(logits, 0)
+    return torch.argmax(probabilities, dim=1)
+
+
+def vector_classify(logits: TensorF32Cpu1D) -> TensorI64Cpu1D:
+    probabilities = torch.softmax(logits, dim=0)
+    return torch.argmax(probabilities, 0, keepdim=True)
 """
 
 
@@ -216,6 +263,44 @@ def _eager_multiply_surface(left, right, bias, vector):
     same_rank_1d = bias * vector
     broadcast_forward = same_rank_2d * same_rank_1d
     return same_rank_1d * broadcast_forward
+
+
+def _eager_cpu_surface_followup(x, weight, bias, divisor):
+    torch = _import_torch()
+    omitted = torch.nn.functional.linear(x, weight)
+    positional_none = torch.nn.functional.linear(omitted, weight, None)
+    hidden = torch.nn.functional.linear(positional_none, weight, bias=None)
+    activated = torch.relu(hidden)
+    gated = torch.sigmoid(activated)
+    shifted = gated - bias
+    scaled = shifted / divisor
+    totals = torch.sum(scaled, 0, keepdim=True)
+    averaged = torch.mean(totals, 1, keepdim=True)
+    probabilities = torch.softmax(averaged, 1)
+    return torch.tanh(probabilities)
+
+
+def _eager_arithmetic_followup(left, right, bias, vector):
+    same_sub_2d = left - right
+    same_sub_1d = bias - vector
+    broadcast_sub_forward = same_sub_2d - same_sub_1d
+    broadcast_sub_reverse = same_sub_1d - same_sub_2d
+    same_div_2d = left / right
+    same_div_1d = bias / vector
+    broadcast_div_forward = same_div_2d / same_div_1d
+    broadcast_div_reverse = same_div_1d / same_div_2d
+    combined_sub = broadcast_sub_forward - broadcast_sub_reverse
+    return combined_sub / (broadcast_div_forward + broadcast_div_reverse)
+
+
+def _eager_functional_classify(logits):
+    torch = _import_torch()
+    return torch.argmax(torch.softmax(logits, 0), dim=1)
+
+
+def _eager_vector_classify(logits):
+    torch = _import_torch()
+    return torch.argmax(torch.softmax(logits, dim=0), 0, keepdim=True)
 
 
 def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
@@ -497,6 +582,201 @@ def test_classification_head_real_cargo(project: CertifiedProject) -> None:
     assert native_grad_out.dtype == torch.int64
     assert torch.equal(native_grad_out, eager)
     assert torch.equal(logits_grad.detach(), logits_snap)
+
+
+def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:
+    """Certify the bounded function/static-dim/sub/div/no-bias vertical slice."""
+    torch = _import_torch()
+    followup_record = _route_of(project, "torch_app.kernels.cpu_surface_followup")
+    assert followup_record["native_status"] == "accepted"
+    assert followup_record["route"] == "native-plugin:rextio-torch"
+    followup_rules = [
+        claim["rule_id"] for claim in followup_record.get("plugin_claims") or []
+    ]
+    assert followup_rules.count(
+        "rextio-torch/functional-linear-none-f32-cpu-2d"
+    ) == 3
+    for rule_id in (
+        "rextio-torch/function-relu-f32-cpu-rank1-2",
+        "rextio-torch/function-sigmoid-f32-cpu-rank1-2",
+        "rextio-torch/function-tanh-f32-cpu-rank1-2",
+        "rextio-torch/tensor-sub-f32-cpu-2d-1d-broadcast",
+        "rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast",
+        "rextio-torch/sum-static-dim-f32-cpu-rank1-2",
+        "rextio-torch/mean-static-dim-f32-cpu-rank1-2",
+        "rextio-torch/softmax-static-dim-f32-cpu-rank1-2",
+    ):
+        assert rule_id in followup_rules
+
+    arithmetic_record = _route_of(project, "torch_app.kernels.arithmetic_followup")
+    assert arithmetic_record["native_status"] == "accepted"
+    assert arithmetic_record["route"] == "native-plugin:rextio-torch"
+    arithmetic_rules = [
+        claim["rule_id"] for claim in arithmetic_record.get("plugin_claims") or []
+    ]
+    assert arithmetic_rules.count("rextio-torch/tensor-sub-f32-cpu-same-rank") == 3
+    assert (
+        arithmetic_rules.count(
+            "rextio-torch/tensor-sub-f32-cpu-2d-1d-broadcast"
+        )
+        == 2
+    )
+    assert arithmetic_rules.count("rextio-torch/tensor-div-f32-cpu-same-rank") == 3
+    assert (
+        arithmetic_rules.count(
+            "rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast"
+        )
+        == 2
+    )
+
+    functional_record = _route_of(
+        project, "torch_app.kernels.functional_classify"
+    )
+    vector_record = _route_of(project, "torch_app.kernels.vector_classify")
+    for record in (functional_record, vector_record):
+        assert record["native_status"] == "accepted"
+        assert record["route"] == "native-plugin:rextio-torch"
+        rules = [claim["rule_id"] for claim in record.get("plugin_claims") or []]
+        assert rules == [
+            "rextio-torch/softmax-static-dim-f32-cpu-rank1-2",
+            "rextio-torch/argmax-static-dim-i64-cpu-rank1",
+        ]
+
+    rust = (
+        project.project_root
+        / ".rextio"
+        / "generated"
+        / "rust"
+        / "src"
+        / "lib.rs"
+    ).read_text(encoding="utf-8")
+    for symbol in (
+        "__rxttorch_linear_no_bias",
+        "__rxttorch_sub",
+        "__rxttorch_div",
+        "__rxttorch_sum_dim0_keepdim_true",
+        "__rxttorch_mean_dim1_keepdim_true",
+        "__rxttorch_softmax_dim0",
+        "__rxttorch_argmax_dim0_keepdim_true",
+    ):
+        assert symbol in rust
+    assert "f_linear(&weight.0, Option::<&tch::Tensor>::None)" in rust
+    assert "f_sub" in rust
+    assert "f_div" in rust
+    assert "no_grad_guard" in rust
+
+    torch.manual_seed(23)
+    width = 3
+    x = torch.randn((4, width), dtype=torch.float32)
+    weight = torch.randn((width, width), dtype=torch.float32)
+    bias = torch.tensor([0.25, -0.75, 1.5], dtype=torch.float32)
+    divisor = torch.tensor([0.5, -1.25, 2.0], dtype=torch.float32)
+    x_snap = x.detach().clone()
+    weight_snap = weight.detach().clone()
+    bias_snap = bias.detach().clone()
+    divisor_snap = divisor.detach().clone()
+    followup_checker = project.equivalence_checker(
+        "torch_app.kernels.cpu_surface_followup",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    followup_out = followup_checker(x, weight, bias, divisor)
+    followup_eager = _eager_cpu_surface_followup(
+        x_snap, weight_snap, bias_snap, divisor_snap
+    )
+    assert _tensor_equal(followup_out, followup_eager)
+    assert followup_out.device.type == "cpu"
+    assert followup_out.dtype == torch.float32
+    assert tuple(followup_out.shape) == (1, 1)
+    assert followup_out.requires_grad is False
+    assert torch.equal(x, x_snap)
+    assert torch.equal(weight, weight_snap)
+    assert torch.equal(bias, bias_snap)
+    assert torch.equal(divisor, divisor_snap)
+
+    with _native_mode(project, "native"):
+        from torch_app.kernels import cpu_surface_followup
+
+        followup_grad = cpu_surface_followup(
+            x_snap.detach().clone().requires_grad_(True),
+            weight_snap.detach().clone().requires_grad_(True),
+            bias_snap.detach().clone().requires_grad_(True),
+            divisor_snap.detach().clone().requires_grad_(True),
+        )
+    assert followup_grad.requires_grad is False
+    assert torch.allclose(
+        followup_grad,
+        followup_eager,
+        rtol=1e-5,
+        atol=1e-6,
+        equal_nan=True,
+    )
+
+    left = torch.tensor(
+        [[1.0, 2.0, 4.0], [3.0, 5.0, 7.0]], dtype=torch.float32
+    )
+    right = torch.tensor(
+        [[2.0, 4.0, 8.0], [6.0, 10.0, 14.0]], dtype=torch.float32
+    )
+    arithmetic_bias = torch.tensor([1.5, 2.5, 3.5], dtype=torch.float32)
+    vector = torch.tensor([0.5, 1.25, 1.75], dtype=torch.float32)
+    arithmetic_args = (left, right, arithmetic_bias, vector)
+    arithmetic_snap = _copy_tensor_args(arithmetic_args)
+    arithmetic_checker = project.equivalence_checker(
+        "torch_app.kernels.arithmetic_followup",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    arithmetic_out = arithmetic_checker(*arithmetic_args)
+    arithmetic_eager = _eager_arithmetic_followup(*arithmetic_snap)
+    assert _tensor_equal(arithmetic_out, arithmetic_eager)
+    assert arithmetic_out.device.type == "cpu"
+    assert arithmetic_out.dtype == torch.float32
+    assert tuple(arithmetic_out.shape) == (2, 3)
+    assert arithmetic_out.requires_grad is False
+    for actual, snapshot in zip(arithmetic_args, arithmetic_snap, strict=True):
+        assert _tensor_equal(actual, snapshot)
+
+    with _native_mode(project, "native"):
+        from torch_app.kernels import arithmetic_followup
+
+        with pytest.raises(RuntimeError):
+            arithmetic_followup(
+                torch.ones((2, 2)),
+                torch.ones((2, 2)),
+                torch.ones(3),
+                torch.ones(3),
+            )
+
+    logits = torch.tensor(
+        [[-2.0, 0.5, 3.0], [1.0, -4.0, 2.0]], dtype=torch.float32
+    )
+    functional_checker = project.equivalence_checker(
+        "torch_app.kernels.functional_classify",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    functional_out = functional_checker(logits)
+    assert _tensor_equal(functional_out, _eager_functional_classify(logits))
+    assert functional_out.dtype == torch.int64
+    assert tuple(functional_out.shape) == (2,)
+    assert functional_out.requires_grad is False
+
+    vector_logits = torch.tensor([-3.0, 4.0, 1.0], dtype=torch.float32)
+    vector_checker = project.equivalence_checker(
+        "torch_app.kernels.vector_classify",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    vector_out = vector_checker(vector_logits)
+    assert _tensor_equal(vector_out, _eager_vector_classify(vector_logits))
+    assert vector_out.dtype == torch.int64
+    assert tuple(vector_out.shape) == (1,)
+    assert vector_out.requires_grad is False
 
 
 class _native_mode:

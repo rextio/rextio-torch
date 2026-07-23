@@ -155,6 +155,52 @@ def test_tensor_valued_keyword_bias_is_not_misclaimed() -> None:
     assert isinstance(PLUGIN.claim(forged_keyword_site, CONFIG), Rejected)
 
 
+@pytest.mark.parametrize("form", ("positional", "keyword"))
+def test_contradictory_tensor_type_plus_none_literal_is_rejected(form: str) -> None:
+    site = _site(form)
+    if form == "positional":
+        contradictory = replace(
+            site,
+            operand_types=(
+                TENSOR_F32_CPU_2D,
+                TENSOR_F32_CPU_2D,
+                TENSOR_F32_CPU_1D,
+            ),
+        )
+    else:
+        contradictory = replace(
+            site,
+            keywords=(
+                KeywordArg(
+                    name="bias",
+                    arg_type=TENSOR_F32_CPU_1D,
+                    literal=LITERAL_NONE,
+                ),
+            ),
+        )
+    assert isinstance(PLUGIN.claim(contradictory, CONFIG), Rejected)
+
+    forged = replace(
+        contradictory,
+        rule_id=LINEAR_NO_BIAS_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    operands = (
+        ("input", "weight", "forged_tensor")
+        if form == "positional"
+        else ("input", "weight")
+    )
+    with pytest.raises(ValueError, match="literal-None"):
+        PLUGIN.lower(
+            forged,
+            LoweringContext(
+                operands=operands,
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
+
+
 class FakeEntryPoint:
     name = PLUGIN_ID
 
@@ -242,11 +288,11 @@ def test_analyzer_proves_all_none_forms_and_falls_back_for_tensor_keyword(
     # so the call is never offered to this provider and follows ordinary fallback.
 
 
-def test_linear_none_rule_record_exists_unverified_before_native_evidence() -> None:
+def test_linear_none_rule_record_is_native_verified() -> None:
     record = next(
         record
         for record in PLUGIN.describe(CONFIG)
         if record.id == LINEAR_NO_BIAS_RULE
     )
     assert record.outcome == "native"
-    assert record.verified is False
+    assert record.verified is True

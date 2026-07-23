@@ -24,6 +24,7 @@ def _keyword_bias_none(claimed: ClaimSite) -> bool:
     keyword = claimed.keywords[0]
     return (
         keyword.name == "bias"
+        and keyword.arg_type == "None"
         and keyword.literal.is_literal
         and keyword.literal.value is None
     )
@@ -33,7 +34,22 @@ def _positional_bias_none(claimed: ClaimSite) -> bool:
     if len(claimed.operand_types) != 3 or len(claimed.operand_literals) != 3:
         return False
     literal = claimed.operand_literals[2]
-    return literal.is_literal and literal.value is None
+    return (
+        claimed.operand_types[2] == "None"
+        and literal.is_literal
+        and literal.value is None
+    )
+
+
+def _contradictory_positional_none(claimed: ClaimSite) -> bool:
+    if len(claimed.operand_types) != 3 or len(claimed.operand_literals) != 3:
+        return False
+    literal = claimed.operand_literals[2]
+    return (
+        claimed.operand_types[2] != "None"
+        and literal.is_literal
+        and literal.value is None
+    )
 
 
 def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
@@ -49,6 +65,10 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         )
 
     if claimed.rule_id == LINEAR_RULE:
+        if _contradictory_positional_none(claimed):
+            raise ValueError(
+                "rextio-torch linear lower received contradictory literal-None bias metadata"
+            )
         if claimed.keywords or tuple(claimed.operand_types) != _EXPECTED:
             raise ValueError(
                 "rextio-torch linear lower requires three positional tensor operands"

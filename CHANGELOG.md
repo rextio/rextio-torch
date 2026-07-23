@@ -5,6 +5,30 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add exact functional activation spellings `torch.relu`, `torch.sigmoid`, and
+  `torch.tanh` for the existing float32 CPU rank-1/rank-2 surface.
+- Add tensor-tensor `-` and true `/` for same-rank rank-1/rank-2 tensors and
+  rank-2/rank-1 trailing broadcast in either operand order. Function aliases,
+  scalar operands, `rounding_mode`, and non-float32 classification results
+  remain fail-closed.
+- Add exact `torch.mean` / `torch.sum` function spellings and generalize method
+  forms to literal dim 0/1, with keepdim omitted (False) or a named bool
+  literal, only when the output remains in the existing float32 rank-1/rank-2
+  vocabulary. Positional keepdim, rank-0 results, dtype, and out stay fallback.
+- Add exact `torch.softmax` / `torch.argmax` function spellings and bounded
+  static method variants. Argmax remains limited to exact int64 CPU rank-1
+  outputs: rank-2 with keepdim=False or rank-1 dim=0 with keepdim=True. No
+  int64 rank-2/rank-0 type is invented.
+- Add no-bias functional linear with bias omitted, positional literal `None`,
+  or keyword literal `bias=None`. Tensor-valued keyword operands remain
+  ordinary fallback because Core plugin API 1.3 cannot represent them.
+- Independently revalidate canonical target, arity, operand/literal alignment,
+  keyword name/type/value, result type, and receiver shape at lowering. Static
+  positional dim/None metadata is never forwarded as a runtime tensor operand.
+- Extend the serialized native Cargo project with a complete CPU follow-up
+  slice and all subtraction/division rank-order families, proving route,
+  numerical parity, dtype/device/rank, no-grad, non-mutation, and incompatible
+  broadcast failure under the unchanged PyTorch 2.11.0 / tch 0.24.0 pins.
 - Add binary elementwise `a * b` for float32 CPU rank-1/rank-2 tensors: same
   rank and rank-2/rank-1 trailing broadcast in either order. It is binop-only;
   scalar operands, `torch.mul`, `.mul`, int64 classification results, and all

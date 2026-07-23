@@ -114,6 +114,28 @@ helpers:
 | `.mean` / `.sum` | `dim=1`, `keepdim=False` literals only; rank-2 → rank-1 |
 | Functional linear | Unchanged Phase A three-operand form |
 
+### Unreleased 0.1.2 bounded CPU follow-up
+
+The next-version integration branch retains every 0.1.0 pin and boundary while
+adding a fail-closed, real-Cargo-tested follow-up:
+
+| Op | Added bounded contract |
+| --- | --- |
+| Activations | Exact `torch.relu/sigmoid/tanh(tensor)` with one positional float32 CPU rank-1/2 tensor |
+| Elementwise `-` / true `/` | Same-rank 1d/2d or rank-2/rank-1 trailing broadcast in either operand order; binop only |
+| Mean / sum | Receiver or exact `torch.mean/sum`; dim literal 0/1 once; keepdim omitted=False or named bool; only already-registered rank-1/2 outputs |
+| Softmax | Receiver or exact `torch.softmax`; rank-1 dim0 or rank-2 dim0/1; no dtype/keepdim |
+| Argmax | Exact int64 rank-1 outputs only: rank-2 dim0/1 keepdim=False or rank-1 dim0 keepdim=True |
+| Functional linear without bias | Input/weight positional; bias omitted, positional literal None, or exact literal keyword `bias=None` |
+
+Core API 1.3 does not represent tensor-valued keyword operands, so
+`linear(..., bias=bias_tensor)` remains ordinary fallback. Positional
+dimensions are independently checked through aligned `operand_literals` in
+claim and lower, then omitted from the runtime tensor helper call. Positional
+keepdim is not admitted; rank-2 argmax keepdim=True and rank-1 argmax
+keepdim=False remain fallback because the exact int64 rank-2/rank-0 vocabulary
+does not exist.
+
 ### Control-flow vertical slice
 
 Python `for` / `if` around matmul, bias `+`, relu/sigmoid, and mean lower to
@@ -133,7 +155,8 @@ scopes Rust `let` bindings per arm).
 ### Intentionally not claimed (without weakening guards)
 
 - Literal transpose / reshape / view (view/alias ambiguity with shallow clone)
-- Elementwise `-`, `*`, `/` and scalar operands (not yet proven in this cut)
+- Scalar operands and semantic-changing function aliases/options such as
+  `torch.div(..., rounding_mode=...)` or `torch.add(..., alpha=...)`
 - Whole-tensor mean/sum, dynamic dim/keepdim
 - In-place methods and operators
 

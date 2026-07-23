@@ -398,6 +398,96 @@ def test_lower_rejects_forged_positional_literal_alignment() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("site", "rule_id", "result_type"),
+    (
+        (
+            _method(
+                "mean",
+                TENSOR_F32_CPU_2D,
+                keywords=(replace(_kw("dim", 0), arg_type="bool"),),
+            ),
+            MEAN_STATIC_RULE,
+            TENSOR_F32_CPU_1D,
+        ),
+        (
+            _method(
+                "sum",
+                TENSOR_F32_CPU_2D,
+                keywords=(
+                    _kw("dim", 0),
+                    replace(_kw("keepdim", True), arg_type="int"),
+                ),
+            ),
+            SUM_STATIC_RULE,
+            TENSOR_F32_CPU_2D,
+        ),
+    ),
+)
+def test_reduction_keyword_arg_type_must_match_literal_kind(
+    site: ClaimSite,
+    rule_id: str,
+    result_type: str,
+) -> None:
+    assert isinstance(PLUGIN.claim(site, CONFIG), Rejected)
+    forged = replace(site, rule_id=rule_id, result_type=result_type)
+    with pytest.raises(ValueError, match="literal keywords"):
+        PLUGIN.lower(
+            forged,
+            LoweringContext(
+                operands=(),
+                target_language="rust",
+                fresh_name=_fresh_name,
+                receiver="tensor",
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("site", "rule_id", "result_type"),
+    (
+        (
+            _method(
+                "softmax",
+                TENSOR_F32_CPU_2D,
+                keywords=(replace(_kw("dim", 0), arg_type="bool"),),
+            ),
+            SOFTMAX_STATIC_RULE,
+            TENSOR_F32_CPU_2D,
+        ),
+        (
+            _method(
+                "argmax",
+                TENSOR_F32_CPU_1D,
+                keywords=(
+                    _kw("dim", 0),
+                    replace(_kw("keepdim", True), arg_type="int"),
+                ),
+            ),
+            ARGMAX_STATIC_RULE,
+            TENSOR_I64_CPU_1D,
+        ),
+    ),
+)
+def test_classification_keyword_arg_type_must_match_literal_kind(
+    site: ClaimSite,
+    rule_id: str,
+    result_type: str,
+) -> None:
+    assert isinstance(PLUGIN.claim(site, CONFIG), Rejected)
+    forged = replace(site, rule_id=rule_id, result_type=result_type)
+    with pytest.raises(ValueError, match="literal keywords"):
+        PLUGIN.lower(
+            forged,
+            LoweringContext(
+                operands=(),
+                target_language="rust",
+                fresh_name=_fresh_name,
+                receiver="tensor",
+            ),
+        )
+
+
 class FakeEntryPoint:
     name = PLUGIN_ID
 
@@ -453,6 +543,21 @@ def function_argmax(x: TensorF32Cpu2D) -> TensorI64Cpu1D:
 
 def vector_argmax(x: TensorF32Cpu1D) -> TensorI64Cpu1D:
     return torch.argmax(x, 0, keepdim=True)
+
+
+def invalid_positional_keepdim(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
+    return torch.mean(x, 0, True)
+
+
+def invalid_rank2_keepdim_argmax(x: TensorF32Cpu2D) -> TensorI64Cpu1D:
+    return torch.argmax(x, dim=1, keepdim=True)
+
+
+def invalid_rounded_div(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+) -> TensorF32Cpu2D:
+    return torch.div(left, right, rounding_mode="trunc")
 """
 
 
@@ -480,9 +585,17 @@ def test_analyzer_routes_new_exact_function_spellings(tmp_path: Path) -> None:
         assert function.route == f"native-plugin:{PLUGIN_ID}"
         assert [claim.rule_id for claim in function.plugin_claims] == rules
         assert not any(d.severity == "error" for d in function.diagnostics)
+    for name in (
+        "invalid_positional_keepdim",
+        "invalid_rank2_keepdim_argmax",
+        "invalid_rounded_div",
+    ):
+        function = _function(analysis, f"myapp.kernels.{name}")
+        assert function.route != f"native-plugin:{PLUGIN_ID}"
+        assert function.plugin_claims == []
 
 
-def test_static_rule_records_exist_and_remain_unverified_before_native_evidence() -> None:
+def test_static_rule_records_are_native_verified() -> None:
     by_id = {record.id: record for record in PLUGIN.describe(CONFIG)}
     for rule_id in (
         FUNCTION_RELU_RULE,
@@ -494,7 +607,7 @@ def test_static_rule_records_exist_and_remain_unverified_before_native_evidence(
         ARGMAX_STATIC_RULE,
     ):
         assert by_id[rule_id].outcome == "native"
-        assert by_id[rule_id].verified is False
+        assert by_id[rule_id].verified is True
 
 
 def test_functional_div_with_rounding_mode_is_not_claimed() -> None:

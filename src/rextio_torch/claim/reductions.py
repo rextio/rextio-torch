@@ -41,8 +41,16 @@ def _method_name(target: str) -> str:
 def _keyword_map(site: ClaimSite) -> dict[str, object] | None:
     """Return a duplicate-free name→literal value map, else ``None``."""
     values: dict[str, object] = {}
+    expected_types = {"dim": "int", "keepdim": "bool"}
     for keyword in site.keywords:
-        if keyword.name in values or not keyword.literal.is_literal:
+        if (
+            keyword.name in values
+            or not keyword.literal.is_literal
+            or (
+                keyword.name in expected_types
+                and keyword.arg_type != expected_types[keyword.name]
+            )
+        ):
             return None
         values[keyword.name] = keyword.literal.value
     return values

@@ -39,8 +39,16 @@ def _method_name(target: str) -> str:
 
 def _keyword_literals(claimed: ClaimSite) -> dict[str, object]:
     values: dict[str, object] = {}
+    expected_types = {"dim": "int", "keepdim": "bool"}
     for keyword in claimed.keywords:
-        if keyword.name in values or not keyword.literal.is_literal:
+        if (
+            keyword.name in values
+            or not keyword.literal.is_literal
+            or (
+                keyword.name in expected_types
+                and keyword.arg_type != expected_types[keyword.name]
+            )
+        ):
             raise ValueError("rextio-torch reduction lower requires unique literal keywords")
         values[keyword.name] = keyword.literal.value
     return values

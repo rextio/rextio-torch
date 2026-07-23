@@ -54,7 +54,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "None, or use the exact literal keyword bias=None."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-relu-f32-cpu-2d",
@@ -372,7 +372,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "Write a - b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-sub-f32-cpu-2d-1d-broadcast",
@@ -398,7 +398,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-div-f32-cpu-same-rank",
@@ -419,7 +419,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "Write a / b with matching TensorF32Cpu1D or TensorF32Cpu2D annotations."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-div-f32-cpu-2d-1d-broadcast",
@@ -445,7 +445,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "TensorF32Cpu1D annotations; concrete trailing sizes must broadcast."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-sum-dim1-f32-cpu-2d",
@@ -487,7 +487,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-024",
         guidance="Call torch.relu(tensor) with one annotated float32 CPU tensor.",
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/function-sigmoid-f32-cpu-rank1-2",
@@ -504,7 +504,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-025",
         guidance="Call torch.sigmoid(tensor) with one annotated float32 CPU tensor.",
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/function-tanh-f32-cpu-rank1-2",
@@ -521,7 +521,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-026",
         guidance="Call torch.tanh(tensor) with one annotated float32 CPU tensor.",
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/mean-static-dim-f32-cpu-rank1-2",
@@ -547,7 +547,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "pass keepdim only as a named bool literal."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/sum-static-dim-f32-cpu-rank1-2",
@@ -571,7 +571,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "pass keepdim only as a named bool literal."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/softmax-static-dim-f32-cpu-rank1-2",
@@ -593,7 +593,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         diagnostic_code="RXTP-TORCH-029",
         guidance="Use torch.softmax(tensor, dim=<literal>) without dtype or keepdim.",
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/argmax-static-dim-i64-cpu-rank1",
@@ -619,7 +619,7 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
             "rank-1 dim=0 with keepdim=True."
         ),
         stability="experimental",
-        verified=False,
+        verified=True,
     ),
     RuleRecord(
         id="rextio-torch/tensor-softmax-dim1-f32-cpu-2d",

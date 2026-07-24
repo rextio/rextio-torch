@@ -70,7 +70,6 @@ pythonpath = ["src", "."]
 testpaths = ["tests"]
 markers = [
   "needs_cargo: builds and executes a real Rust extension against torch 2.11; serialize these tests",
-  "needs_cuda_gpu: explicitly runs the manual Linux x86_64 NVIDIA certification candidate",
 ]
 
 [tool.ruff]

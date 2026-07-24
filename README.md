@@ -223,7 +223,7 @@ claimed `result_type`.
 | ReLU method | `.relu()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-relu-f32-cpu-1d` or `…/tensor-relu-f32-cpu-2d` |
 | Sigmoid method | `.sigmoid()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-sigmoid-f32-cpu-1d` or `…/tensor-sigmoid-f32-cpu-2d` |
 | Tanh method | `.tanh()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-tanh-f32-cpu-1d` or `…/tensor-tanh-f32-cpu-2d` |
-| Functional activations | Exact `torch.relu(t)`, `torch.sigmoid(t)`, or `torch.tanh(t)`; one positional tensor, no keywords | input **1** or **2** | **same as input** | `…/function-{relu,sigmoid,tanh}-f32-cpu-rank1-2` |
+| Functional activations | Exact `torch.relu(t)`, `torch.sigmoid(t)`, or `torch.tanh(t)`; one positional tensor, no keywords; exact `torch.nn.functional.relu(t)` additionally permits omitted or literal `inplace=False` | input **1** or **2** | **same as input** | `…/function-{relu,sigmoid,tanh}-f32-cpu-rank1-2`; `…/functional-relu-f32-cpu-rank1-2` |
 | Unary math | Exact `torch.{abs,neg,negative,square,exp,log,sqrt}(t)` or matching zero-argument tensor method; one tensor and no keywords | input/receiver **1** or **2** | **same as input** | `…/unary-{abs,neg,negative,square,exp,log,sqrt}-f32-cpu-rank1-2` |
 | Exact GELU | `torch.nn.functional.gelu(t)` or `gelu(t, approximate="none")`; one positional tensor and no other options | input **1** or **2** | **same as input** | `…/functional-gelu-none-f32-cpu-rank1-2` |
 | Matmul binop | `a @ b` | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-f32-cpu-{2d,mixed-rank}` |
@@ -237,7 +237,7 @@ claimed `result_type`.
 | Elementwise true `/` | `a / b`, with the same rank/broadcast matrix as subtraction; binop only | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-div-f32-cpu-{same-rank,2d-1d-broadcast}` |
 | Functional elementwise arithmetic | Exact `torch.add/sub/mul/div(a, b)`; two positional tensors and no keywords, using the same rank/broadcast matrix as the operators | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/function-{add,sub,mul,div}-f32-cpu-rank1-2` |
 | Mean / sum | Receiver methods or exact `torch.mean` / `torch.sum`; `dim=0|1` once (positional literal or keyword); `keepdim` omitted=False or named bool | rank-2: dim 0/1; rank-1: only dim 0 + keepdim=True | registered float32 rank **1** or **2** only | legacy dim1 rules or `…/{mean,sum}-static-dim-f32-cpu-rank1-2` |
-| Softmax | Receiver method or exact `torch.softmax`; literal dim once; no dtype/keepdim | rank-1 dim 0; rank-2 dim 0/1 | same as input | legacy dim1 rule or `…/softmax-static-dim-f32-cpu-rank1-2` |
+| Softmax | Receiver method or exact `torch.softmax`; exact `torch.nn.functional.softmax` additionally permits omitted or literal `dtype=None`; literal dim once | rank-1 dim 0; rank-2 dim 0/1 | same as input | legacy dim1 rule, `…/softmax-static-dim-f32-cpu-rank1-2`, or `…/functional-softmax-f32-cpu-rank1-2` |
 | Argmax | Receiver method or exact `torch.argmax`; literal dim once; keepdim omitted=False or named bool | rank-2 dim 0/1 + keepdim=False; rank-1 dim 0 + keepdim=True | **1 int64** | legacy dim1 rule or `…/argmax-static-dim-i64-cpu-rank1` |
 
 Native op helpers (all fallible, all under `no_grad`):
@@ -258,7 +258,7 @@ Native op helpers (all fallible, all under `no_grad`):
 | argmax | `__rxttorch_argmax_dim{0,1}_keepdim_{true,false}` (only rank-1 outputs) | `f_argmax` plus exact CPU/int64/rank-1 check |
 
 Coverage symbols declared for the analyzer include
-`torch.nn.functional.{linear,gelu}`, `torch.matmul`,
+`torch.nn.functional.{linear,gelu,relu,softmax}`, `torch.matmul`,
 `torch.{relu,sigmoid,tanh,abs,neg,negative,square,exp,log,sqrt,add,sub,mul,div,mean,sum,softmax,argmax}`,
 and the corresponding receiver methods. Binary `+` / `*` / `-` / `/` / `@`
 are also claimed via binop sites. Functional options that change or widen
@@ -299,11 +299,11 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | --- | --- |
 | Plugin type keys are the registered float32 CPU rank-1/2 keys | `is_tensor_type` / exact type equality per rule |
 | Linear: exact `torch.nn.functional.linear`; three positional tensors (2,2,1), or rank-2 input/weight with bias omitted / positional literal `None` / keyword literal `bias=None` | `claim/linear.py`; tensor-valued keywords remain unrepresentable in the Core API 1.6 ClaimSite contract |
-| Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; rank 1/2 and no keywords | `claim/activations.py` |
+| Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; exact `torch.nn.functional.relu` also permits omitted/literal `inplace=False`; rank 1/2 only | `claim/activations.py` |
 | Unary math: receiver zero-arg methods, or exact `torch.abs/neg/negative/square/exp/log/sqrt` with one positional tensor; rank 1/2 and no keywords | `claim/unary.py` |
 | GELU: exact `torch.nn.functional.gelu`; one positional rank-1/2 tensor; `approximate` omitted or exactly the static string literal `"none"`; lower always hardcodes `"none"` | `claim/gelu.py` |
 | Reductions: receiver or exact `torch.mean/sum`; dim literal 0/1 once positionally/keyword; keepdim omitted=False or named bool; output must already map to rank-1/2 | `claim/reductions.py` |
-| Classification: receiver or exact `torch.softmax/argmax`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
+| Classification: receiver or exact `torch.softmax/argmax`; exact `torch.nn.functional.softmax` also permits omitted/literal `dtype=None`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
 | Matmul `@` / `torch.matmul` / `.matmul`: rank-2/rank-2 or one rank-2 plus one rank-1 operand in either order; call forms disallow keywords; method form takes one positional operand; rank-1/rank-1 stays rejected because it would return rank-0 | `claim/binops.py` |
 | Elementwise arithmetic: binary `+` / `*` / `-` / `/`, or exact `torch.add/sub/mul/div(a, b)` with two positional non-literal tensors and no keywords; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/method/option variants and other ranks rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
@@ -332,7 +332,7 @@ become silent native claims.
 | Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
 | Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
 | Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by the Core API 1.6 ClaimSite contract; others reject/fallback |
-| In-place ops | `relu_`, `sigmoid_`, `tanh_`, unary `_` variants, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
+| In-place ops | `relu_`, `sigmoid_`, `tanh_`, unary `_` variants, in-place operators; `F.relu(..., inplace=True)` | Not claimed (zero-arg out-of-place methods only; `F.relu` admits only omitted/literal `inplace=False`) |
 | Unary variants | scalar inputs; `out`; alternate aliases such as `torch.absolute`; method arguments or keywords | Rejected for recognized exact functions/methods or otherwise unclaimed |
 | GELU variants | `approximate="tanh"`, dynamic/invalid/positional approximate, other keywords, `.gelu()`, or `nn.GELU` capture | Static recognized variants are rejected; dynamic values may be filtered by Core to ordinary fallback before plugin claim |
 | Elementwise variants | scalar operands; `.add/.sub/.mul/.div`; aliases such as `torch.subtract`; `alpha`, `out`, or `rounding_mode` options | Rejected for recognized exact functions/options or otherwise unclaimed; `/` and exact `torch.div(a, b)` mean tensor-tensor true division only |

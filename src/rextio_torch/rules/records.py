@@ -703,6 +703,24 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         verified=True,
     ),
     RuleRecord(
+        id="rextio-torch/functional-relu-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.nn.functional.relu(tensor, inplace=False) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact torch.nn.functional.relu with one positional tensor and inplace "
+            "omitted or exactly the literal False. True, dynamic, duplicate, and all "
+            "other options remain fail-closed."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-050",
+        guidance="Call F.relu(tensor) or F.relu(tensor, inplace=False).",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
         id="rextio-torch/function-sigmoid-f32-cpu-rank1-2",
         provider="rextio-torch",
         scope=RuleScope(
@@ -805,6 +823,25 @@ RULE_RECORDS: tuple[RuleRecord, ...] = (
         outcome="native",
         diagnostic_code="RXTP-TORCH-029",
         guidance="Use torch.softmax(tensor, dim=<literal>) without dtype or keepdim.",
+        stability="experimental",
+        verified=True,
+    ),
+    RuleRecord(
+        id="rextio-torch/functional-softmax-f32-cpu-rank1-2",
+        provider="rextio-torch",
+        scope=RuleScope(
+            kind="call",
+            pattern="torch.nn.functional.softmax(tensor, dim) on float32 CPU rank-1/rank-2 tensors",
+        ),
+        constraint=(
+            "Exact torch.nn.functional.softmax with one positional tensor and a literal "
+            "dim once. Rank-1 accepts dim=0; rank-2 accepts dim=0/1. dtype is "
+            "omitted or exactly the literal None; _stacklevel and every other option "
+            "are excluded."
+        ),
+        outcome="native",
+        diagnostic_code="RXTP-TORCH-051",
+        guidance="Call F.softmax(tensor, dim=<literal>) with dtype omitted or None.",
         stability="experimental",
         verified=True,
     ),

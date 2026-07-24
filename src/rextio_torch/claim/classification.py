@@ -7,6 +7,7 @@ from rextio.plugins.api import Claimed, ClaimResult, ClaimSite, NotCovered
 from rextio_torch.diagnostics import (
     DIAGNOSTIC_ARGMAX,
     DIAGNOSTIC_SOFTMAX,
+    DIAGNOSTIC_FUNCTIONAL_SOFTMAX,
     DIAGNOSTIC_UNSUPPORTED,
     TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
@@ -18,9 +19,16 @@ from rextio_torch.diagnostics import (
 SOFTMAX_RULE = "rextio-torch/tensor-softmax-dim1-f32-cpu-2d"
 ARGMAX_RULE = "rextio-torch/tensor-argmax-dim1-keepfalse-i64-cpu-1d"
 SOFTMAX_STATIC_RULE = "rextio-torch/softmax-static-dim-f32-cpu-rank1-2"
+FUNCTIONAL_SOFTMAX_RULE = "rextio-torch/functional-softmax-f32-cpu-rank1-2"
 ARGMAX_STATIC_RULE = "rextio-torch/argmax-static-dim-i64-cpu-rank1"
 CLASSIFICATION_RULES: frozenset[str] = frozenset(
-    {SOFTMAX_RULE, ARGMAX_RULE, SOFTMAX_STATIC_RULE, ARGMAX_STATIC_RULE}
+    {
+        SOFTMAX_RULE,
+        ARGMAX_RULE,
+        SOFTMAX_STATIC_RULE,
+        ARGMAX_STATIC_RULE,
+        FUNCTIONAL_SOFTMAX_RULE,
+    }
 )
 
 _RULES: dict[str, tuple[str, str, str]] = {
@@ -30,6 +38,7 @@ _RULES: dict[str, tuple[str, str, str]] = {
 _FUNCTION_TARGETS: dict[str, str] = {
     "torch.softmax": "softmax",
     "torch.argmax": "argmax",
+    "torch.nn.functional.softmax": "softmax",
 }
 
 
@@ -39,7 +48,7 @@ def _method_name(target: str) -> str:
 
 def _keyword_map(site: ClaimSite) -> dict[str, object] | None:
     values: dict[str, object] = {}
-    expected_types = {"dim": "int", "keepdim": "bool"}
+    expected_types = {"dim": "int", "keepdim": "bool", "dtype": "None"}
     for keyword in site.keywords:
         if (
             keyword.name in values
@@ -131,15 +140,27 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
             f"{method} keywords must be unique static literals",
             "Use a literal dim and, for argmax only, optional named literal keepdim.",
         )
+    functional_softmax_alias = (
+        site.receiver is None and site.target == "torch.nn.functional.softmax"
+    )
     allowed = set() if has_positional_dim else {"dim"}
     if method == "argmax":
         allowed.add("keepdim")
+    elif functional_softmax_alias:
+        allowed.add("dtype")
     if not set(keywords) <= allowed:
         return reject(
             site,
             diagnostic,
             f"unsupported or duplicate positional/keyword options for {method}",
             "Provide dim once; omit dtype and use keepdim only as an argmax keyword.",
+        )
+    if functional_softmax_alias and "dtype" in keywords and keywords["dtype"] is not None:
+        return reject(
+            site,
+            DIAGNOSTIC_FUNCTIONAL_SOFTMAX,
+            "functional softmax accepts dtype only as the exact literal None",
+            "Omit dtype or use the exact literal dtype=None.",
         )
     if has_positional_dim:
         dim = positional_dim
@@ -214,7 +235,11 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
         )
     )
     return Claimed(
-        rule_id=legacy_rule if is_legacy else static_rule,
+        rule_id=(
+            FUNCTIONAL_SOFTMAX_RULE
+            if functional_softmax_alias
+            else legacy_rule if is_legacy else static_rule
+        ),
         result_type=result_type,
     )
 
@@ -223,6 +248,7 @@ __all__ = [
     "ARGMAX_RULE",
     "ARGMAX_STATIC_RULE",
     "CLASSIFICATION_RULES",
+    "FUNCTIONAL_SOFTMAX_RULE",
     "SOFTMAX_RULE",
     "SOFTMAX_STATIC_RULE",
     "try_claim",

@@ -5,6 +5,15 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Add exact `torch.nn.functional.relu(t)` and
+  `torch.nn.functional.relu(t, inplace=False)` aliases for the existing
+  float32 CPU rank-1/rank-2 ReLU helper. `inplace=True`, dynamic/duplicate
+  metadata, and every other option remain fail-closed.
+- Add exact `torch.nn.functional.softmax(t, dim=<literal>)` aliases for the
+  existing static softmax rank/dimension matrix. `dtype` is omitted or exactly
+  literal `None`; non-`None` dtype, `_stacklevel`, duplicate/dynamic metadata,
+  and all other options remain fail-closed.
+
 - Add a Linux x86_64 **build-only**, `support_claim=false` CUDA E2 candidate
   under plugin API 1.6 and Core `rextio>=0.1.6`. New import-free
   `TensorF32Cuda0_2D` / `TensorF32Cuda0_1D` annotations carry exact

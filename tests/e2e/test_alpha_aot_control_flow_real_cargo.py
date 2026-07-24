@@ -199,6 +199,11 @@ def functional_classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
 def vector_classify(logits: TensorF32Cpu1D) -> TensorI64Cpu1D:
     probabilities = torch.softmax(logits, dim=0)
     return torch.argmax(probabilities, 0, keepdim=True)
+
+
+def functional_activation_aliases(logits: TensorF32Cpu2D) -> TensorF32Cpu2D:
+    activated = torch.nn.functional.relu(logits, inplace=False)
+    return torch.nn.functional.softmax(activated, dim=1, dtype=None)
 """
 
 
@@ -703,6 +708,39 @@ def test_classification_head_real_cargo(project: CertifiedProject) -> None:
     assert native_grad_out.dtype == torch.int64
     assert torch.equal(native_grad_out, eager)
     assert torch.equal(logits_grad.detach(), logits_snap)
+
+
+def test_functional_activation_aliases_real_cargo(project: CertifiedProject) -> None:
+    """Functional ReLU/softmax aliases reuse the certified CPU helpers exactly."""
+    torch = _import_torch()
+    record = _route_of(project, "torch_app.kernels.functional_activation_aliases")
+    assert record["native_status"] == "accepted"
+    assert record["route"] == "native-plugin:rextio-torch"
+    assert [claim["rule_id"] for claim in record.get("plugin_claims") or []] == [
+        "rextio-torch/functional-relu-f32-cpu-rank1-2",
+        "rextio-torch/functional-softmax-f32-cpu-rank1-2",
+    ]
+
+    logits = torch.tensor(
+        [[-3.0, 2.0, 0.0], [0.5, -0.4, 0.6]], dtype=torch.float32
+    )
+    logits_snap = logits.detach().clone()
+    checker = project.equivalence_checker(
+        "torch_app.kernels.functional_activation_aliases",
+        equals=_tensor_equal,
+        args_equals=_args_unmutated,
+        copy_args=_copy_tensor_args,
+    )
+    native_out = checker(logits)
+    eager = torch.nn.functional.softmax(
+        torch.nn.functional.relu(logits_snap, inplace=False), dim=1, dtype=None
+    )
+    assert _tensor_equal(native_out, eager)
+    assert native_out.dtype == torch.float32
+    assert native_out.device.type == "cpu"
+    assert native_out.dim() == 2
+    assert native_out.requires_grad is False
+    assert torch.equal(logits, logits_snap)
 
 
 def test_cpu_surface_followup_real_cargo(project: CertifiedProject) -> None:

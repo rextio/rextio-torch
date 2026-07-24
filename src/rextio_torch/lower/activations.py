@@ -7,6 +7,7 @@ from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 from rextio_torch.claim.activations import (
     ACTIVATION_RULES,
     FUNCTION_RELU_RULE,
+    FUNCTIONAL_RELU_RULE,
     FUNCTION_SIGMOID_RULE,
     FUNCTION_TANH_RULE,
     RELU_RULE,
@@ -37,6 +38,7 @@ _METHOD_BY_RULE: dict[str, str] = {
     FUNCTION_RELU_RULE: "relu",
     FUNCTION_SIGMOID_RULE: "sigmoid",
     FUNCTION_TANH_RULE: "tanh",
+    FUNCTIONAL_RELU_RULE: "relu",
 }
 
 _HELPER_BY_METHOD: dict[str, tuple[str, str]] = {
@@ -50,9 +52,10 @@ _FUNCTION_TARGETS: dict[str, str] = {
     "torch.relu": "relu",
     "torch.sigmoid": "sigmoid",
     "torch.tanh": "tanh",
+    "torch.nn.functional.relu": "relu",
 }
 _FUNCTION_RULES = frozenset(
-    {FUNCTION_RELU_RULE, FUNCTION_SIGMOID_RULE, FUNCTION_TANH_RULE}
+    {FUNCTION_RELU_RULE, FUNCTION_SIGMOID_RULE, FUNCTION_TANH_RULE, FUNCTIONAL_RELU_RULE}
 )
 
 
@@ -77,6 +80,7 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             f"rule_id={claimed.rule_id!r} method={method!r}"
         )
     if claimed.rule_id in _FUNCTION_RULES:
+        functional_relu_alias = claimed.rule_id == FUNCTIONAL_RELU_RULE
         if (
             _FUNCTION_TARGETS.get(claimed.target) != method
             or claimed.receiver is not None
@@ -84,12 +88,27 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             or len(claimed.operand_types) != 1
             or len(ctx.operands) != 1
             or claimed.operand_types[0] not in _RANK_TYPES
-            or claimed.keywords
             or claimed.result_type != claimed.operand_types[0]
         ):
             raise ValueError(
                 f"rextio-torch received malformed functional {method} lower metadata"
             )
+        if functional_relu_alias:
+            if len(claimed.operand_literals) != 1:
+                raise ValueError("rextio-torch functional ReLU lower requires aligned input metadata")
+            if len(claimed.keywords) > 1:
+                raise ValueError("rextio-torch functional ReLU lower received duplicate options")
+            if claimed.keywords:
+                keyword = claimed.keywords[0]
+                if not (
+                    keyword.name == "inplace"
+                    and keyword.arg_type == "bool"
+                    and keyword.literal.is_literal
+                    and keyword.literal.value is False
+                ):
+                    raise ValueError("rextio-torch functional ReLU lower requires literal inplace=False")
+        elif claimed.keywords:
+            raise ValueError(f"rextio-torch functional {method} lower received options")
         input_name = ctx.operands[0]
     else:
         receiver = claimed.receiver

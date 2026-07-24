@@ -122,3 +122,82 @@ python scripts/build_cuda_candidate.py \
 This command is Linux x86_64-only. It uses the fixed synthetic probe described
 above, links the generated cdylib, verifies that file exists, and never loads
 or executes it.
+
+## Manual real-NVIDIA execution candidate
+
+`scripts/certify_cuda_candidate.py` is an explicit maintainer-run candidate,
+never an ordinary GitHub-hosted CI job. It requires clean Core and provider
+checkouts at the commits above, a clean `rextio-torch` candidate descending
+from `7d6fb1b606bfab6530a7ff96317081b2fd1c1b22`, Rust 1.93.1, a CUDA-enabled
+PyTorch 2.11.0 wheel, `ldd`, `readelf`, and NVIDIA device ordinal 0.
+
+On a trusted Linux x86_64 NVIDIA host:
+
+```bash
+# From the rextio-torch checkout, with sibling exact Core/provider checkouts.
+python -m pip install --no-deps -e ../rextio
+python -m pip install --no-deps -e ../rextio-device-cuda
+python -m pip install --no-deps -e .
+export LIBTORCH_USE_PYTORCH=1
+unset LIBTORCH_BYPASS_VERSION_CHECK
+TORCH_COMMIT="$(git rev-parse HEAD)"
+python scripts/certify_cuda_candidate.py \
+  --expected-torch-commit "${TORCH_COMMIT}" \
+  --sm sm_80 \
+  --work-dir /tmp/rextio-torch-cuda-e2-work \
+  --output /tmp/rextio-torch-cuda-e2.json
+python scripts/verify_cuda_e2_evidence.py \
+  /tmp/rextio-torch-cuda-e2.json
+```
+
+The editable local installs are mandatory for this manual command: the harness
+checks that imported Core, provider, and Torch plugin modules resolve under the
+three exact clean checkouts whose commits enter evidence. Installing those
+commits into unrelated `site-packages` paths does not satisfy that identity
+check.
+
+Replace `sm_80` with the exact device SM: `sm_60`, `sm_61`, `sm_70`, `sm_72`,
+`sm_75`, `sm_80`, `sm_86`, `sm_87`, `sm_89`, or `sm_90`. Use a new,
+non-existing work directory for every run.
+
+The harness builds the exact provider probe, routes its absolute path through
+real Core preflight, generates/builds the four-op extension, imports PyTorch
+first, and executes contiguous and noncontiguous tensors already on `cuda:0`.
+It requires eager numerical equivalence, output/input/lifetime contracts,
+non-default-stream CUDA Graph capture/replay, no static or profiled transfer,
+and CUDA activity for expected matmul/add/ReLU/mean ATen operations.
+`/proc/self/maps` and `ldd` must agree on canonical PyTorch-wheel
+`libtorch*`/`libc10*` images.
+
+The replay check copies new values into the captured static inputs on the
+selected non-default stream before replay, so a same-input cached result cannot
+pass. Successful inputs retain value, stride, storage offset, and data pointer;
+grad-requesting inputs still produce no-grad output. CPU, float64, wrong-rank,
+and sparse-layout inputs must fail at the native boundary. The Cargo build is
+bound to the active CPython 3.11 virtual environment through `VIRTUAL_ENV`,
+`PATH`, and `PYO3_PYTHON`, with a subprocess interpreter/torch identity check.
+
+Evidence is canonical, size/depth-bounded JSON with a non-circular payload
+hash. It retains wheel-relative paths, hashes, sizes, and ELF build IDs, but
+not raw maps/`ldd`, machine paths, environment values, URLs, stream pointers,
+or timings. The offline verifier rejects unknown fields, payload tampering,
+weakened tolerances, incomplete invariants, and every support/certification
+overclaim.
+
+The payload also binds the exact ordered lowering-rule IDs, generated
+`lib.rs`/`Cargo.toml`/`Cargo.lock`, built extension, immutable provider probe,
+and equal authorization/provider-lock artifact-profile hashes. Installed
+`direct_url.json` contributes only sanitized VCS commit, editable flag, or
+safe archive-hash identity; URLs, paths, credentials, and requested revisions
+are neither retained nor hashed.
+
+A successful run still records:
+
+```text
+support_claim=false
+certification_ready=false
+kernel_executed=true
+```
+
+The last value is emitted only after expected ATen operations show CUDA
+activity. It is real-execution evidence, not a release or support claim.

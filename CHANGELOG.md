@@ -23,6 +23,13 @@ Changelog and Semantic Versioning conventions.
   then compiles the generated cdylib once. It never loads or executes CUDA and
   provides no real-GPU, one-libtorch-image/ABI, numerical, performance, or
   release certification.
+- Add a separate opt-in Linux x86_64/NVIDIA execution-evidence harness for the
+  same frozen four-op slice. It builds the exact real provider probe, executes
+  contiguous/noncontiguous `cuda:0` inputs, requires CUDA Graph replay and
+  expected ATen CUDA activity, rejects transfer events, and verifies canonical
+  PyTorch-wheel libtorch/c10 image identity. Its canonical offline-verifiable
+  evidence remains `support_claim=false` and `certification_ready=false`; it
+  is excluded from ordinary GPU-free CI and does not promote CUDA support.
 - Add exact `torch.nn.functional.gelu(x)` and literal
   `approximate="none"` for float32 CPU rank-1/rank-2 inference. Both forms
   lower to fixed fallible `f_gelu("none")` under no-grad; `"tanh"`,

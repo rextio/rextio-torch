@@ -18,8 +18,8 @@ PyTorch inference code to Rust expressions backed by
 | Deferred | **Windows** — unverified; no support claim |
 
 This README documents the **unreleased 0.1.2 compatibility,
-classification-head, bounded CPU-surface update, and build-only CUDA E2
-candidate** to the
+classification-head, bounded CPU-surface update, build-only CUDA E2 candidate,
+and opt-in real-NVIDIA execution-evidence candidate** to the
 0.1.0 public native-AOT Alpha support contract. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
@@ -197,6 +197,16 @@ Because tch 0.24 has no general layout getter, native checks use its exposed
 require the pinned PyTorch 2.11.0 `tensor.layout` to render as
 `torch.strided`; this catches sparse CSR/CSC/BSR/BSC without claiming a
 version-independent tch layout query.
+
+A separate manual Linux x86_64/NVIDIA harness executes the same exact slice
+on a trusted maintainer host. It uses the real provider probe, compares
+contiguous and noncontiguous values with eager PyTorch, requires
+non-default-stream CUDA Graph replay and expected ATen CUDA activity, rejects
+observed host/device transfers, and binds canonical wheel-relative
+libtorch/c10 identities into offline-verifiable evidence. It remains
+`support_claim=false` and `certification_ready=false`, is excluded from normal
+CI, and does not expand the accepted operation or platform surface. See the
+[CUDA candidate contract and commands](docs/cuda-build-only-0.1.2.md).
 
 ---
 

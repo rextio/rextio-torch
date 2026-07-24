@@ -38,6 +38,11 @@ _FUNCTION_TARGETS: dict[str, str] = {
     "torch.argmax": "argmax",
     "torch.nn.functional.softmax": "softmax",
 }
+_STATIC_FUNCTION_TARGETS: dict[str, str] = {
+    SOFTMAX_STATIC_RULE: "torch.softmax",
+    ARGMAX_STATIC_RULE: "torch.argmax",
+    FUNCTIONAL_SOFTMAX_RULE: "torch.nn.functional.softmax",
+}
 _F32_TYPES = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
 
@@ -155,6 +160,16 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         raise ValueError(
             "rextio-torch classification lower rule/method mismatch: "
             f"rule_id={claimed.rule_id!r} method={method!r}"
+        )
+    expected_static_target = _STATIC_FUNCTION_TARGETS.get(claimed.rule_id or "")
+    if (
+        claimed.receiver is None and claimed.target != expected_static_target
+    ) or (
+        claimed.receiver is not None and claimed.target in _FUNCTION_TARGETS
+    ):
+        raise ValueError(
+            "rextio-torch classification lower received non-canonical target for "
+            f"rule_id={claimed.rule_id!r}: {claimed.target!r}"
         )
 
     input_type, positional_dim, has_positional_dim, input_name = _form_metadata(

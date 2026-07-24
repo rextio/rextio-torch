@@ -38,6 +38,7 @@ from rextio_torch.claim.binops import (
 from rextio_torch.claim.classification import (
     ARGMAX_STATIC_RULE,
     FUNCTIONAL_SOFTMAX_RULE,
+    SOFTMAX_RULE,
     SOFTMAX_STATIC_RULE,
 )
 from rextio_torch.claim.reductions import MEAN_STATIC_RULE, SUM_STATIC_RULE
@@ -467,6 +468,23 @@ def test_functional_relu_alias_lower_rejects_forged_torch_relu_target() -> None:
         )
 
 
+def test_torch_relu_lower_rejects_forged_functional_relu_target() -> None:
+    claimed = replace(
+        _call("torch.nn.functional.relu", TENSOR_F32_CPU_2D),
+        rule_id=FUNCTION_RELU_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    with pytest.raises(ValueError, match="malformed functional relu lower metadata"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("tensor",),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
+
+
 def test_positional_reduction_dim_is_static_not_runtime_tensor_input() -> None:
     claimed = _call(
         "torch.sum",
@@ -563,6 +581,50 @@ def test_functional_softmax_alias_lower_rejects_forged_torch_softmax_target() ->
             claimed,
             LoweringContext(
                 operands=("tensor", "rendered_dim"),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
+
+
+def test_torch_softmax_static_rule_rejects_forged_functional_target() -> None:
+    claimed = replace(
+        _call(
+            "torch.nn.functional.softmax",
+            TENSOR_F32_CPU_1D,
+            positional_dim=0,
+        ),
+        rule_id=SOFTMAX_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    with pytest.raises(ValueError, match="non-canonical target"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("tensor", "rendered_dim"),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
+
+
+def test_tensor_softmax_legacy_rule_rejects_forged_functional_target() -> None:
+    claimed = replace(
+        _method(
+            "softmax",
+            TENSOR_F32_CPU_2D,
+            keywords=(_kw("dim", 1),),
+        ),
+        target="torch.nn.functional.softmax",
+        rule_id=SOFTMAX_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
+    with pytest.raises(ValueError, match="non-canonical target"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=(),
+                receiver="logits",
                 target_language="rust",
                 fresh_name=_fresh_name,
             ),

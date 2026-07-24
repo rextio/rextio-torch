@@ -54,6 +54,12 @@ _FUNCTION_TARGETS: dict[str, str] = {
     "torch.tanh": "tanh",
     "torch.nn.functional.relu": "relu",
 }
+_FUNCTION_TARGET_BY_RULE: dict[str, str] = {
+    FUNCTION_RELU_RULE: "torch.relu",
+    FUNCTION_SIGMOID_RULE: "torch.sigmoid",
+    FUNCTION_TANH_RULE: "torch.tanh",
+    FUNCTIONAL_RELU_RULE: "torch.nn.functional.relu",
+}
 _FUNCTION_RULES = frozenset(
     {FUNCTION_RELU_RULE, FUNCTION_SIGMOID_RULE, FUNCTION_TANH_RULE, FUNCTIONAL_RELU_RULE}
 )
@@ -83,10 +89,7 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         functional_relu_alias = claimed.rule_id == FUNCTIONAL_RELU_RULE
         if (
             _FUNCTION_TARGETS.get(claimed.target) != method
-            or (
-                functional_relu_alias
-                and claimed.target != "torch.nn.functional.relu"
-            )
+            or claimed.target != _FUNCTION_TARGET_BY_RULE.get(claimed.rule_id)
             or claimed.receiver is not None
             or ctx.receiver is not None
             or len(claimed.operand_types) != 1

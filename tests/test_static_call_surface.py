@@ -182,6 +182,24 @@ def test_claims_functional_relu_alias_with_only_false_inplace(input_type: str) -
         ) == Claimed(rule_id=FUNCTIONAL_RELU_RULE, result_type=input_type)
 
 
+@pytest.mark.parametrize("keywords", ((), (_none_kw("dtype"),)))
+def test_claims_functional_softmax_alias_with_optional_none_dtype(
+    keywords: tuple[KeywordArg, ...],
+) -> None:
+    assert PLUGIN.claim(
+        _call(
+            "torch.nn.functional.softmax",
+            TENSOR_F32_CPU_2D,
+            positional_dim=1,
+            keywords=keywords,
+        ),
+        CONFIG,
+    ) == Claimed(
+        rule_id=FUNCTIONAL_SOFTMAX_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
+
+
 @pytest.mark.parametrize(
     "keywords",
     (
@@ -406,12 +424,15 @@ def test_functional_activation_lower_uses_only_tensor_operand() -> None:
     assert lowered.rust == f"{RELU}(&tensor)?"
 
 
-def test_functional_relu_alias_lower_revalidates_literal_inplace() -> None:
+@pytest.mark.parametrize("keywords", ((), (_kw("inplace", False),)))
+def test_functional_relu_alias_lower_revalidates_literal_inplace(
+    keywords: tuple[KeywordArg, ...],
+) -> None:
     claimed = replace(
         _call(
             "torch.nn.functional.relu",
             TENSOR_F32_CPU_2D,
-            keywords=(_kw("inplace", False),),
+            keywords=keywords,
         ),
         rule_id=FUNCTIONAL_RELU_RULE,
         result_type=TENSOR_F32_CPU_2D,
@@ -425,6 +446,24 @@ def test_functional_relu_alias_lower_revalidates_literal_inplace() -> None:
         PLUGIN.lower(
             replace(claimed, keywords=(_kw("inplace", True),)),
             LoweringContext(operands=("tensor",), target_language="rust", fresh_name=_fresh_name),
+        )
+
+
+def test_functional_relu_alias_lower_rejects_forged_torch_relu_target() -> None:
+    claimed = replace(
+        _call("torch.nn.functional.relu", TENSOR_F32_CPU_2D),
+        rule_id=FUNCTIONAL_RELU_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+        target="torch.relu",
+    )
+    with pytest.raises(ValueError, match="malformed functional relu lower metadata"):
+        PLUGIN.lower(
+            claimed,
+            LoweringContext(
+                operands=("tensor",),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
         )
 
 
@@ -474,13 +513,16 @@ def test_positional_classification_dim_is_static_not_runtime_tensor_input() -> N
     assert softmax_helper(0) in lowered.helpers
 
 
-def test_functional_softmax_alias_lower_revalidates_literal_dtype() -> None:
+@pytest.mark.parametrize("keywords", ((), (_none_kw("dtype"),)))
+def test_functional_softmax_alias_lower_revalidates_literal_dtype(
+    keywords: tuple[KeywordArg, ...],
+) -> None:
     claimed = replace(
         _call(
             "torch.nn.functional.softmax",
             TENSOR_F32_CPU_1D,
             positional_dim=0,
-            keywords=(_none_kw("dtype"),),
+            keywords=keywords,
         ),
         rule_id=FUNCTIONAL_SOFTMAX_RULE,
         result_type=TENSOR_F32_CPU_1D,
@@ -497,6 +539,28 @@ def test_functional_softmax_alias_lower_revalidates_literal_dtype() -> None:
     with pytest.raises(ValueError, match="literal keywords"):
         PLUGIN.lower(
             replace(claimed, keywords=(_kw("dtype", "float32"),)),
+            LoweringContext(
+                operands=("tensor", "rendered_dim"),
+                target_language="rust",
+                fresh_name=_fresh_name,
+            ),
+        )
+
+
+def test_functional_softmax_alias_lower_rejects_forged_torch_softmax_target() -> None:
+    claimed = replace(
+        _call(
+            "torch.nn.functional.softmax",
+            TENSOR_F32_CPU_1D,
+            positional_dim=0,
+        ),
+        rule_id=FUNCTIONAL_SOFTMAX_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+        target="torch.softmax",
+    )
+    with pytest.raises(ValueError, match="non-canonical target"):
+        PLUGIN.lower(
+            claimed,
             LoweringContext(
                 operands=("tensor", "rendered_dim"),
                 target_language="rust",
@@ -660,6 +724,7 @@ def _function(analysis: ProjectAnalysis, qualname: str) -> FunctionAnalysis:
 FUNCTION_SOURCE = """
 from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D, TensorI64Cpu1D
 import torch
+import torch.nn.functional as F
 
 
 def function_surface(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
@@ -672,6 +737,11 @@ def function_surface(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
 def functional_aliases(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
     activated = torch.nn.functional.relu(x, inplace=False)
     return torch.nn.functional.softmax(activated, dim=1, dtype=None)
+
+
+def functional_alias_defaults(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
+    activated = F.relu(x)
+    return F.softmax(activated, dim=1)
 
 
 def function_argmax(x: TensorF32Cpu2D) -> TensorI64Cpu1D:
@@ -752,6 +822,10 @@ def test_analyzer_routes_new_exact_function_spellings(tmp_path: Path) -> None:
             FUNCTION_DIV_RULE,
         ],
         "functional_aliases": [FUNCTIONAL_RELU_RULE, FUNCTIONAL_SOFTMAX_RULE],
+        "functional_alias_defaults": [
+            FUNCTIONAL_RELU_RULE,
+            FUNCTIONAL_SOFTMAX_RULE,
+        ],
     }
     for name, rules in expected.items():
         function = _function(analysis, f"myapp.kernels.{name}")

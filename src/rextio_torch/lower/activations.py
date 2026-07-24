@@ -83,6 +83,10 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         functional_relu_alias = claimed.rule_id == FUNCTIONAL_RELU_RULE
         if (
             _FUNCTION_TARGETS.get(claimed.target) != method
+            or (
+                functional_relu_alias
+                and claimed.target != "torch.nn.functional.relu"
+            )
             or claimed.receiver is not None
             or ctx.receiver is not None
             or len(claimed.operand_types) != 1

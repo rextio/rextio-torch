@@ -8,6 +8,7 @@ from rextio_torch.claim.classification import (
     ARGMAX_RULE,
     ARGMAX_STATIC_RULE,
     CLASSIFICATION_RULES,
+    FUNCTIONAL_SOFTMAX_RULE,
     SOFTMAX_RULE,
     SOFTMAX_STATIC_RULE,
 )
@@ -27,6 +28,7 @@ from rextio_torch.rust_snippets import (
 _RULE_METHODS: dict[str, str] = {
     SOFTMAX_RULE: "softmax",
     SOFTMAX_STATIC_RULE: "softmax",
+    FUNCTIONAL_SOFTMAX_RULE: "softmax",
     ARGMAX_RULE: "argmax",
     ARGMAX_STATIC_RULE: "argmax",
 }
@@ -34,6 +36,12 @@ _LEGACY_RULES = frozenset({SOFTMAX_RULE, ARGMAX_RULE})
 _FUNCTION_TARGETS: dict[str, str] = {
     "torch.softmax": "softmax",
     "torch.argmax": "argmax",
+    "torch.nn.functional.softmax": "softmax",
+}
+_STATIC_FUNCTION_TARGETS: dict[str, str] = {
+    SOFTMAX_STATIC_RULE: "torch.softmax",
+    ARGMAX_STATIC_RULE: "torch.argmax",
+    FUNCTIONAL_SOFTMAX_RULE: "torch.nn.functional.softmax",
 }
 _F32_TYPES = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
@@ -44,7 +52,7 @@ def _method_name(target: str) -> str:
 
 def _keyword_literals(claimed: ClaimSite) -> dict[str, object]:
     values: dict[str, object] = {}
-    expected_types = {"dim": "int", "keepdim": "bool"}
+    expected_types = {"dim": "int", "keepdim": "bool", "dtype": "None"}
     for keyword in claimed.keywords:
         if (
             keyword.name in values
@@ -153,18 +161,35 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             "rextio-torch classification lower rule/method mismatch: "
             f"rule_id={claimed.rule_id!r} method={method!r}"
         )
+    expected_static_target = _STATIC_FUNCTION_TARGETS.get(claimed.rule_id or "")
+    if (
+        claimed.receiver is None and claimed.target != expected_static_target
+    ) or (
+        claimed.receiver is not None and claimed.target in _FUNCTION_TARGETS
+    ):
+        raise ValueError(
+            "rextio-torch classification lower received non-canonical target for "
+            f"rule_id={claimed.rule_id!r}: {claimed.target!r}"
+        )
 
     input_type, positional_dim, has_positional_dim, input_name = _form_metadata(
         claimed, ctx, method
     )
     values = _keyword_literals(claimed)
+    functional_softmax_alias = claimed.rule_id == FUNCTIONAL_SOFTMAX_RULE
     allowed = set() if has_positional_dim else {"dim"}
     if method == "argmax":
         allowed.add("keepdim")
+    elif functional_softmax_alias:
+        if claimed.receiver is not None or claimed.target != "torch.nn.functional.softmax":
+            raise ValueError("rextio-torch functional softmax lower received non-canonical target")
+        allowed.add("dtype")
     if not set(values) <= allowed:
         raise ValueError(
             f"rextio-torch {method} lower received duplicate/unsupported options"
         )
+    if functional_softmax_alias and "dtype" in values and values["dtype"] is not None:
+        raise ValueError("rextio-torch functional softmax lower requires literal dtype=None")
     raw_dim: object
     if has_positional_dim:
         raw_dim = positional_dim
@@ -210,7 +235,11 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             raise ValueError(
                 f"rextio-torch legacy {method} lower metadata changed between claim and lower"
             )
-    elif claimed.rule_id not in {SOFTMAX_STATIC_RULE, ARGMAX_STATIC_RULE}:
+    elif claimed.rule_id not in {
+        SOFTMAX_STATIC_RULE,
+        ARGMAX_STATIC_RULE,
+        FUNCTIONAL_SOFTMAX_RULE,
+    }:
         raise ValueError(
             f"rextio-torch classification lower missing static rule: {claimed.rule_id!r}"
         )

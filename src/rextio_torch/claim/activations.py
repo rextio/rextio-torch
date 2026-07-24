@@ -2,7 +2,9 @@
 
 Supports float32 CPU rank-1 and rank-2 method forms with zero arguments.
 The exact functional spellings ``torch.relu`` / ``torch.sigmoid`` /
-``torch.tanh`` accept one positional tensor and no keywords.
+``torch.tanh`` accept one positional tensor and no keywords. The deliberately
+separate ``torch.nn.functional.relu`` alias permits only its proved
+``inplace=False`` literal option.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from rextio_torch.diagnostics import (
     DIAGNOSTIC_FUNCTION_RELU,
     DIAGNOSTIC_FUNCTION_SIGMOID,
     DIAGNOSTIC_FUNCTION_TANH,
+    DIAGNOSTIC_FUNCTIONAL_RELU,
     DIAGNOSTIC_SIGMOID,
     DIAGNOSTIC_TANH,
     DIAGNOSTIC_UNSUPPORTED,
@@ -33,6 +36,7 @@ TANH_RULE_2D = "rextio-torch/tensor-tanh-f32-cpu-2d"
 FUNCTION_RELU_RULE = "rextio-torch/function-relu-f32-cpu-rank1-2"
 FUNCTION_SIGMOID_RULE = "rextio-torch/function-sigmoid-f32-cpu-rank1-2"
 FUNCTION_TANH_RULE = "rextio-torch/function-tanh-f32-cpu-rank1-2"
+FUNCTIONAL_RELU_RULE = "rextio-torch/functional-relu-f32-cpu-rank1-2"
 
 _SUPPORTED_RANKS = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
@@ -61,6 +65,7 @@ _FUNCTION_TARGETS: dict[str, str] = {
     "torch.relu": "relu",
     "torch.sigmoid": "sigmoid",
     "torch.tanh": "tanh",
+    "torch.nn.functional.relu": "relu",
 }
 
 _FUNCTION_RULES: dict[str, str] = {
@@ -79,6 +84,7 @@ ACTIVATION_RULES: frozenset[str] = frozenset(
     {
         *(rule for by_rank in _RULES.values() for rule in by_rank.values()),
         *_FUNCTION_RULES.values(),
+        FUNCTIONAL_RELU_RULE,
     }
 )
 
@@ -97,8 +103,49 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
         functional_method = _FUNCTION_TARGETS.get(site.target)
         if functional_method is None:
             return NotCovered()
-        diagnostic = _FUNCTION_DIAGNOSTICS[functional_method]
-        if site.keywords or len(site.operand_types) != 1:
+        functional_relu_alias = site.target == "torch.nn.functional.relu"
+        diagnostic = (
+            DIAGNOSTIC_FUNCTIONAL_RELU
+            if functional_relu_alias
+            else _FUNCTION_DIAGNOSTICS[functional_method]
+        )
+        if len(site.operand_types) != 1:
+            return reject(
+                site,
+                diagnostic,
+                f"only {site.target}(tensor) with one positional tensor is supported",
+                f"Call {site.target}(tensor) with one positional tensor.",
+            )
+        if functional_relu_alias:
+            if len(site.operand_literals) != 1:
+                return reject(
+                    site,
+                    diagnostic,
+                    "functional ReLU literal metadata must align with its tensor input",
+                    "Use one tensor input and omit inplace or write inplace=False.",
+                )
+            if len(site.keywords) > 1:
+                return reject(
+                    site,
+                    diagnostic,
+                    "functional ReLU accepts at most one inplace=False literal",
+                    "Omit inplace or use the exact literal inplace=False.",
+                )
+            if site.keywords:
+                keyword = site.keywords[0]
+                if not (
+                    keyword.name == "inplace"
+                    and keyword.arg_type == "bool"
+                    and keyword.literal.is_literal
+                    and keyword.literal.value is False
+                ):
+                    return reject(
+                        site,
+                        diagnostic,
+                        "functional ReLU accepts only the exact literal inplace=False option",
+                        "Omit inplace or use the exact literal inplace=False.",
+                    )
+        elif site.keywords:
             return reject(
                 site,
                 diagnostic,
@@ -116,7 +163,11 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
                 "Use TensorF32Cpu1D or TensorF32Cpu2D for the activation operand.",
             )
         return Claimed(
-            rule_id=_FUNCTION_RULES[functional_method],
+            rule_id=(
+                FUNCTIONAL_RELU_RULE
+                if functional_relu_alias
+                else _FUNCTION_RULES[functional_method]
+            ),
             result_type=operand_type,
         )
     diagnostic = _DIAGNOSTICS[method]
@@ -150,6 +201,7 @@ def try_claim(site: ClaimSite) -> ClaimResult | None:
 __all__ = [
     "ACTIVATION_RULES",
     "FUNCTION_RELU_RULE",
+    "FUNCTIONAL_RELU_RULE",
     "FUNCTION_SIGMOID_RULE",
     "FUNCTION_TANH_RULE",
     "RELU_RULE",

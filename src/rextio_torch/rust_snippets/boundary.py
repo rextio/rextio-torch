@@ -21,6 +21,33 @@ fn __rxttorch_map_err(err: tch::TchError) -> pyo3::PyErr {
     pyo3::exceptions::PyRuntimeError::new_err(err.to_string())
 }
 
+fn __rxttorch_require_python_strided(
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+) -> pyo3::PyResult<()> {
+    let layout = value.getattr("layout")?;
+    let rendered = layout.str()?;
+    if rendered.to_str()? != "torch.strided" {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a strided tensor layout",
+        ));
+    }
+    Ok(())
+}
+
+fn __rxttorch_require_native_strided(
+    tensor: &tch::Tensor,
+) -> pyo3::PyResult<()> {
+    // tch 0.24 has no general Tensor::layout() getter. These native flags
+    // cover its exposed sparse/MKLDNN cases; the exact pinned-PyTorch layout
+    // check at each Python boundary rejects CSR/CSC/BSR/BSC as well.
+    if tensor.is_sparse() || tensor.is_mkldnn() {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a strided tensor layout",
+        ));
+    }
+    Ok(())
+}
+
 fn __rxttorch_extract_f32_cpu(
     _py: pyo3::Python<'_>,
     value: &pyo3::Bound<'_, pyo3::types::PyAny>,
@@ -66,12 +93,131 @@ fn __rxttorch_extract_f32_cpu_1d(
     __rxttorch_extract_f32_cpu(py, value, 1)
 }
 
+fn __rxttorch_extract_f32_cuda0(
+    _py: pyo3::Python<'_>,
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+    expected_rank: i64,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let ptr = value.as_ptr();
+    let tensor = unsafe { tch::Tensor::pyobject_unpack(ptr as *mut _) }
+        .map_err(__rxttorch_map_err)?
+        .ok_or_else(|| {
+            pyo3::exceptions::PyTypeError::new_err("rextio-torch: expected a torch.Tensor")
+        })?;
+    __rxttorch_require_python_strided(value)?;
+    __rxttorch_require_native_strided(&tensor)?;
+    if tensor.device() != tch::Device::Cuda(0) {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a CUDA device-0 tensor",
+        ));
+    }
+    if tensor.kind() != tch::Kind::Float {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a float32 tensor",
+        ));
+    }
+    let rank = tensor.dim() as i64;
+    if rank != expected_rank {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "rextio-torch: expected rank-{} tensor, got rank {}",
+            expected_rank, rank
+        )));
+    }
+    Ok(RxtTorchTensor(tensor))
+}
+
+fn __rxttorch_extract_f32_cuda0_2d(
+    py: pyo3::Python<'_>,
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    __rxttorch_extract_f32_cuda0(py, value, 2)
+}
+
+fn __rxttorch_extract_f32_cuda0_1d(
+    py: pyo3::Python<'_>,
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    __rxttorch_extract_f32_cuda0(py, value, 1)
+}
+
+fn __rxttorch_extract_i64_cpu_1d(
+    _py: pyo3::Python<'_>,
+    value: &pyo3::Bound<'_, pyo3::types::PyAny>,
+) -> pyo3::PyResult<RxtTorchTensor> {
+    let ptr = value.as_ptr();
+    let tensor = unsafe { tch::Tensor::pyobject_unpack(ptr as *mut _) }
+        .map_err(__rxttorch_map_err)?
+        .ok_or_else(|| {
+            pyo3::exceptions::PyTypeError::new_err("rextio-torch: expected a torch.Tensor")
+        })?;
+    if tensor.device() != tch::Device::Cpu {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected a CPU tensor",
+        ));
+    }
+    if tensor.kind() != tch::Kind::Int64 {
+        return Err(pyo3::exceptions::PyValueError::new_err(
+            "rextio-torch: expected an int64 tensor",
+        ));
+    }
+    let rank = tensor.dim() as i64;
+    if rank != 1 {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+            "rextio-torch: expected rank-1 tensor, got rank {}", rank
+        )));
+    }
+    Ok(RxtTorchTensor(tensor))
+}
+
 fn __rxttorch_materialize_tensor(
     py: pyo3::Python<'_>,
     value: RxtTorchTensor,
 ) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {
     let ptr = value.0.pyobject_wrap().map_err(__rxttorch_map_err)?;
     Ok(unsafe { pyo3::Bound::from_owned_ptr(py, ptr as *mut _) })
+}
+
+fn __rxttorch_materialize_f32_cuda0(
+    py: pyo3::Python<'_>,
+    value: RxtTorchTensor,
+    expected_rank: i64,
+) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {
+    __rxttorch_require_native_strided(&value.0)?;
+    if value.0.device() != tch::Device::Cuda(0) {
+        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+            "rextio-torch: CUDA result left device cuda:0",
+        ));
+    }
+    if value.0.kind() != tch::Kind::Float {
+        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+            "rextio-torch: CUDA result is not float32",
+        ));
+    }
+    let rank = value.0.dim() as i64;
+    if rank != expected_rank {
+        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+            "rextio-torch: CUDA result expected rank {}, got rank {}",
+            expected_rank, rank
+        )));
+    }
+    let ptr = value.0.pyobject_wrap().map_err(__rxttorch_map_err)?;
+    let wrapped = unsafe { pyo3::Bound::from_owned_ptr(py, ptr as *mut _) };
+    __rxttorch_require_python_strided(&wrapped)?;
+    Ok(wrapped)
+}
+
+fn __rxttorch_materialize_f32_cuda0_2d(
+    py: pyo3::Python<'_>,
+    value: RxtTorchTensor,
+) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {
+    __rxttorch_materialize_f32_cuda0(py, value, 2)
+}
+
+fn __rxttorch_materialize_f32_cuda0_1d(
+    py: pyo3::Python<'_>,
+    value: RxtTorchTensor,
+) -> pyo3::PyResult<pyo3::Bound<'_, pyo3::types::PyAny>> {
+    __rxttorch_materialize_f32_cuda0(py, value, 1)
 }"""
 
 

@@ -14,11 +14,20 @@ from rextio.targets.models import TargetSpec
 from rextio_torch.claim.activations import RELU_RULE, SIGMOID_RULE_2D
 from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
     MATMUL_BINOP_RULE,
+    MATMUL_CALL_MIXED_RANK_RULE,
     MATMUL_CALL_RULE,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
+from rextio_torch.claim.classification import ARGMAX_RULE, SOFTMAX_RULE
 from rextio_torch.claim.reductions import MEAN_RULE
-from rextio_torch.diagnostics import TENSOR_F32_CPU_2D
+from rextio_torch.diagnostics import (
+    DIAGNOSTIC_UNSUPPORTED,
+    TENSOR_F32_CPU_2D,
+    TENSOR_I64_CPU_1D,
+)
 from rextio_torch.plugin import PLUGIN_ID, plugin
 
 # Temps are required: core does not claim method calls whose receiver is a bare BinOp
@@ -58,6 +67,55 @@ def method_matmul(
     right: TensorF32Cpu2D,
 ) -> TensorF32Cpu2D:
     return left.matmul(right)
+
+
+def mixed_rank_matmul(
+    matrix: TensorF32Cpu2D,
+    left_vector: TensorF32Cpu1D,
+    right_vector: TensorF32Cpu1D,
+) -> TensorF32Cpu1D:
+    binop_mv = matrix @ right_vector
+    binop_vm = left_vector @ matrix
+    function_mv = torch.matmul(matrix, right_vector)
+    function_vm = torch.matmul(left_vector, matrix)
+    method_mv = matrix.matmul(right_vector)
+    method_vm = left_vector.matmul(matrix)
+    return binop_mv + binop_vm + function_mv + function_vm + method_mv + method_vm
+
+
+def multiply_surface(
+    left: TensorF32Cpu2D,
+    right: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    vector: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    same_rank_2d = left * right
+    same_rank_1d = bias * vector
+    broadcast_forward = same_rank_2d * same_rank_1d
+    return same_rank_1d * broadcast_forward
+'''
+
+CLASSIFICATION_HEAD_SOURCE = '''
+from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D, TensorI64Cpu1D
+
+
+def classify(logits: TensorF32Cpu2D) -> TensorI64Cpu1D:
+    probabilities = logits.softmax(dim=1)
+    return probabilities.argmax(dim=1, keepdim=False)
+
+
+def invalid_i64_add(labels: TensorI64Cpu1D) -> TensorI64Cpu1D:
+    return labels + labels
+
+
+def invalid_mixed_add(labels: TensorI64Cpu1D, scores: TensorF32Cpu1D) -> TensorI64Cpu1D:
+    return labels + scores
+
+
+def invalid_mixed_add_reverse(
+    labels: TensorI64Cpu1D, scores: TensorF32Cpu1D
+) -> TensorF32Cpu1D:
+    return scores + labels
 '''
 
 
@@ -140,3 +198,43 @@ def test_analyzer_alpha_control_flow_routes_native(tmp_path: Path) -> None:
     assert method.plugin_claims[0].target.rpartition(".")[2] == "matmul"
     assert method.plugin_claims[0].receiver is not None
     assert method.plugin_claims[0].receiver.arg_type == TENSOR_F32_CPU_2D
+
+    mixed = _function(analysis, "myapp.kernels.mixed_rank_matmul")
+    assert mixed.accepted is True
+    assert mixed.route == f"native-plugin:{PLUGIN_ID}"
+    mixed_rules = [claim.rule_id for claim in mixed.plugin_claims]
+    assert mixed_rules.count(MATMUL_BINOP_MIXED_RANK_RULE) == 2
+    assert mixed_rules.count(MATMUL_CALL_MIXED_RANK_RULE) == 4
+    assert all(
+        claim.result_type == "rextio-torch/tensor-f32-cpu-1d"
+        for claim in mixed.plugin_claims[:6]
+    )
+
+    multiply = _function(analysis, "myapp.kernels.multiply_surface")
+    assert multiply.accepted is True
+    assert multiply.route == f"native-plugin:{PLUGIN_ID}"
+    multiply_rules = [claim.rule_id for claim in multiply.plugin_claims]
+    assert multiply_rules.count(MUL_SAME_RANK_RULE) == 2
+    assert multiply_rules.count(MUL_BROADCAST_2D_1D_RULE) == 2
+
+
+def test_analyzer_classification_head_routes_native_with_i64_result(tmp_path: Path) -> None:
+    registry = _registry()
+    analysis = analyze_project(
+        _write_module(tmp_path, CLASSIFICATION_HEAD_SOURCE),
+        active_plugins=registry.active,
+        plugin_registry=registry,
+        plugin_config=RextioConfig(),
+    )
+    function = _function(analysis, "myapp.kernels.classify")
+    assert function.accepted is True
+    assert function.route == f"native-plugin:{PLUGIN_ID}"
+    assert not any(d.severity == "error" for d in function.diagnostics)
+    assert [claim.rule_id for claim in function.plugin_claims] == [SOFTMAX_RULE, ARGMAX_RULE]
+    assert function.plugin_claims[-1].result_type == TENSOR_I64_CPU_1D
+
+    for qualname in ("invalid_i64_add", "invalid_mixed_add", "invalid_mixed_add_reverse"):
+        rejected = _function(analysis, f"myapp.kernels.{qualname}")
+        assert rejected.accepted is False
+        assert not rejected.plugin_claims
+        assert any(d.code == DIAGNOSTIC_UNSUPPORTED for d in rejected.diagnostics)

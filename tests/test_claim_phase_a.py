@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from rextio.config.schema import RextioConfig
 from rextio.plugins.api import (
     ClaimLiteral,
@@ -22,17 +23,21 @@ from rextio_torch.claim.activations import (
 from rextio_torch.claim.binops import (
     ADD_BROADCAST_2D_1D_RULE,
     ADD_SAME_RANK_RULE,
+    FUNCTION_MUL_RULE,
+    MATMUL_BINOP_MIXED_RANK_RULE,
     MATMUL_BINOP_RULE,
     MATMUL_CALL_RULE,
     MATMUL_CALL_TARGET,
+    MUL_BROADCAST_2D_1D_RULE,
+    MUL_SAME_RANK_RULE,
 )
 from rextio_torch.claim.linear import LINEAR_RULE, LINEAR_TARGET
-from rextio_torch.claim.reductions import MEAN_RULE, SUM_RULE
+from rextio_torch.claim.reductions import MEAN_RULE, MEAN_STATIC_RULE, SUM_RULE
 from rextio_torch.diagnostics import (
-    DIAGNOSTIC_MEAN,
     DIAGNOSTIC_UNSUPPORTED,
     TENSOR_F32_CPU_1D,
     TENSOR_F32_CPU_2D,
+    TENSOR_I64_CPU_1D,
 )
 from rextio_torch.plugin import plugin
 
@@ -198,6 +203,89 @@ def test_claims_broadcast_add_rank2_rank1() -> None:
     )
 
 
+def test_claims_same_rank_and_broadcast_multiply() -> None:
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=MUL_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=MUL_SAME_RANK_RULE, result_type=TENSOR_F32_CPU_1D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_1D), CONFIG) == Claimed(
+        rule_id=MUL_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+    assert PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
+        rule_id=MUL_BROADCAST_2D_1D_RULE, result_type=TENSOR_F32_CPU_2D
+    )
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    (
+        (TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
+        (TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D),
+        (TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D),
+    ),
+)
+def test_rejects_add_with_classification_result_type(left: str, right: str) -> None:
+    result = PLUGIN.claim(_binop_site("+", left, right), CONFIG)
+    assert isinstance(result, Rejected)
+    assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    (
+        (TENSOR_I64_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_1D),
+        (TENSOR_F32_CPU_1D, TENSOR_I64_CPU_1D),
+        (TENSOR_I64_CPU_1D, TENSOR_F32_CPU_2D),
+        (TENSOR_F32_CPU_2D, TENSOR_I64_CPU_1D),
+    ),
+)
+def test_rejects_multiply_with_classification_result_type(left: str, right: str) -> None:
+    result = PLUGIN.claim(_binop_site("*", left, right), CONFIG)
+    assert isinstance(result, Rejected)
+    assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
+
+
+def test_multiply_claims_exact_function_alias_but_no_method_or_scalar_forms() -> None:
+    functional = ClaimSite(
+        kind="call",
+        target="torch.mul",
+        operand_types=(TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        operand_literals=(
+            ClaimLiteral(is_literal=False),
+            ClaimLiteral(is_literal=False),
+        ),
+        file_path="",
+        line=0,
+        column=0,
+    )
+    assert PLUGIN.claim(functional, CONFIG) == Claimed(
+        rule_id=FUNCTION_MUL_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    method = ClaimSite(
+        kind="call",
+        target="tensor.mul",
+        operand_types=(TENSOR_F32_CPU_1D,),
+        file_path="",
+        line=0,
+        column=0,
+        receiver=ReceiverMeta(
+            arg_type=TENSOR_F32_CPU_1D,
+            expr_kind="name",
+            is_safe=True,
+        ),
+    )
+    assert isinstance(PLUGIN.claim(method, CONFIG), NotCovered)
+    scalar = PLUGIN.claim(_binop_site("*", TENSOR_F32_CPU_1D, "int"), CONFIG)
+    assert isinstance(scalar, Rejected)
+    assert scalar.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
+
+
 def test_claims_matmul_binop_and_call() -> None:
     assert PLUGIN.claim(_binop_site("@", TENSOR_F32_CPU_2D, TENSOR_F32_CPU_2D), CONFIG) == Claimed(
         rule_id=MATMUL_BINOP_RULE, result_type=TENSOR_F32_CPU_2D
@@ -233,7 +321,7 @@ def test_rejects_wrong_linear_ranks() -> None:
     assert result.diagnostic.code == DIAGNOSTIC_UNSUPPORTED
 
 
-def test_rejects_mean_wrong_dim() -> None:
+def test_claims_mean_dim0_keepdim_false() -> None:
     keywords = (
         KeywordArg(name="dim", arg_type="int", literal=ClaimLiteral(is_literal=True, value=0)),
         KeywordArg(
@@ -246,11 +334,13 @@ def test_rejects_mean_wrong_dim() -> None:
         _method_site("mean", TENSOR_F32_CPU_2D, keywords=keywords),
         CONFIG,
     )
-    assert isinstance(result, Rejected)
-    assert result.diagnostic.code == DIAGNOSTIC_MEAN
+    assert result == Claimed(
+        rule_id=MEAN_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
 
 
-def test_rejects_mean_keepdim_true() -> None:
+def test_claims_mean_keepdim_true() -> None:
     keywords = (
         KeywordArg(name="dim", arg_type="int", literal=ClaimLiteral(is_literal=True, value=1)),
         KeywordArg(
@@ -263,19 +353,29 @@ def test_rejects_mean_keepdim_true() -> None:
         _method_site("mean", TENSOR_F32_CPU_2D, keywords=keywords),
         CONFIG,
     )
-    assert isinstance(result, Rejected)
-    assert result.diagnostic.code == DIAGNOSTIC_MEAN
+    assert result == Claimed(
+        rule_id=MEAN_STATIC_RULE,
+        result_type=TENSOR_F32_CPU_2D,
+    )
 
 
-def test_rejects_matmul_rank1() -> None:
+def test_claims_mixed_rank_matmul_but_rejects_rank1_rank1() -> None:
     result = PLUGIN.claim(_binop_site("@", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D), CONFIG)
-    assert isinstance(result, Rejected)
+    assert result == Claimed(
+        rule_id=MATMUL_BINOP_MIXED_RANK_RULE,
+        result_type=TENSOR_F32_CPU_1D,
+    )
+    rank0 = PLUGIN.claim(
+        _binop_site("@", TENSOR_F32_CPU_1D, TENSOR_F32_CPU_1D),
+        CONFIG,
+    )
+    assert isinstance(rank0, Rejected)
 
 
 def test_not_covered_for_unrelated_target() -> None:
     site = ClaimSite(
         kind="call",
-        target="torch.softmax",
+        target="torch.linalg.norm",
         operand_types=(TENSOR_F32_CPU_2D,),
         file_path="",
         line=0,

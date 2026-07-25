@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, alpha/native-aot-0.1.0]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -17,6 +17,7 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   RUST_TOOLCHAIN: "1.93.1"
+  CUDA_PROVIDER_COMMIT: "a5fb427e91710b65f54ee5b8e33706c45840cf9c"
 
 jobs:
   quality:
@@ -36,7 +37,7 @@ jobs:
         run: |
           python -m pip install "pip==26.1"
           python -m pip install \
-            "rextio==0.1.3" \
+            "rextio==0.1.6" \
             "pytest==9.1.1" \
             "ruff==0.15.22" \
             "mypy==2.3.0"
@@ -47,6 +48,31 @@ jobs:
         run: mypy
       - name: Unit and contract tests
         run: python -m pytest -q tests --ignore=tests/e2e
+
+  core-compatibility:
+    name: Core compatibility (released 0.1.6)
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install the selected Core and contract-test dependencies
+        run: |
+          python -m pip install "pip==26.1"
+          python -m pip install \
+            "rextio==0.1.6" \
+            "pytest==9.1.1"
+          python -m pip install --no-deps -e .
+      - name: Exercise plugin registration compatibility
+        run: python -m pytest -q tests/test_plugin.py
 
   platform-contract:
     name: Platform contract (${{ matrix.os }} / ${{ matrix.arch }})
@@ -156,7 +182,9 @@ jobs:
           # torch 2.11.0 requires setuptools<82 at runtime; the build above has
           # already consumed the separately pinned 82.0.1 build environment.
           .venv/bin/python -m pip install \
-            "setuptools==81.0.0" "rextio==0.1.3" "torch==2.11.0" "pytest==9.1.1"
+            "setuptools==81.0.0" \
+            "rextio==0.1.6" \
+            "torch==2.11.0" "pytest==9.1.1"
           .venv/bin/python -m pip install --no-deps dist/*.whl
           .venv/bin/python -m pip check
       - name: Verify runner, pins, and profile
@@ -229,7 +257,7 @@ jobs:
           assert "Private :: Do Not Upload" not in project["classifiers"]
           assert "Development Status :: 3 - Alpha" in project["classifiers"]
           assert "torch==2.11.0" in project["dependencies"]
-          assert "rextio>=0.1.3,<0.2" in project["dependencies"]
+          assert "rextio>=0.1.6,<0.2" in project["dependencies"]
           PY
       - name: Build wheel and sdist
         run: |
@@ -247,7 +275,8 @@ jobs:
           python -m venv /tmp/rextio-torch-sdist-tests
           audit_python=/tmp/rextio-torch-sdist-tests/bin/python
           "$audit_python" -m pip install "pip==26.1"
-          "$audit_python" -m pip install "rextio==0.1.3" "pytest==9.1.1"
+          "$audit_python" -m pip install \
+            "rextio==0.1.6" "pytest==9.1.1"
           extracted_root="$(find /tmp/rextio-torch-sdist-audit \
             -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$extracted_root"
@@ -264,11 +293,13 @@ jobs:
         run: |
           python -m venv /tmp/rextio-torch-wheel
           /tmp/rextio-torch-wheel/bin/python -m pip install "pip==26.1"
-          /tmp/rextio-torch-wheel/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-wheel/bin/python -m pip install \
+            "rextio==0.1.6"
           /tmp/rextio-torch-wheel/bin/python -m pip install --no-deps dist/*.whl
           python -m venv /tmp/rextio-torch-sdist
           /tmp/rextio-torch-sdist/bin/python -m pip install "pip==26.1"
-          /tmp/rextio-torch-sdist/bin/python -m pip install "rextio==0.1.3"
+          /tmp/rextio-torch-sdist/bin/python -m pip install \
+            "rextio==0.1.6"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
             "setuptools==82.0.1" "wheel==0.47.0"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
@@ -278,25 +309,96 @@ jobs:
           from importlib.metadata import distribution, entry_points
 
           dist = distribution("rextio-torch")
-          assert dist.version == "0.1.0"
+          assert dist.version == "0.1.2"
           requires = set(dist.requires or ())
           assert "torch==2.11.0" in requires
           factory = next(
               ep for ep in entry_points(group="rextio.plugins") if ep.name == "rextio-torch"
           ).load()
-          assert factory().api_version == "1.3"
+          assert factory().api_version == "1.6"
           PY
           done
+
+  cuda-build-only:
+    name: CUDA E2 build-only (Linux x86_64, no runtime claim)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      LIBTORCH_USE_PYTORCH: "1"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Set up CPython 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install exact Rust toolchain
+        run: |
+          rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update
+          rustup default "${RUST_TOOLCHAIN}"
+      - name: Install released Core and frozen CUDA provider contracts
+        run: |
+          python -m pip install "pip==26.1"
+          python -m pip install \
+            "rextio==0.1.6" \
+            "torch==2.11.0" "pytest==9.1.1"
+          python -m pip install --no-deps \
+            "git+https://github.com/rextio/rextio-device-cuda.git@${CUDA_PROVIDER_COMMIT}"
+          python -m pip install --no-deps -e .
+      - name: Verify exact API and provider capability inputs
+        run: |
+          python - <<'PY'
+          import json
+          import platform
+          from importlib.metadata import distribution, entry_points
+          from rextio.plugins.api import PLUGIN_API_VERSION
+          from rextio_torch.plugin import plugin
+          import torch
+
+          assert PLUGIN_API_VERSION == "1.6"
+          assert platform.machine() == "x86_64"
+          assert plugin().api_version == "1.6"
+          assert torch.__version__.split("+")[0] == "2.11.0"
+          assert torch.version.cuda is not None
+          assert torch.cuda.is_available() is False
+          assert distribution("rextio").version == "0.1.6"
+          direct = json.loads(
+              distribution("rextio-device-cuda").read_text("direct_url.json")
+          )
+          assert direct["vcs_info"]["commit_id"] == (
+              "a5fb427e91710b65f54ee5b8e33706c45840cf9c"
+          )
+          factory = next(
+              ep for ep in entry_points(group="rextio.device_providers")
+              if ep.name == "rextio-device-cuda"
+          ).load()
+          manifest = factory().manifest()
+          assert any(
+              item.id == "cuda-libtorch-linux-x86_64"
+              for item in manifest.capabilities
+          )
+          PY
+      - name: Run CUDA contract tests without a GPU
+        run: python -m pytest -q tests/test_cuda_e2_build_only.py
+      - name: Orchestrate and compile the generated CUDA candidate without loading it
+        run: |
+          unset LIBTORCH_BYPASS_VERSION_CHECK
+          python scripts/build_cuda_candidate.py --output /tmp/rextio-torch-cuda-build-only
 
   ci-gate:
     name: CI gate
     if: always()
-    needs: [quality, platform-contract, native-e2e, package]
+    needs: [quality, core-compatibility, platform-contract, native-e2e, package, cuda-build-only]
     runs-on: ubuntu-24.04
     steps:
       - name: Require every blocking lane
         run: |
           test "${{ needs.quality.result }}" = "success"
+          test "${{ needs.core-compatibility.result }}" = "success"
           test "${{ needs.platform-contract.result }}" = "success"
           test "${{ needs.native-e2e.result }}" = "success"
           test "${{ needs.package.result }}" = "success"
+          test "${{ needs.cuda-build-only.result }}" = "success"

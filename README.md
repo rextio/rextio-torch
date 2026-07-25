@@ -6,18 +6,21 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.0** (from `rextio_torch.__about__`) |
-| Release status | **0.1.0 public Alpha**, released **2026-07-18** |
-| Distribution | [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
-| Plugin API | **1.3** (`REQUIRED_PLUGIN_API`) |
-| Product mode | **CPU inference / no-grad only** |
+| Package version | **0.1.2** (from `rextio_torch.__about__`) |
+| Release status | **Released 0.1.2 public Alpha** on **2026-07-26**; CPU reinforcement is released while CUDA E2 remains build-only and non-certifying |
+| Distribution | [`rextio-torch==0.1.2`](https://pypi.org/project/rextio-torch/0.1.2/) on PyPI |
+| Plugin API | **1.6** (`REQUIRED_PLUGIN_API`) |
+| Product mode | Proven CPU inference plus a **Linux x86_64 build-only CUDA candidate**; no CUDA support claim |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
 | Experimental hosts | **Linux x86_64**, **Linux AArch64** — runtime-backed but **not** certified |
 | Availability-gated | **macOS x86_64** — pinned torch 2.11.0 CPython 3.11 wheel absent |
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README is the **0.1.0 public native-AOT Alpha support contract**. Every
+This README documents the **0.1.2 compatibility,
+classification-head, bounded CPU-surface update, build-only CUDA E2 candidate,
+and opt-in real-NVIDIA execution-evidence candidate** to the
+0.1.0 public native-AOT Alpha support contract. Every
 form, rank, pin, and fail-closed behavior below is backed by current claim /
 lower / rules / rust_snippets sources and the focused or real-Cargo tests that
 exercise them. Unsupported sites must stay on the ordinary Python fallback or
@@ -34,15 +37,15 @@ a release gate for this Alpha cut.
 | Component | Exact pin | Why it must match |
 | --- | --- | --- |
 | CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
-| Rextio package | **`>=0.1.3,<0.2`** | Allowed package range, not an exact pin. Registration/contract calls fail unless core advertises plugin API exactly **1.3**. |
-| Plugin API | **1.3** | Claim sites, receivers, keyword literals, type vocabulary, and crate deps are API 1.3 contracts. |
+| Rextio package | **`>=0.1.6,<0.2`** | Required for structured device metadata and exact lowering authorization. |
+| Plugin API | **1.6** | Adds device-value metadata and lowering authorization to the existing claim/lower contracts. |
 | PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
 | Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
-| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from Rextio 0.1.3's generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
+| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from the Rextio 0.1.6 generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
 | Certified Rust toolchain | `rustc 1.93.1`, `cargo 1.93.1` on `aarch64-apple-darwin` | The real-Cargo Alpha evidence was reproduced with this local toolchain. This repo has no `rust-toolchain.toml`. |
 | libtorch linkage | **`LIBTORCH_USE_PYTORCH=1`** | Builds against the active Python torch install. |
 | Version-check bypass | **Forbidden** | `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path (stripped in e2e env setup; never set). |
-| Device | **CPU only** | Boundary extract rejects non-CPU tensors at runtime. |
+| Device | **CPU proven; CUDA device 0 build-only** | CPU types retain their old checks. CUDA marker types require already-resident `cuda:0` values and never lower transfers. |
 | Dtype | **float32 only** | Boundary extract rejects non-float32 at runtime. |
 | Mode | **Inference / no-grad** | Every op helper wraps `tch::no_grad_guard()`; certified native outputs have `requires_grad is False` even when inputs request grad. |
 
@@ -57,8 +60,11 @@ a release gate for this Alpha cut.
 3. **CPython 3.11** — the generated native extension must load under the **same**
    CPython 3.11 + torch 2.11.0 environment that built it (PyO3 ABI + tch
    python-extension bridge).
-4. **Rextio 0.1.3+ / API 1.3** — claim metadata (receivers, literal keywords,
-   type keys) is not available on older plugin APIs.
+4. **Rextio 0.1.6+ / provider API 1.6** — structured device metadata and
+   lowering authorization are not available on older plugin APIs. The provider
+   declares API 1.6 while Core's loader handles compatible later 1.x hosts.
+   Registration fails closed for API 1.5 and older, other majors, or malformed host
+   versions before registration can reach fields unavailable on older Core.
 
 Certification and real-Cargo tests configure this environment explicitly.
 **Host OS is not a runtime claim gate in this plugin:** the source does not
@@ -105,11 +111,14 @@ Use this only to exercise the pinned environment on Linux. It does **not**
 promote Linux to certified status.
 
 ```bash
-# CPython 3.11 venv with the package + pins (torch==2.11.0, rextio>=0.1.3,<0.2)
+# CPython 3.11 venv with the released source and exact Core evidence
 python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e '.[dev]'
+python -m pip install 'pip==26.1'
+python -m pip install \
+  'git+https://github.com/rextio/rextio.git@7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0' \
+  'torch==2.11.0' 'pytest==9.1.1' 'ruff==0.15.22' 'mypy==2.3.0'
+python -m pip install --no-deps -e .
 
 # Required link mode; version-check bypass is forbidden
 export LIBTORCH_USE_PYTORCH=1
@@ -145,6 +154,9 @@ with a clear reason** — never mask by setting `LIBTORCH_BYPASS_VERSION_CHECK`.
 | --- | --- | --- | --- | --- |
 | `TensorF32Cpu2D` | `rextio-torch/tensor-f32-cpu-2d` | float32 | CPU | 2 |
 | `TensorF32Cpu1D` | `rextio-torch/tensor-f32-cpu-1d` | float32 | CPU | 1 |
+| `TensorI64Cpu1D` | `rextio-torch/tensor-i64-cpu-1d` | int64 | CPU | 1 (classification result only) |
+| `TensorF32Cuda0_2D` | `rextio-torch/tensor-f32-cuda0-2d` | float32 | CUDA device 0 | 2 (build-only) |
+| `TensorF32Cuda0_1D` | `rextio-torch/tensor-f32-cuda0-1d` | float32 | CUDA device 0 | 1 (build-only) |
 
 Marker classes intentionally **import neither torch nor Rextio**. Runtime values
 remain ordinary `torch.Tensor` objects; the analyzer resolves the dotted
@@ -161,52 +173,103 @@ Boundary unpack/wrap uses tch’s python-extension bridge (another ref-counted
 handle, **no storage copy**). `Clone` uses `shallow_clone()` — in-place ops are
 excluded because shallow clones alias storage.
 
+### Build-only CUDA E2 candidate
+
+The CUDA candidate is frozen to Linux x86_64, CPython 3.11, PyTorch/libtorch
+2.11.0, tch 0.24.0, `LIBTORCH_USE_PYTORCH=1`, float32 rank-1/rank-2
+`cuda:0`, and inference/no-grad. It accepts only named-intermediate
+`rank2 @ rank2 -> rank2 + rank1 bias -> rank2.relu() ->
+rank2.mean(dim=1) -> rank1`. Lowering requires the exact
+`rextio-device-cuda/cuda-libtorch-linux-x86_64` authorization.
+
+This is `support_claim=false`. CI runs actual Core orchestration with the real
+provider implementation fed by a fixed synthetic probe report, then compiles
+but never loads or runs the generated CUDA Rust slice. It does not inspect
+host hardware or prove real NVIDIA execution, one-libtorch-image/ABI identity,
+numerical equivalence, stream behavior, or performance. `.cuda()`/`.to()`,
+CPU/CUDA mixing, reverse/same-rank add, mixed-rank CUDA matmul, functional CUDA
+spellings, other devices, training/autograd, Windows, and macOS remain
+excluded. See [the complete frozen CUDA contract](docs/cuda-build-only-0.1.2.md).
+
+CUDA input and output boundaries also fail closed on non-strided layouts.
+Because tch 0.24 has no general layout getter, native checks use its exposed
+`is_sparse()` / `is_mkldnn()` flags and both Python boundaries additionally
+require the pinned PyTorch 2.11.0 `tensor.layout` to render as
+`torch.strided`; this catches sparse CSR/CSC/BSR/BSC without claiming a
+version-independent tch layout query.
+
+A separate manual Linux x86_64/NVIDIA harness executes the same exact slice
+on a trusted maintainer host. It uses the real provider probe, compares
+contiguous and noncontiguous values with eager PyTorch, requires
+non-default-stream CUDA Graph replay and expected ATen CUDA activity, rejects
+observed host/device transfers, and binds canonical wheel-relative
+libtorch/c10 identities into offline-verifiable evidence. It remains
+`support_claim=false` and `certification_ready=false`, is excluded from normal
+CI, and does not expand the accepted operation or platform surface. See the
+[CUDA candidate contract and commands](docs/cuda-build-only-0.1.2.md).
+
 ---
 
 ## Exactly supported Python forms and result ranks
 
-Claims require API 1.3 metadata that proves the form (operand / receiver type
+Claims require API 1.6 metadata that proves the form (operand / receiver type
 keys, call target, static keyword literals). Result ranks are those of the
 claimed `result_type`.
 
 | Form | Syntax contract | Operand / receiver ranks | Result rank | Rule id (native) |
 | --- | --- | --- | --- | --- |
-| Functional linear | `torch.nn.functional.linear(x, w, b)` — **three positional** tensors; **no keywords**; **no method form** | x, w: **2**; b: **1** | **2** | `rextio-torch/functional-linear-f32-cpu-2d` |
+| Functional linear (tensor bias) | `torch.nn.functional.linear(x, w, b)` — three positional tensors | x, w: **2**; b: **1** | **2** | `rextio-torch/functional-linear-f32-cpu-2d` |
+| Functional linear (no bias) | `torch.nn.functional.linear(x, w)`, `(x, w, None)`, or `(x, w, bias=None)`; x/w stay positional | x, w: **2** | **2** | `rextio-torch/functional-linear-none-f32-cpu-2d` |
 | ReLU method | `.relu()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-relu-f32-cpu-1d` or `…/tensor-relu-f32-cpu-2d` |
 | Sigmoid method | `.sigmoid()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-sigmoid-f32-cpu-1d` or `…/tensor-sigmoid-f32-cpu-2d` |
 | Tanh method | `.tanh()` — zero args, no keywords | receiver **1** or **2** | **same as receiver** | `…/tensor-tanh-f32-cpu-1d` or `…/tensor-tanh-f32-cpu-2d` |
-| Matmul binop | `a @ b` | both **2** | **2** | `rextio-torch/tensor-matmul-f32-cpu-2d` |
-| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | both **2** | **2** | `rextio-torch/tensor-matmul-call-f32-cpu-2d` |
-| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver **2**, other **2** | **2** | same as call form |
+| Functional activations | Exact `torch.relu(t)`, `torch.sigmoid(t)`, or `torch.tanh(t)`; one positional tensor, no keywords; exact `torch.nn.functional.relu(t)` additionally permits omitted or literal `inplace=False` | input **1** or **2** | **same as input** | `…/function-{relu,sigmoid,tanh}-f32-cpu-rank1-2`; `…/functional-relu-f32-cpu-rank1-2` |
+| Unary math | Exact `torch.{abs,neg,negative,square,exp,log,sqrt}(t)` or matching zero-argument tensor method; one tensor and no keywords | input/receiver **1** or **2** | **same as input** | `…/unary-{abs,neg,negative,square,exp,log,sqrt}-f32-cpu-rank1-2` |
+| Exact GELU | `torch.nn.functional.gelu(t)` or `gelu(t, approximate="none")`; one positional tensor and no other options | input **1** or **2** | **same as input** | `…/functional-gelu-none-f32-cpu-rank1-2` |
+| Matmul binop | `a @ b` | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-f32-cpu-{2d,mixed-rank}` |
+| Matmul call | `torch.matmul(a, b)` — two positional; no keywords | **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | `…/tensor-matmul-call-f32-cpu-{2d,mixed-rank}` |
+| Matmul method | `a.matmul(b)` — one positional; no keywords | receiver/other **2/2**, **2/1**, or **1/2** | **2** for 2/2; **1** for mixed ranks | same as call form |
 | Elementwise `+` (same rank) | `a + b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-add-f32-cpu-same-rank` |
 | Elementwise `+` (bias broadcast) | `a + b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-add-f32-cpu-2d-1d-broadcast` |
-| Mean | `.mean(dim=1, keepdim=False)` — **only** those two **literal** keywords; no positionals | receiver **2** | **1** | `rextio-torch/tensor-mean-dim1-f32-cpu-2d` |
-| Sum | `.sum(dim=1, keepdim=False)` — same literal guards as mean | receiver **2** | **1** | `rextio-torch/tensor-sum-dim1-f32-cpu-2d` |
+| Elementwise `*` (same rank) | `a * b` | both **1**, or both **2** | **same as left** | `rextio-torch/tensor-mul-f32-cpu-same-rank` |
+| Elementwise `*` (bias broadcast) | `a * b` | one **2**, one **1** (either order) | **2** | `rextio-torch/tensor-mul-f32-cpu-2d-1d-broadcast` |
+| Elementwise `-` | `a - b`, same-rank or rank-2/rank-1 trailing broadcast in either operand order | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-sub-f32-cpu-{same-rank,2d-1d-broadcast}` |
+| Elementwise true `/` | `a / b`, with the same rank/broadcast matrix as subtraction; binop only | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/tensor-div-f32-cpu-{same-rank,2d-1d-broadcast}` |
+| Functional elementwise arithmetic | Exact `torch.add/sub/mul/div(a, b)`; two positional tensors and no keywords, using the same rank/broadcast matrix as the operators | input ranks **1/1**, **2/2**, **2/1**, or **1/2** | same rank, or **2** for mixed ranks | `…/function-{add,sub,mul,div}-f32-cpu-rank1-2` |
+| Mean / sum | Receiver methods or exact `torch.mean` / `torch.sum`; `dim=0|1` once (positional literal or keyword); `keepdim` omitted=False or named bool | rank-2: dim 0/1; rank-1: only dim 0 + keepdim=True | registered float32 rank **1** or **2** only | legacy dim1 rules or `…/{mean,sum}-static-dim-f32-cpu-rank1-2` |
+| Softmax | Receiver method or exact `torch.softmax`; exact `torch.nn.functional.softmax` additionally permits omitted or literal `dtype=None`; literal dim once | rank-1 dim 0; rank-2 dim 0/1 | same as input | legacy dim1 rule, `…/softmax-static-dim-f32-cpu-rank1-2`, or `…/functional-softmax-f32-cpu-rank1-2` |
+| Argmax | Receiver method or exact `torch.argmax`; literal dim once; keepdim omitted=False or named bool | rank-2 dim 0/1 + keepdim=False; rank-1 dim 0 + keepdim=True | **1 int64** | legacy dim1 rule or `…/argmax-static-dim-i64-cpu-rank1` |
 
 Native op helpers (all fallible, all under `no_grad`):
 
 | Python form | Rust helper | tch API used |
 | --- | --- | --- |
-| linear | `__rxttorch_linear` | `f_linear` |
-| `.relu()` | `__rxttorch_relu` | `f_relu` |
-| `.sigmoid()` | `__rxttorch_sigmoid` | `f_sigmoid` |
-| `.tanh()` | `__rxttorch_tanh` | `f_tanh` |
-| `.mean(…)` | `__rxttorch_mean_dim1_keepdim_false` | `f_mean_dim(1, false, None)` |
-| `.sum(…)` | `__rxttorch_sum_dim1_keepdim_false` | `f_sum_dim_intlist(1, false, None)` |
+| linear | `__rxttorch_linear` / `__rxttorch_linear_no_bias` | `f_linear(Some(bias))` / `f_linear(None)` |
+| activation method/function | `__rxttorch_{relu,sigmoid,tanh}` | fallible matching tch activation |
+| unary math method/function | `__rxttorch_{abs,neg,negative,square,exp,log,sqrt}` | exact fallible `f_abs`, `f_neg`, `f_negative`, `f_square`, `f_exp`, `f_log`, or `f_sqrt` |
+| exact GELU | `__rxttorch_gelu_none` | fixed fallible `f_gelu("none")`; the source option is never interpolated |
+| mean / sum | `__rxttorch_{mean,sum}_dim{0,1}_keepdim_{true,false}` | `f_mean_dim` / `f_sum_dim_intlist` with fixed literals |
 | `+` | `__rxttorch_add` | `f_add` |
+| `*` | `__rxttorch_mul` | `f_mul` |
+| `-` | `__rxttorch_sub` | `f_sub` |
+| `/` | `__rxttorch_div` | `f_div` |
 | matmul / `@` | `__rxttorch_matmul` | `f_matmul` |
+| softmax | `__rxttorch_softmax_dim{0,1}` | `f_softmax` with fixed dim |
+| argmax | `__rxttorch_argmax_dim{0,1}_keepdim_{true,false}` (only rank-1 outputs) | `f_argmax` plus exact CPU/int64/rank-1 check |
 
 Coverage symbols declared for the analyzer include
-`torch.nn.functional.linear`, `torch.matmul`, and method forms
-`torch.Tensor.{relu,sigmoid,tanh,mean,sum,matmul}`. Binary `+` / `@` are claimed
-via binop sites (not module symbols alone).
+`torch.nn.functional.{linear,gelu,relu,softmax}`, `torch.matmul`,
+`torch.{relu,sigmoid,tanh,abs,neg,negative,square,exp,log,sqrt,add,sub,mul,div,mean,sum,softmax,argmax}`,
+and the corresponding receiver methods. Binary `+` / `*` / `-` / `/` / `@`
+are also claimed via binop sites. Functional options that change or widen
+semantics, such as `alpha`, `out`, or `rounding_mode`, remain rejected.
 
 ### Control flow around claimed ops
 
 Python `for` / `if` with Rextio-lowerable scalar `int` / `bool` conditions become
 Rust control flow around the native tch helpers (certified control-flow
 vertical slice). Tensor comparisons and tensor-data-dependent conditions are
-**not** claimable by plugin API 1.3 and remain on the Python fallback.
+**not** claimable by the current plugin API 1.6 surface and remain on the Python fallback.
 
 **Core receiver limitation (not a plugin gap):** Rextio core does not offer
 method calls whose receiver is a **bare BinOp** to plugins. Write named temps:
@@ -235,15 +298,20 @@ fail-closed](#compile-time-fallback-vs-runtime-fail-closed).
 | Check | Enforcement |
 | --- | --- |
 | Plugin type keys are the registered float32 CPU rank-1/2 keys | `is_tensor_type` / exact type equality per rule |
-| Linear: target `torch.nn.functional.linear`, no receiver, exactly 3 positionals, no keywords, ranks (2, 2, 1) | `claim/linear.py` |
-| Activations: method form only (receiver present), zero args/keywords, rank 1 or 2 | `claim/activations.py` — module-style `torch.relu` etc. → `NotCovered` |
-| Reductions: method form, **no** positionals, keywords exactly `{dim, keepdim}` with **literal** `dim=1` and `keepdim=False`, receiver rank 2 | `claim/reductions.py` |
-| Matmul `@` / `torch.matmul` / `.matmul`: both sides rank 2; call forms disallow keywords; method form one positional | `claim/binops.py` |
-| Add: binary `+` only; same-rank 1/1 or 2/2, or {1,2} broadcast; other rank pairs rejected | `claim/binops.py` |
+| Linear: exact `torch.nn.functional.linear`; three positional tensors (2,2,1), or rank-2 input/weight with bias omitted / positional literal `None` / keyword literal `bias=None` | `claim/linear.py`; tensor-valued keywords remain unrepresentable in the Core API 1.6 ClaimSite contract |
+| Activations: receiver zero-arg methods, or exact `torch.relu/sigmoid/tanh` with one positional tensor; exact `torch.nn.functional.relu` also permits omitted/literal `inplace=False`; rank 1/2 only | `claim/activations.py` |
+| Unary math: receiver zero-arg methods, or exact `torch.abs/neg/negative/square/exp/log/sqrt` with one positional tensor; rank 1/2 and no keywords | `claim/unary.py` |
+| GELU: exact `torch.nn.functional.gelu`; one positional rank-1/2 tensor; `approximate` omitted or exactly the static string literal `"none"`; lower always hardcodes `"none"` | `claim/gelu.py` |
+| Reductions: receiver or exact `torch.mean/sum`; dim literal 0/1 once positionally/keyword; keepdim omitted=False or named bool; output must already map to rank-1/2 | `claim/reductions.py` |
+| Classification: receiver or exact `torch.softmax/argmax`; exact `torch.nn.functional.softmax` also permits omitted/literal `dtype=None`; positional dim literal alignment and options are revalidated; argmax must map exactly to `TensorI64Cpu1D` | `claim/classification.py` |
+| Matmul `@` / `torch.matmul` / `.matmul`: rank-2/rank-2 or one rank-2 plus one rank-1 operand in either order; call forms disallow keywords; method form takes one positional operand; rank-1/rank-1 stays rejected because it would return rank-0 | `claim/binops.py` |
+| Elementwise arithmetic: binary `+` / `*` / `-` / `/`, or exact `torch.add/sub/mul/div(a, b)` with two positional non-literal tensors and no keywords; same-rank 1/1 or 2/2, or {1,2} broadcast; scalar/method/option variants and other ranks rejected | `claim/binops.py` |
 | Claim metadata is pure function of site kind, target, operand types, receiver, static keyword literals | `claim/__init__.py` (config unused) |
 
-Keyword order for `dim` / `keepdim` does not matter; values must still be static
-literals. Dynamic dim/keepdim, wrong dim, or `keepdim=True` → **Rejected**.
+Keyword order for `dim` / `keepdim` does not matter. A positional dim must be
+an aligned non-bool int literal and is compile-time metadata, never a runtime
+tensor helper operand. A second positional keepdim is excluded; keepdim is
+omitted (real default `False`) or supplied as a named bool literal.
 
 Lowering **independently revalidates** the same metadata (`rule_id`, ranks,
 operand counts, receiver) and raises `ValueError` on drift — guards use
@@ -258,20 +326,24 @@ become silent native claims.
 
 | Category | Examples / notes | Claim outcome (when offered as a torch site) |
 | --- | --- | --- |
-| Other devices | CUDA, MPS, non-CPU | Outside vocabulary; boundary would reject non-CPU if a native path were reached |
+| Other devices | CUDA other than the exact build-only `cuda:0` slice; MPS and other accelerators | Outside the accepted vocabulary/slice; mixed devices and transfers are rejected |
 | Other dtypes | float64, int, etc. | Outside vocabulary; boundary rejects non-float32 at runtime on native paths |
-| Other ranks | rank-0 / rank-3+, matmul with rank-1, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
+| Other ranks | rank-0 / rank-3+, rank-1 × rank-1 matmul, linear with wrong ranks | `Rejected` when form is recognized with wrong ranks |
 | Training / autograd | backward, optimizers, parameter mutation | Out of scope; native helpers always `no_grad` |
-| Modules | arbitrary `nn.Module`, module-style activations (`torch.relu`, …) | Uncovered / not claimed |
-| Linear variants | keywords, optional bias omission, method linear | `Rejected` or not the linear lane |
-| In-place ops | `relu_`, `sigmoid_`, `tanh_`, in-place operators | Not claimed (zero-arg out-of-place methods only; helpers use non-`_` APIs) |
-| Elementwise other ops | `-`, `*`, `/`, scalar operands | Not claimed |
-| Reductions other shapes | whole-tensor mean/sum, `dim≠1`, `keepdim=True`, dynamic dim/keepdim, positionals | `Rejected` or unclaimed |
+| Modules | arbitrary `nn.Module` capture/execution | Uncovered / not claimed |
+| Linear variants | tensor-valued keyword bias/input/weight, other keywords, method linear | Tensor keywords are not offered by the Core API 1.6 ClaimSite contract; others reject/fallback |
+| In-place ops | `relu_`, `sigmoid_`, `tanh_`, unary `_` variants, in-place operators; `F.relu(..., inplace=True)` | Not claimed (zero-arg out-of-place methods only; `F.relu` admits only omitted/literal `inplace=False`) |
+| Unary variants | scalar inputs; `out`; alternate aliases such as `torch.absolute`; method arguments or keywords | Rejected for recognized exact functions/methods or otherwise unclaimed |
+| GELU variants | `approximate="tanh"`, dynamic/invalid/positional approximate, other keywords, `.gelu()`, or `nn.GELU` capture | Static recognized variants are rejected; dynamic values may be filtered by Core to ordinary fallback before plugin claim |
+| Elementwise variants | scalar operands; `.add/.sub/.mul/.div`; aliases such as `torch.subtract`; `alpha`, `out`, or `rounding_mode` options | Rejected for recognized exact functions/options or otherwise unclaimed; `/` and exact `torch.div(a, b)` mean tensor-tensor true division only |
+| Reductions other shapes | whole-tensor reduction, dynamic/duplicate/out-of-range dim, positional keepdim, dtype/out, or rank-0 result | `Rejected` or unclaimed |
+| Classification variations | dtype override, dynamic/duplicate dim, softmax keepdim, rank-2 argmax keepdim=True, rank-1 argmax keepdim=False, rank-3+ | `Rejected` or unclaimed; unavailable int64 rank-2/rank-0 types are not invented |
+| Classification-result arithmetic | `TensorI64Cpu1D` or mixed int64/float32 operands with `+`, `*`, `-`, or `/` | `Rejected`; elementwise arithmetic remains float32-only |
 | Views / reshape | transpose, view, reshape (alias / shallow-clone risk) | Intentionally not claimed |
-| Unsupported broadcast ranks | `+` rank combinations other than same-rank or 2d+1d | `Rejected` |
-| Unrelated torch APIs | e.g. `torch.softmax` | `NotCovered` |
+| Unsupported broadcast ranks | arithmetic rank combinations other than same-rank or 2d/1d | `Rejected` |
+| Unrelated torch APIs | e.g. `torch.subtract` / `torch.divide` aliases | `NotCovered` |
 | Unresolved types | missing annotation / `None` operand types | `NotCovered` (no false claim) |
-| Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under API 1.3 |
+| Tensor-dependent control flow | tensor comparisons as `if` conditions | Not claimable under the current API 1.6 surface |
 | Bare BinOp method receivers | `(a @ b).relu()` | Core does not offer site; use temps |
 | Version bypass | `LIBTORCH_BYPASS_VERSION_CHECK` | Forbidden build path |
 | Custom operators | user ops outside the table above | Uncovered |
@@ -308,8 +380,16 @@ op and remains `verified=False`.
 | Boundary: dtype is float32 | `ValueError` | `rextio-torch: expected a float32 tensor` |
 | Boundary: rank matches annotation | `ValueError` | `rextio-torch: expected rank-N tensor, got rank M` |
 | Matmul inner dimensions | Fallible `f_matmul` → mapped error | `TchError` → `PyRuntimeError` via `__rxttorch_map_err` |
-| Add / broadcast concrete sizes | Fallible `f_add` | same mapping |
+| Add / multiply broadcast concrete sizes | Fallible `f_add` / `f_mul` | same mapping |
 | Other op failures | Fallible `f_*` APIs under `no_grad` | same mapping; no `unwrap` / `panic!` / `assert` |
+
+Unary domain values are normal tensor results, not operation failures:
+`log`/`sqrt` can produce NaN, zero can map to signed infinity, and overflow can
+produce infinity. Native certification compares eager/native NaN and infinity
+classes, finite values, and signed zero under the pinned backend. NaN payload
+bits and NaN sign are intentionally not portable cross-platform guarantees.
+Exact GELU uses the same comparison policy (`-∞` produces NaN, `+∞` remains
+infinite, and signed zero is preserved).
 
 Certified e2e tests force **native-only** mode for the boundary rejects they
 exercise, so eager fallback cannot mask float64/wrong-rank failures. Inputs are
@@ -377,9 +457,36 @@ def expanded_surface(
 
 One serialized certification project exercises every Alpha rule family (both
 matmul call forms, same-rank and 2D+1D add families, sum, tanh, rank-1
-activation chaining, and the control-flow route). The claim table also accepts
-the reverse **1D+2D** broadcast order; that exact order is unit-tested at the
-claim/lower layer but is not a separate real-Cargo fixture.
+activation chaining, and the control-flow route).
+
+### Accepted (bounded 0.1.2 CPU follow-up)
+
+```python
+def cpu_surface_followup(
+    x: TensorF32Cpu2D,
+    weight: TensorF32Cpu2D,
+    bias: TensorF32Cpu1D,
+    divisor: TensorF32Cpu1D,
+) -> TensorF32Cpu2D:
+    hidden = torch.nn.functional.linear(x, weight, bias=None)
+    activated = torch.relu(hidden)
+    shifted = torch.sigmoid(activated) - bias
+    scaled = shifted / divisor
+    totals = torch.sum(scaled, 0, keepdim=True)
+    averaged = torch.mean(totals, 1, keepdim=True)
+    probabilities = torch.softmax(averaged, 1)
+    return torch.tanh(probabilities)
+```
+
+The same serialized real-Cargo project executes this slice plus omitted and
+positional-`None` linear forms, every same-rank/2D↔1D subtraction and division
+order, all six mixed-rank matmul spellings/order combinations, functional
+rank-2 argmax with default `keepdim=False`, and rank-1 argmax with named
+`keepdim=True`. It checks numerical parity, exact dtype/device/rank, no-grad
+output, non-mutation, native route evidence, and runtime incompatible
+matmul/broadcast failures. Direct unary kernels additionally certify NaN/Inf
+domain behavior and signed-zero parity for every exact fallible helper; default
+and explicit-`none` GELU are separately routed and compared.
 
 ### Rejected or not covered (illustrative)
 
@@ -387,39 +494,76 @@ claim/lower layer but is not a separate real-Cargo fixture.
 # Rejected: linear wrong ranks (1d input)
 # F.linear(x_1d, weight_2d, bias_1d)
 
-# Rejected: mean dim / keepdim not the literal contract
-# t.mean(dim=0, keepdim=False)
-# t.mean(dim=1, keepdim=True)
+# Rejected: rank-1 reduction would produce unregistered rank-0
+# vector.mean(dim=0)  # keepdim defaults to False
 
-# Rejected: rank-1 matmul
-# a_1d @ b_2d
+# Rejected: positional keepdim is deliberately not represented
+# t.mean(0, True)
 
-# NotCovered: unrelated torch API
-# torch.softmax(x, dim=-1)
+# Rejected: duplicate positional and keyword dim
+# t.sum(0, dim=1)
 
-# NotCovered: module-style activation (no receiver on the claim site)
-# torch.relu(x)
+# Rejected: rank-1 × rank-1 matmul would produce unregistered rank-0
+# a_1d @ b_1d
+
+# Rejected: exact i64 output type is unavailable
+# matrix.argmax(dim=1, keepdim=True)  # would be int64 rank-2
+# vector.argmax(dim=0)                # would be int64 rank-0
+
+# Rejected: semantic-changing functional option
+# torch.div(a, b, rounding_mode="trunc")
+
+# Rejected: only exact GELU approximation "none" is native
+# torch.nn.functional.gelu(x, approximate="tanh")
+
+# Not offered by the current Core API 1.6 ClaimSite contract: runtime tensor-valued keyword
+# F.linear(x, weight, bias=bias_tensor)
 
 # Not offered by core to plugins: bare BinOp receiver
 # (a @ b + bias).relu()
 
-# Not claimed: in-place / other elementwise / views
-# x.relu_();  x * y;  x.transpose(0, 1)
+# Not claimed: in-place / unsupported elementwise forms / views
+# x.relu_();  x * 2.0;  x.transpose(0, 1)
+
+# Accepted classification head: int64 rank-1 labels
+# logits.softmax(dim=1).argmax(dim=1, keepdim=False)
 ```
 
 ---
 
 ## Install
 
-Install the exact public Alpha in a CPython 3.11 environment. A source checkout
-remains useful for development and for running the focused contract tests.
+The public PyPI command installs the released **0.1.2 / plugin API 1.6
+Alpha**. Its CPU surface is released; the included CUDA lane remains the
+explicitly build-only, non-certifying candidate documented below:
 
 ```bash
-# CPython 3.11 only; requires rextio 0.1.3+ and torch 2.11.0
-python3.11 -m pip install 'rextio-torch==0.1.0'
+python3.11 -m pip install 'rextio-torch==0.1.2'
+```
 
-# Development checkout alternative
-python3.11 -m pip install -e '.[dev]'
+To reproduce the reviewed **0.1.2 / plugin API 1.6** source evidence exactly,
+install the pinned Core commit and this checkout without dependency resolution:
+
+```bash
+python3.11 -m pip install \
+  'git+https://github.com/rextio/rextio.git@7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0' \
+  'torch==2.11.0' 'pytest==9.1.1' 'ruff==0.15.22' 'mypy==2.3.0'
+python3.11 -m pip install --no-deps -e .
+```
+
+The reviewed 0.1.2 evidence pins are Core
+`7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0` and CUDA provider
+`a5fb427e91710b65f54ee5b8e33706c45840cf9c`. The provider is not a mandatory
+package dependency; install it only for the maintainer CUDA orchestration/build
+gate:
+
+```bash
+python3.11 -m pip install --no-deps \
+  'git+https://github.com/rextio/rextio-device-cuda.git@a5fb427e91710b65f54ee5b8e33706c45840cf9c'
+export LIBTORCH_USE_PYTORCH=1
+unset LIBTORCH_BYPASS_VERSION_CHECK
+python3.11 scripts/build_cuda_candidate.py \
+  --output /tmp/rextio-torch-cuda-build-only
 ```
 
 Plugin discovery and `rextio_torch.types` import **without** importing torch.
@@ -483,7 +627,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Package metadata identifies version **0.1.0** as Development Status Alpha.
+- Package metadata identifies released version **0.1.2** as Development Status Alpha.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

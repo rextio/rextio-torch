@@ -3,5 +3,8 @@ include MANIFEST.in
 recursive-include benchmarks *.json *.md *.py
 recursive-include docs *.md
 include scripts/check_sdist.py
+include scripts/build_cuda_candidate.py
+include scripts/certify_cuda_candidate.py
+include scripts/verify_cuda_e2_evidence.py
 include scripts/linux-smoke.sh
 recursive-include tests *.py

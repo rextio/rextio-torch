@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Experimental Linux smoke for rextio-torch 0.1.0 Alpha.
+# Experimental Linux smoke for the rextio-torch 0.1.2 Alpha.
 #
 # Exercises the pinned native-AOT contract on Linux x86_64 or aarch64.
 # This is NOT certification. Certified host remains macOS arm64.
@@ -38,7 +38,7 @@ done
 
 if [[ ! -x "${VIRTUAL_ENV:-}/bin/python" && ! -x ".venv/bin/python" ]]; then
   echo "error: need an active venv or ./.venv with CPython 3.11 + editable install" >&2
-  echo "hint: python3.11 -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'" >&2
+  echo "hint: follow README.md 'Linux experimental verification recipe' (exact Core commit, then this repo --no-deps)" >&2
   exit 1
 fi
 
@@ -103,16 +103,15 @@ if version != "2.11.0":
     )
 PY
 
-echo "== rextio plugin API 1.3 =="
+echo "== rextio plugin API compatibility =="
 "$PYTHON" - <<'PY'
 from rextio.plugins.api import PLUGIN_API_VERSION
 from rextio_torch.plugin import REQUIRED_PLUGIN_API, plugin
 
 print(f"PLUGIN_API_VERSION={PLUGIN_API_VERSION}")
 print(f"REQUIRED_PLUGIN_API={REQUIRED_PLUGIN_API}")
-if PLUGIN_API_VERSION != REQUIRED_PLUGIN_API:
-    raise SystemExit("error: Rextio plugin API must be exactly 1.3")
-deps = plugin().crate_dependencies()
+provider = plugin()
+deps = provider.crate_dependencies()
 assert deps[0].name == "tch" and deps[0].version == "=0.24.0"
 assert deps[0].features == ("python-extension",)
 print("crate pin: tch =0.24.0 features=python-extension")

@@ -201,6 +201,9 @@ grad-requesting inputs still produce no-grad output. CPU, float64, wrong-rank,
 and sparse-layout inputs must fail at the native boundary. The Cargo build is
 bound to the active CPython 3.11 virtual environment through `VIRTUAL_ENV`,
 `PATH`, and `PYO3_PYTHON`, with a subprocess interpreter/torch identity check.
+The intentional invalid sparse fixture enables PyTorch invariant checking
+explicitly, and the profiler accumulates events across cycles explicitly, so
+the manual run does not rely on global warning suppression.
 
 Evidence is canonical, size/depth-bounded JSON with a non-circular payload
 hash. It retains wheel-relative paths, hashes, sizes, and ELF build IDs, but

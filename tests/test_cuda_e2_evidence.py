@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -531,6 +531,101 @@ def test_cuda_graph_replay_is_nested_in_selected_stream_context() -> None:
         for call in ast.walk(block)
         if isinstance(call, ast.Call)
     )
+
+
+def test_sparse_boundary_fixture_enables_invariant_checks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeTensor:
+        def detach(self) -> FakeTensor:
+            return self
+
+        def clone(self) -> FakeTensor:
+            return self
+
+        def requires_grad_(self, _required: bool) -> FakeTensor:
+            return self
+
+        def cpu(self) -> FakeTensor:
+            return self
+
+        def to(self, _dtype: object) -> FakeTensor:
+            return self
+
+    class FakeCuda:
+        @staticmethod
+        def synchronize() -> None:
+            return None
+
+    class FakeTorch:
+        cuda = FakeCuda()
+        float32 = object()
+        float64 = object()
+
+        def __init__(self) -> None:
+            self.sparse_kwargs: list[dict[str, object]] = []
+
+        @staticmethod
+        def randn(*_args: object, **_kwargs: object) -> FakeTensor:
+            return FakeTensor()
+
+        @staticmethod
+        def tensor(*_args: object, **_kwargs: object) -> FakeTensor:
+            return FakeTensor()
+
+        def sparse_coo_tensor(
+            self, *_args: object, **kwargs: object
+        ) -> FakeTensor:
+            self.sparse_kwargs.append(kwargs)
+            return FakeTensor()
+
+    torch = FakeTorch()
+    calls = 0
+
+    def function(*_values: object) -> object:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return SimpleNamespace(requires_grad=False)
+        raise TypeError("expected boundary rejection")
+
+    monkeypatch.setattr(certifier, "_tensor_snapshot", lambda *_args: ())
+    monkeypatch.setattr(certifier, "_assert_inputs_unchanged", lambda *_args: None)
+
+    certifier._requires_grad_and_boundary_checks(torch, function)
+
+    assert torch.sparse_kwargs == [{"check_invariants": True}]
+
+
+def test_profiler_accumulates_events_across_cycles() -> None:
+    root = Path(__file__).resolve().parents[1]
+    tree = ast.parse(
+        (root / "scripts/certify_cuda_candidate.py").read_text(encoding="utf-8")
+    )
+    capture = next(
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name == "_capture_and_profile"
+    )
+    profiler_call = next(
+        call
+        for call in ast.walk(capture)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "profile"
+        and isinstance(call.func.value, ast.Attribute)
+        and call.func.value.attr == "profiler"
+        and isinstance(call.func.value.value, ast.Name)
+        and call.func.value.value.id == "torch"
+    )
+    keyword = next(
+        (item for item in profiler_call.keywords if item.arg == "acc_events"),
+        None,
+    )
+    assert keyword is not None
+    assert isinstance(keyword.value, ast.Constant)
+    assert keyword.value.value is True
 
 
 def test_file_verifier_rejects_noncanonical_json(tmp_path: Path) -> None:

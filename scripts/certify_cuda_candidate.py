@@ -404,6 +404,7 @@ def _requires_grad_and_boundary_checks(torch: ModuleType, function: Any) -> None
                 torch.tensor([[0, 1], [0, 2]], device="cuda:0"),
                 torch.tensor([1.0, 2.0], device="cuda:0"),
                 (4, 3),
+                check_invariants=True,
             ),
             weight,
             bias,
@@ -447,7 +448,7 @@ def _capture_and_profile(torch: ModuleType, function: Any) -> tuple[list[str], l
         raise RuntimeError("CUDA Graph replay differs from eager")
 
     activities = [torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA]
-    with torch.profiler.profile(activities=activities) as profile:
+    with torch.profiler.profile(activities=activities, acc_events=True) as profile:
         function(x, weight, bias)
         torch.cuda.synchronize()
     averages = list(profile.key_averages())

@@ -17,6 +17,9 @@ Changelog and Semantic Versioning conventions.
   with `ldd_match=false` and shared-image identity false; every linked path
   still requires canonical same-file agreement and all other framework images
   remain `ldd`-bound.
+- Make the manual CUDA boundary fixture request sparse invariant checks and
+  make its profiler accumulate events explicitly, removing the two intentional
+  PyTorch warnings without suppressing warnings globally.
 - Add exact `torch.nn.functional.relu(t)` and
   `torch.nn.functional.relu(t, inplace=False)` aliases for the existing
   float32 CPU rank-1/rank-2 ReLU helper. `inplace=True`, dynamic/duplicate

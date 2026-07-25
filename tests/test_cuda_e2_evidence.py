@@ -12,6 +12,7 @@ from types import ModuleType
 
 import pytest
 
+import scripts.certify_cuda_candidate as certifier
 from scripts.verify_cuda_e2_evidence import (
     EvidenceError,
     canonical_json,
@@ -256,6 +257,66 @@ def test_direct_url_identity_never_hashes_url_or_requested_revision() -> None:
 def test_checked_ldd_rejects_relevant_not_found() -> None:
     with pytest.raises(EvidenceError, match="libtorch_cuda.so"):
         _parse_ldd_checked("\tlibtorch_cuda.so => not found\n", "extension")
+
+
+def test_runtime_ldd_prepends_exact_imported_torch_lib(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    torch_package = tmp_path / "venv/site-packages/torch"
+    torch_lib = torch_package / "lib"
+    torch_lib.mkdir(parents=True)
+    torch_init = torch_package / "__init__.py"
+    torch_c = torch_package / "_C.so"
+    extension = tmp_path / "rextio_native_abi.so"
+    shared_image = torch_lib / "libtorch_cpu.so"
+    for path in (torch_init, torch_c, extension, shared_image):
+        path.write_bytes(b"fixture")
+
+    torch = ModuleType("torch")
+    torch.__file__ = str(torch_init)
+    torch._C = ModuleType("torch._C")
+    torch._C.__file__ = str(torch_c)
+
+    guessed_cmake_lib = "/ambient/torch/share/cmake/lib"
+    ambient = f"{guessed_cmake_lib}{os.pathsep}/usr/lib"
+    monkeypatch.setenv("LD_LIBRARY_PATH", ambient)
+    ldd_environments: list[dict[str, str] | None] = []
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: Path | None = None,
+        env: dict[str, str] | None = None,
+        timeout: int = 1800,
+    ) -> str:
+        del cwd, timeout
+        assert command[0] == "ldd"
+        ldd_environments.append(env)
+        return f"\tlibtorch_cpu.so => {shared_image} (0x7f00)\n"
+
+    monkeypatch.setattr(certifier, "_run", fake_run)
+    original_read_text = Path.read_text
+    monkeypatch.setattr(
+        Path,
+        "read_text",
+        lambda path, *args, **kwargs: (
+            "" if path == Path("/proc/self/maps") else original_read_text(path, *args, **kwargs)
+        ),
+    )
+    monkeypatch.setattr(
+        certifier,
+        "parse_proc_maps",
+        lambda _raw, root: {"libtorch_cpu.so": shared_image} if root == torch_lib else {},
+    )
+    monkeypatch.setattr(certifier, "_build_id", lambda _path: None)
+
+    certifier._runtime_images(torch, extension)
+
+    expected = f"{torch_lib}{os.pathsep}{ambient}"
+    assert [env["LD_LIBRARY_PATH"] if env is not None else None for env in ldd_environments] == [
+        expected,
+        expected,
+    ]
 
 
 def test_module_identity_must_resolve_under_exact_checkout(tmp_path: Path) -> None:

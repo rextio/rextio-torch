@@ -501,6 +501,16 @@ def _parse_ldd_checked(raw: str, label: str) -> dict[str, Path]:
     return parse_ldd(raw)
 
 
+def _ldd_environment(torch_lib: Path) -> dict[str, str]:
+    """Prepend the exact active wheel library directory for ldd resolution."""
+    env = dict(os.environ)
+    ambient = env.get("LD_LIBRARY_PATH")
+    env["LD_LIBRARY_PATH"] = (
+        os.pathsep.join((str(torch_lib), ambient)) if ambient else str(torch_lib)
+    )
+    return env
+
+
 def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object]]:
     torch_c = Path(torch._C.__file__).resolve(strict=True)
     torch_file = torch.__file__
@@ -508,9 +518,10 @@ def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object
         raise RuntimeError("torch package has no filesystem identity")
     torch_lib = Path(torch_file).resolve(strict=True).parent / "lib"
     loaded = parse_proc_maps(Path("/proc/self/maps").read_text(encoding="utf-8"), torch_lib)
+    ldd_env = _ldd_environment(torch_lib)
     ldd_by_binary: dict[str, dict[str, Path]] = {}
     for label, binary in (("torch_c", torch_c), ("extension", extension)):
-        raw = _run(["ldd", str(binary)], timeout=60)
+        raw = _run(["ldd", str(binary)], env=ldd_env, timeout=60)
         ldd_by_binary[label] = _parse_ldd_checked(raw, label)
     torch_rows = ldd_by_binary["torch_c"]
     extension_rows = ldd_by_binary["extension"]

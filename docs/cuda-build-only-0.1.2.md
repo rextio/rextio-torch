@@ -141,13 +141,14 @@ python -m pip install --no-deps -e .
 export LIBTORCH_USE_PYTORCH=1
 unset LIBTORCH_BYPASS_VERSION_CHECK
 TORCH_COMMIT="$(git rev-parse HEAD)"
+EVIDENCE_PATH="/tmp/rextio-torch-cuda-e2.json"
 python scripts/certify_cuda_candidate.py \
   --expected-torch-commit "${TORCH_COMMIT}" \
   --sm sm_80 \
   --work-dir /tmp/rextio-torch-cuda-e2-work \
-  --output /tmp/rextio-torch-cuda-e2.json
+  --output "${EVIDENCE_PATH}"
 python scripts/verify_cuda_e2_evidence.py \
-  /tmp/rextio-torch-cuda-e2.json
+  "${EVIDENCE_PATH}"
 ```
 
 The editable local installs are mandatory for this manual command: the harness
@@ -156,9 +157,22 @@ three exact clean checkouts whose commits enter evidence. Installing those
 commits into unrelated `site-packages` paths does not satisfy that identity
 check.
 
+Do not derive an `LD_LIBRARY_PATH` entry from
+`torch.utils.cmake_prefix_path` or append `/lib` to that CMake path. It points
+under `torch/share/cmake`, while the wheel DSOs are under the `lib` directory
+beside the exact imported `torch.__file__`. The harness derives that wheel-local
+directory itself and prepends it to the environment supplied to each `ldd`
+subprocess; an existing ambient `LD_LIBRARY_PATH` is retained only after that
+exact path.
+
 Replace `sm_80` with the exact device SM: `sm_60`, `sm_61`, `sm_70`, `sm_72`,
 `sm_75`, `sm_80`, `sm_86`, `sm_87`, `sm_89`, or `sm_90`. Use a new,
 non-existing work directory for every run.
+
+WSL2 remains part of the Linux x86_64 experimental/manual-evidence path only.
+A successful WSL2 run is useful execution evidence, but it does not establish
+a Windows or CUDA support claim and does not change `support_claim=false` or
+`certification_ready=false`.
 
 The harness builds the exact provider probe, routes its absolute path through
 real Core preflight, generates/builds the four-op extension, imports PyTorch

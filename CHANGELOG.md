@@ -5,6 +5,12 @@ Changelog and Semantic Versioning conventions.
 
 ## [Unreleased]
 
+- Fix the opt-in CUDA evidence harness so its `ldd` subprocesses resolve
+  `libtorch*`/`libc10*` through the exact active PyTorch wheel's sibling
+  `torch/lib` directory instead of relying on an ambient or guessed
+  `torch/share/cmake/lib` path. This keeps Linux/WSL2 execution manual and
+  experimental and does not change `support_claim=false` or
+  `certification_ready=false`.
 - Add exact `torch.nn.functional.relu(t)` and
   `torch.nn.functional.relu(t, inplace=False)` aliases for the existing
   float32 CPU rank-1/rank-2 ReLU helper. `inplace=True`, dynamic/duplicate

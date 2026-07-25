@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Experimental Linux smoke for the unreleased rextio-torch 0.1.2 candidate.
+# Experimental Linux smoke for the rextio-torch 0.1.2 Alpha.
 #
 # Exercises the pinned native-AOT contract on Linux x86_64 or aarch64.
 # This is NOT certification. Certified host remains macOS arm64.

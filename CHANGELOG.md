@@ -3,7 +3,11 @@
 All notable changes to `rextio-torch` are documented here following Keep a
 Changelog and Semantic Versioning conventions.
 
-## [Unreleased]
+## [0.1.2] - 2026-07-26
+
+Public native-AOT Alpha release on PyPI. The CPU surface below is released;
+the CUDA E2 lane remains a build-only, non-certifying engineering candidate
+with `support_claim=false` and `certification_ready=false`.
 
 - Fix the opt-in CUDA evidence harness so its `ldd` subprocesses resolve
   `libtorch*`/`libc10*` through the exact active PyTorch wheel's sibling
@@ -106,7 +110,7 @@ Changelog and Semantic Versioning conventions.
 - Lower multiplication through a fallible `tch::Tensor::f_mul` helper under
   `no_grad`, with claim/lower metadata revalidation and real-Cargo coverage.
 
-## [0.1.2] - Unreleased
+### Earlier 0.1.2 integration baseline
 
 - Add the inference-only rank-2 classification-head method chain:
   `.softmax(dim=1).argmax(dim=1, keepdim=False)`. The emitted tch 0.24.0
@@ -121,9 +125,9 @@ Changelog and Semantic Versioning conventions.
 - Extend native Cargo certification with numerical, dtype, shape, no-grad,
   non-mutation, and route evidence for the classification head.
 - Update the normal CI triggers to include the active `0.1.2` integration
-  branch. The package remains unreleased: no tag or publication is implied.
+  branch. At that integration stage, no tag or publication was implied.
 
-## [0.1.1] - Unreleased integration baseline
+## [0.1.1] - Integration baseline (not released)
 
 - Compatibility hotfix for Core 0.1.5 / plugin API 1.4 hosts: provider methods
   no longer require the host's `PLUGIN_API_VERSION` to equal the provider's

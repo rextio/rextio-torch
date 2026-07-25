@@ -6,9 +6,9 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.2** (unreleased; from `rextio_torch.__about__`) |
-| Release status | **Unreleased 0.1.2 CPU reinforcement + build-only CUDA E2 candidate**; latest release is **0.1.0 public Alpha** (2026-07-18) |
-| Distribution | Latest published release: [`rextio-torch==0.1.0`](https://pypi.org/project/rextio-torch/0.1.0/) on PyPI |
+| Package version | **0.1.2** (from `rextio_torch.__about__`) |
+| Release status | **Released 0.1.2 public Alpha** on **2026-07-26**; CPU reinforcement is released while CUDA E2 remains build-only and non-certifying |
+| Distribution | [`rextio-torch==0.1.2`](https://pypi.org/project/rextio-torch/0.1.2/) on PyPI |
 | Plugin API | **1.6** (`REQUIRED_PLUGIN_API`) |
 | Product mode | Proven CPU inference plus a **Linux x86_64 build-only CUDA candidate**; no CUDA support claim |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -17,7 +17,7 @@ PyTorch inference code to Rust expressions backed by
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README documents the **unreleased 0.1.2 compatibility,
+This README documents the **0.1.2 compatibility,
 classification-head, bounded CPU-surface update, build-only CUDA E2 candidate,
 and opt-in real-NVIDIA execution-evidence candidate** to the
 0.1.0 public native-AOT Alpha support contract. Every
@@ -37,11 +37,11 @@ a release gate for this Alpha cut.
 | Component | Exact pin | Why it must match |
 | --- | --- | --- |
 | CPython | **3.11 only** (`requires-python = ">=3.11,<3.12"`) | PyO3 extension ABI and the dedicated certification venv; other CPython minor versions are not in the package contract. |
-| Rextio package | **`>=0.1.6,<0.2`** | Required for structured device metadata and exact lowering authorization. Until Core 0.1.6 is released, CI pins its reviewed source commit and installs this candidate without dependency resolution. |
+| Rextio package | **`>=0.1.6,<0.2`** | Required for structured device metadata and exact lowering authorization. |
 | Plugin API | **1.6** | Adds device-value metadata and lowering authorization to the existing claim/lower contracts. |
 | PyTorch | **`torch==2.11.0`** | Same major/minor/patch as the libtorch that published `tch` 0.24.0 expects. |
 | Rust crate | **`tch =0.24.0`** with feature **`python-extension`** | Emitted by `crate_dependencies()`; `python-extension` supplies `pyobject_unpack` / `pyobject_wrap` for zero-storage-copy boundaries. |
-| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from the Rextio 0.1.6 candidate's generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
+| Generated Rust crate | Edition **2021**, `rust-version = "1.83"`, PyO3 **0.29** | Inherited from the Rextio 0.1.6 generated Cargo manifest. This is an MSRV/API contract, not an exact rustc patch pin. |
 | Certified Rust toolchain | `rustc 1.93.1`, `cargo 1.93.1` on `aarch64-apple-darwin` | The real-Cargo Alpha evidence was reproduced with this local toolchain. This repo has no `rust-toolchain.toml`. |
 | libtorch linkage | **`LIBTORCH_USE_PYTORCH=1`** | Builds against the active Python torch install. |
 | Version-check bypass | **Forbidden** | `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path (stripped in e2e env setup; never set). |
@@ -111,7 +111,7 @@ Use this only to exercise the pinned environment on Linux. It does **not**
 promote Linux to certified status.
 
 ```bash
-# CPython 3.11 venv with the unreleased source candidate and exact Core evidence
+# CPython 3.11 venv with the released source and exact Core evidence
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install 'pip==26.1'
@@ -533,17 +533,16 @@ and explicit-`none` GELU are separately routed and compared.
 
 ## Install
 
-The public PyPI command installs the released **0.1.0 / plugin API 1.3 CPU
-Alpha**. It does not install this branch's CUDA candidate:
+The public PyPI command installs the released **0.1.2 / plugin API 1.6
+Alpha**. Its CPU surface is released; the included CUDA lane remains the
+explicitly build-only, non-certifying candidate documented below:
 
 ```bash
-python3.11 -m pip install 'rextio-torch==0.1.0'
+python3.11 -m pip install 'rextio-torch==0.1.2'
 ```
 
-The unreleased **0.1.2 / plugin API 1.6** source candidate requires the exact
-reviewed Core source until Core 0.1.6 is released. Its metadata intentionally
-keeps the future `rextio>=0.1.6` floor, so install it without dependency
-resolution after installing the pinned Core commit:
+To reproduce the reviewed **0.1.2 / plugin API 1.6** source evidence exactly,
+install the pinned Core commit and this checkout without dependency resolution:
 
 ```bash
 python3.11 -m pip install \
@@ -628,7 +627,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Unreleased package metadata identifies version **0.1.2** as Development Status Alpha.
+- Package metadata identifies released version **0.1.2** as Development Status Alpha.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

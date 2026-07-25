@@ -1,7 +1,7 @@
 # rextio-torch 0.1.0 implementation plan
 
 > Historical 0.1.0 plan: its CPU-only and plugin-API-1.3 statements describe
-> the released baseline, not the current unreleased branch. The bounded 0.1.2
+> the released baseline, not the current 0.1.2 release. The bounded 0.1.2
 > CUDA build-only candidate is defined by
 > [cuda-build-only-0.1.2.md](cuda-build-only-0.1.2.md) and remains
 > `support_claim=false`.
@@ -120,10 +120,10 @@ helpers:
 | `.mean` / `.sum` | `dim=1`, `keepdim=False` literals only; rank-2 → rank-1 |
 | Functional linear | Unchanged Phase A three-operand form |
 
-### Unreleased 0.1.2 bounded CPU follow-up
+### Released 0.1.2 bounded CPU follow-up
 
-The next-version integration branch retains every 0.1.0 pin and boundary while
-adding a fail-closed, real-Cargo-tested follow-up:
+The 0.1.2 release retains every 0.1.0 pin and boundary while adding a
+fail-closed, real-Cargo-tested follow-up:
 
 | Op | Added bounded contract |
 | --- | --- |

@@ -1,8 +1,9 @@
-# CUDA E2 build-only candidate (unreleased 0.1.2)
+# CUDA E2 build-only candidate in 0.1.2
 
-This document defines the entire CUDA scope in this branch. It is an
-engineering candidate, not a CUDA support claim. All provider reports remain
-`support_claim=false`.
+This document defines the entire CUDA scope shipped with 0.1.2. It remains an
+engineering candidate, not a CUDA support claim or certification. All
+provider reports remain `support_claim=false` and
+`certification_ready=false`.
 
 ## Frozen environment
 

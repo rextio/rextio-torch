@@ -63,6 +63,7 @@ PROVIDER_COMMIT = "a5fb427e91710b65f54ee5b8e33706c45840cf9c"
 TORCH_BASE = "7d6fb1b606bfab6530a7ff96317081b2fd1c1b22"
 RTOL = 1e-5
 ATOL = 1e-6
+TORCH_GLOBAL_DEPS_BASENAME = _evidence.TORCH_GLOBAL_DEPS_BASENAME
 
 
 class _PluginEntryPoint:
@@ -403,6 +404,7 @@ def _requires_grad_and_boundary_checks(torch: ModuleType, function: Any) -> None
                 torch.tensor([[0, 1], [0, 2]], device="cuda:0"),
                 torch.tensor([1.0, 2.0], device="cuda:0"),
                 (4, 3),
+                check_invariants=True,
             ),
             weight,
             bias,
@@ -446,7 +448,7 @@ def _capture_and_profile(torch: ModuleType, function: Any) -> tuple[list[str], l
         raise RuntimeError("CUDA Graph replay differs from eager")
 
     activities = [torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA]
-    with torch.profiler.profile(activities=activities) as profile:
+    with torch.profiler.profile(activities=activities, acc_events=True) as profile:
         function(x, weight, bias)
         torch.cuda.synchronize()
     averages = list(profile.key_averages())
@@ -501,6 +503,16 @@ def _parse_ldd_checked(raw: str, label: str) -> dict[str, Path]:
     return parse_ldd(raw)
 
 
+def _ldd_environment(torch_lib: Path) -> dict[str, str]:
+    """Prepend the exact active wheel library directory for ldd resolution."""
+    env = dict(os.environ)
+    ambient = env.get("LD_LIBRARY_PATH")
+    env["LD_LIBRARY_PATH"] = (
+        os.pathsep.join((str(torch_lib), ambient)) if ambient else str(torch_lib)
+    )
+    return env
+
+
 def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object]]:
     torch_c = Path(torch._C.__file__).resolve(strict=True)
     torch_file = torch.__file__
@@ -508,9 +520,10 @@ def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object
         raise RuntimeError("torch package has no filesystem identity")
     torch_lib = Path(torch_file).resolve(strict=True).parent / "lib"
     loaded = parse_proc_maps(Path("/proc/self/maps").read_text(encoding="utf-8"), torch_lib)
+    ldd_env = _ldd_environment(torch_lib)
     ldd_by_binary: dict[str, dict[str, Path]] = {}
     for label, binary in (("torch_c", torch_c), ("extension", extension)):
-        raw = _run(["ldd", str(binary)], timeout=60)
+        raw = _run(["ldd", str(binary)], env=ldd_env, timeout=60)
         ldd_by_binary[label] = _parse_ldd_checked(raw, label)
     torch_rows = ldd_by_binary["torch_c"]
     extension_rows = ldd_by_binary["extension"]
@@ -528,12 +541,18 @@ def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object
             raise EvidenceError(f"ldd disagrees on framework image identity: {basename}")
     result: list[dict[str, object]] = []
     for basename, path in loaded.items():
+        relative = redact_path(path, torch_lib)
         linked_rows = [
             rows[basename]
             for rows in (torch_rows, extension_rows)
             if basename in rows
         ]
-        if not linked_rows or any(
+        unlinked_bootstrap = (
+            not linked_rows
+            and basename == TORCH_GLOBAL_DEPS_BASENAME
+            and relative == TORCH_GLOBAL_DEPS_BASENAME
+        )
+        if (not linked_rows and not unlinked_bootstrap) or any(
             linked.resolve(strict=True) != path or not os.path.samefile(linked, path)
             for linked in linked_rows
         ):
@@ -541,11 +560,11 @@ def _runtime_images(torch: ModuleType, extension: Path) -> list[dict[str, object
         result.append(
             {
                 "basename": basename,
-                "wheel_relative_path": redact_path(path, torch_lib),
+                "wheel_relative_path": relative,
                 "sha256": sha256_file(path),
                 "size": path.stat().st_size,
                 "build_id": _build_id(path),
-                "ldd_match": True,
+                "ldd_match": bool(linked_rows),
                 "shared_by_torch_c_and_extension": basename in shared,
             }
         )

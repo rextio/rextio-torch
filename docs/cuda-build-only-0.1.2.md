@@ -141,13 +141,14 @@ python -m pip install --no-deps -e .
 export LIBTORCH_USE_PYTORCH=1
 unset LIBTORCH_BYPASS_VERSION_CHECK
 TORCH_COMMIT="$(git rev-parse HEAD)"
+EVIDENCE_PATH="/tmp/rextio-torch-cuda-e2.json"
 python scripts/certify_cuda_candidate.py \
   --expected-torch-commit "${TORCH_COMMIT}" \
   --sm sm_80 \
   --work-dir /tmp/rextio-torch-cuda-e2-work \
-  --output /tmp/rextio-torch-cuda-e2.json
+  --output "${EVIDENCE_PATH}"
 python scripts/verify_cuda_e2_evidence.py \
-  /tmp/rextio-torch-cuda-e2.json
+  "${EVIDENCE_PATH}"
 ```
 
 The editable local installs are mandatory for this manual command: the harness
@@ -156,9 +157,22 @@ three exact clean checkouts whose commits enter evidence. Installing those
 commits into unrelated `site-packages` paths does not satisfy that identity
 check.
 
+Do not derive an `LD_LIBRARY_PATH` entry from
+`torch.utils.cmake_prefix_path` or append `/lib` to that CMake path. It points
+under `torch/share/cmake`, while the wheel DSOs are under the `lib` directory
+beside the exact imported `torch.__file__`. The harness derives that wheel-local
+directory itself and prepends it to the environment supplied to each `ldd`
+subprocess; an existing ambient `LD_LIBRARY_PATH` is retained only after that
+exact path.
+
 Replace `sm_80` with the exact device SM: `sm_60`, `sm_61`, `sm_70`, `sm_72`,
 `sm_75`, `sm_80`, `sm_86`, `sm_87`, `sm_89`, or `sm_90`. Use a new,
 non-existing work directory for every run.
+
+WSL2 remains part of the Linux x86_64 experimental/manual-evidence path only.
+A successful WSL2 run is useful execution evidence, but it does not establish
+a Windows or CUDA support claim and does not change `support_claim=false` or
+`certification_ready=false`.
 
 The harness builds the exact provider probe, routes its absolute path through
 real Core preflight, generates/builds the four-op extension, imports PyTorch
@@ -169,6 +183,17 @@ and CUDA activity for expected matmul/add/ReLU/mean ATen operations.
 `/proc/self/maps` and `ldd` must agree on canonical PyTorch-wheel
 `libtorch*`/`libc10*` images.
 
+PyTorch bootstraps the exact wheel-local `libtorch_global_deps.so` with
+`ctypes.CDLL(..., RTLD_GLOBAL)`, so that image can appear in
+`/proc/self/maps` without being a DT_NEEDED dependency of either `torch._C` or
+the generated extension. Evidence retains its exact wheel-relative identity,
+hash, size, and ELF build ID with `ldd_match=false` and
+`shared_by_torch_c_and_extension=false` only for that root-level basename. If
+either binary does report it through `ldd`, the resolved path must still
+same-file match the mapped wheel image. Every other mapped `libtorch*` or
+`libc10*` image remains required to match `ldd`, and at least one ordinary
+framework image must remain shared by `torch._C` and the extension.
+
 The replay check copies new values into the captured static inputs on the
 selected non-default stream before replay, so a same-input cached result cannot
 pass. Successful inputs retain value, stride, storage offset, and data pointer;
@@ -176,6 +201,9 @@ grad-requesting inputs still produce no-grad output. CPU, float64, wrong-rank,
 and sparse-layout inputs must fail at the native boundary. The Cargo build is
 bound to the active CPython 3.11 virtual environment through `VIRTUAL_ENV`,
 `PATH`, and `PYO3_PYTHON`, with a subprocess interpreter/torch identity check.
+The intentional invalid sparse fixture enables PyTorch invariant checking
+explicitly, and the profiler accumulates events across cycles explicitly, so
+the manual run does not rely on global warning suppression.
 
 Evidence is canonical, size/depth-bounded JSON with a non-circular payload
 hash. It retains wheel-relative paths, hashes, sizes, and ELF build IDs, but

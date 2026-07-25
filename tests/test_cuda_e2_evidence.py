@@ -145,6 +145,68 @@ def test_canonical_envelope_round_trip(tmp_path: Path) -> None:
     assert len(verify_file(path)) == 64
 
 
+def test_verifier_accepts_exact_unlinked_torch_global_deps_bootstrap() -> None:
+    payload = _payload()
+    payload["runtime_images"].append(  # type: ignore[union-attr]
+        {
+            "basename": "libtorch_global_deps.so",
+            "wheel_relative_path": "libtorch_global_deps.so",
+            "sha256": "8" * 64,
+            "size": 84,
+            "build_id": "dcba",
+            "ldd_match": False,
+            "shared_by_torch_c_and_extension": False,
+        }
+    )
+    verify_document(make_envelope(payload))
+
+
+@pytest.mark.parametrize("basename", ("libtorch_cpu.so", "libc10.so"))
+def test_verifier_rejects_unlinked_nonbootstrap_runtime_image(basename: str) -> None:
+    payload = _payload()
+    images = payload["runtime_images"]
+    assert isinstance(images, list)
+    if basename == "libtorch_cpu.so":
+        images[0]["basename"] = "libtorch_cuda.so"
+        images[0]["wheel_relative_path"] = "libtorch_cuda.so"
+    images.append(
+        {
+            "basename": basename,
+            "wheel_relative_path": basename,
+            "sha256": "8" * 64,
+            "size": 84,
+            "build_id": "dcba",
+            "ldd_match": False,
+            "shared_by_torch_c_and_extension": False,
+        }
+    )
+    with pytest.raises(EvidenceError, match="not bound through ldd"):
+        verify_document(make_envelope(payload))
+
+
+@pytest.mark.parametrize(
+    ("relative_path", "shared"),
+    (("nested/libtorch_global_deps.so", False), ("libtorch_global_deps.so", True)),
+)
+def test_verifier_rejects_invalid_unlinked_torch_global_deps_identity(
+    relative_path: str, shared: bool
+) -> None:
+    payload = _payload()
+    payload["runtime_images"].append(  # type: ignore[union-attr]
+        {
+            "basename": "libtorch_global_deps.so",
+            "wheel_relative_path": relative_path,
+            "sha256": "8" * 64,
+            "size": 84,
+            "build_id": "dcba",
+            "ldd_match": False,
+            "shared_by_torch_c_and_extension": shared,
+        }
+    )
+    with pytest.raises(EvidenceError, match="not bound through ldd"):
+        verify_document(make_envelope(payload))
+
+
 @pytest.mark.parametrize(
     ("path", "value"),
     (
@@ -316,6 +378,78 @@ def test_runtime_ldd_prepends_exact_imported_torch_lib(
     assert [env["LD_LIBRARY_PATH"] if env is not None else None for env in ldd_environments] == [
         expected,
         expected,
+    ]
+
+
+def test_runtime_images_retains_unlinked_torch_global_deps_bootstrap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    torch_package = tmp_path / "venv/site-packages/torch"
+    torch_lib = torch_package / "lib"
+    torch_lib.mkdir(parents=True)
+    torch_init = torch_package / "__init__.py"
+    torch_c = torch_package / "_C.so"
+    extension = tmp_path / "rextio_native_abi.so"
+    shared_image = torch_lib / "libtorch_cpu.so"
+    bootstrap_image = torch_lib / "libtorch_global_deps.so"
+    for path in (torch_init, torch_c, extension, shared_image, bootstrap_image):
+        path.write_bytes(b"fixture")
+
+    torch = ModuleType("torch")
+    torch.__file__ = str(torch_init)
+    torch._C = ModuleType("torch._C")
+    torch._C.__file__ = str(torch_c)
+
+    monkeypatch.setattr(
+        certifier,
+        "_run",
+        lambda command, **_kwargs: (
+            f"\tlibtorch_cpu.so => {shared_image} (0x7f00)\n"
+            if command[0] == "ldd"
+            else ""
+        ),
+    )
+    original_read_text = Path.read_text
+    monkeypatch.setattr(
+        Path,
+        "read_text",
+        lambda path, *args, **kwargs: (
+            "" if path == Path("/proc/self/maps") else original_read_text(path, *args, **kwargs)
+        ),
+    )
+    monkeypatch.setattr(
+        certifier,
+        "parse_proc_maps",
+        lambda _raw, root: {
+            "libtorch_cpu.so": shared_image,
+            "libtorch_global_deps.so": bootstrap_image,
+        }
+        if root == torch_lib
+        else {},
+    )
+    monkeypatch.setattr(certifier, "_build_id", lambda path: "dcba" if path == bootstrap_image else None)
+
+    rows = certifier._runtime_images(torch, extension)
+
+    assert rows == [
+        {
+            "basename": "libtorch_cpu.so",
+            "wheel_relative_path": "libtorch_cpu.so",
+            "sha256": certifier.sha256_file(shared_image),
+            "size": shared_image.stat().st_size,
+            "build_id": None,
+            "ldd_match": True,
+            "shared_by_torch_c_and_extension": True,
+        },
+        {
+            "basename": "libtorch_global_deps.so",
+            "wheel_relative_path": "libtorch_global_deps.so",
+            "sha256": certifier.sha256_file(bootstrap_image),
+            "size": bootstrap_image.stat().st_size,
+            "build_id": "dcba",
+            "ldd_match": False,
+            "shared_by_torch_c_and_extension": False,
+        },
     ]
 
 

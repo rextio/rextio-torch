@@ -13,6 +13,7 @@ from typing import Any
 SCHEMA = "rextio-torch.cuda-e2.real-nvidia.v1"
 MAX_EVIDENCE_BYTES = 1_048_576
 MAX_DEPTH = 12
+TORCH_GLOBAL_DEPS_BASENAME = "libtorch_global_deps.so"
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 ALLOWED_SMS = frozenset(
@@ -454,10 +455,16 @@ def verify_document(document: object) -> None:
             or re.fullmatch(r"[0-9a-f]+", row["build_id"]) is None
         ):
             raise EvidenceError("invalid ELF build id")
-        if row["ldd_match"] is not True:
-            raise EvidenceError("runtime image was not bound through ldd")
+        if type(row["ldd_match"]) is not bool:
+            raise EvidenceError("runtime ldd identity is not boolean")
         if type(row["shared_by_torch_c_and_extension"]) is not bool:
             raise EvidenceError("runtime shared-image identity is not boolean")
+        if row["ldd_match"] is False and (
+            basename != TORCH_GLOBAL_DEPS_BASENAME
+            or relative != TORCH_GLOBAL_DEPS_BASENAME
+            or row["shared_by_torch_c_and_extension"] is not False
+        ):
+            raise EvidenceError("runtime image was not bound through ldd")
     if not any(row["basename"].startswith("libtorch") for row in images):
         raise EvidenceError("no shared libtorch framework image was proven")
     if not any(row["shared_by_torch_c_and_extension"] is True for row in images):

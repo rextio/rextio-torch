@@ -11,6 +11,12 @@ Changelog and Semantic Versioning conventions.
   `torch/share/cmake/lib` path. This keeps Linux/WSL2 execution manual and
   experimental and does not change `support_claim=false` or
   `certification_ready=false`.
+- Represent PyTorch's exact wheel-local `libtorch_global_deps.so` RTLD_GLOBAL
+  bootstrap image without weakening ordinary one-libtorch-image evidence.
+  Only that root-level mapped image may be retained without a DT_NEEDED row,
+  with `ldd_match=false` and shared-image identity false; every linked path
+  still requires canonical same-file agreement and all other framework images
+  remain `ldd`-bound.
 - Add exact `torch.nn.functional.relu(t)` and
   `torch.nn.functional.relu(t, inplace=False)` aliases for the existing
   float32 CPU rank-1/rank-2 ReLU helper. `inplace=True`, dynamic/duplicate

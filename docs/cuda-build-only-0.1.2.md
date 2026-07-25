@@ -183,6 +183,17 @@ and CUDA activity for expected matmul/add/ReLU/mean ATen operations.
 `/proc/self/maps` and `ldd` must agree on canonical PyTorch-wheel
 `libtorch*`/`libc10*` images.
 
+PyTorch bootstraps the exact wheel-local `libtorch_global_deps.so` with
+`ctypes.CDLL(..., RTLD_GLOBAL)`, so that image can appear in
+`/proc/self/maps` without being a DT_NEEDED dependency of either `torch._C` or
+the generated extension. Evidence retains its exact wheel-relative identity,
+hash, size, and ELF build ID with `ldd_match=false` and
+`shared_by_torch_c_and_extension=false` only for that root-level basename. If
+either binary does report it through `ldd`, the resolved path must still
+same-file match the mapped wheel image. Every other mapped `libtorch*` or
+`libc10*` image remains required to match `ldd`, and at least one ordinary
+framework image must remain shared by `torch._C` and the extension.
+
 The replay check copies new values into the captured static inputs on the
 selected non-default stream before replay, so a same-input cached result cannot
 pass. Successful inputs retain value, stride, storage offset, and data pointer;

@@ -1,7 +1,7 @@
 # rextio-torch 0.1.0 implementation plan
 
 > Historical 0.1.0 plan: its CPU-only and plugin-API-1.3 statements describe
-> the released baseline, not the current 0.1.2 release. The bounded 0.1.2
+> the released baseline, not the current 0.1.3 candidate. The bounded 0.1.2
 > CUDA build-only candidate is defined by
 > [cuda-build-only-0.1.2.md](cuda-build-only-0.1.2.md) and remains
 > `support_claim=false`.
@@ -228,10 +228,10 @@ raise through the fallible tch path.
 - Core limitation: method claims require named or call-chain receivers, not
   bare BinOp receivers.
 
-## Historical 0.1.0 Linux experimental smoke (not current 0.1.2 setup)
+## Historical 0.1.0 Linux experimental smoke (not current 0.1.3 candidate setup)
 
 The commands below describe the released 0.1.0/API-1.3 baseline only.
-Maintainers testing the current 0.1.2 candidate must instead follow the exact
+Maintainers testing the current 0.1.3 candidate must instead follow the exact
 Core/provider commit instructions in the README Install section and
 `cuda-build-only-0.1.2.md`.
 

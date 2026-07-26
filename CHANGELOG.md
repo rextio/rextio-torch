@@ -3,6 +3,44 @@
 All notable changes to `rextio-torch` are documented here following Keep a
 Changelog and Semantic Versioning conventions.
 
+## [0.1.3] - Unreleased candidate
+
+Integration baseline for the invocation-scope / small-batch scoring candidate.
+No tag or PyPI publication is implied.
+
+- Inspect Core plugin API **1.6** read-only and record that only expression
+  `LoweredExpr` (`rust` / `uses` / `helpers`) and module helpers exist: there
+  is **no** deterministic per-generated-function or per-invocation Rust body
+  prelude/epilogue hook. See `docs/invocation-scope-proposal-0.1.3.md` and
+  `rextio_torch.invocation_scope`.
+- Keep the production **per-operation** `tch::no_grad_guard()` baseline in
+  every fallible helper. Do not use globals, thread locals, tensor-lifetime
+  tricks, or other shared mutable state that could leak grad mode across
+  Python callbacks, exceptions, reentrancy, or nested generated calls.
+  `INVOCATION_SCOPE_OPTIMIZATION_ACTIVE` remains **false**; the candidate does
+  not pretend a single RAII scope per native invocation is active.
+- Publish an explicit, tested Core capability proposal for one stack-scoped
+  RAII no-grad prelude per generated native invocation (target framing API
+  1.7+), without modifying Core in this repository.
+- Add a self-contained **diagnostic** small-batch scoring pipeline (batch
+  sizes 1 / 16 / 128, feature width 32, class count 8, control-flow
+  **`rounds=4`** via `for layer in range(rounds)`): rank-2/rank-1 normalize by
+  sub/div, functional linear, scalar `range` + integer `if` through ReLU/tanh,
+  classification linear, softmax, argmax. Validate full logits and
+  probabilities with numeric tolerance before exact labels. Primary diagnostic
+  lane is **native Rextio** against an already-built project (retained
+  wrappers, route/provenance checks, no rebuild inside timed samples); ordinary
+  CLI marks native unavailable unless `--built-project` is supplied. Eager and
+  `torch.inference_mode` remain context lanes. Timing sample count is separate
+  from control-flow rounds and must be positive. All timings are labeled
+  diagnostic; no official performance cohort and no speedup claim. Phase A/B
+  historical results are not modified or deleted.
+- Add focused unit/analyzer/harness tests plus an opt-in real-Cargo vertical
+  slice for the scoring pipeline (`tests/e2e/test_small_batch_scoring_real_cargo.py`).
+- Update package version to **0.1.3** candidate metadata, README/benchmark
+  docs, Linux smoke banner, and CI push/PR triggers to include the `0.1.3`
+  integration branch.
+
 ## [0.1.2] - 2026-07-26
 
 Public native-AOT Alpha release on PyPI. The CPU surface below is released;

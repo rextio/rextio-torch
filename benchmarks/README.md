@@ -137,3 +137,43 @@ they are not an instruction to rerun benchmarks during the Alpha release:
 # Full preregistered matrix; owns only results_phase_b/
 .venv/bin/python -m benchmarks.bench_phase_b
 ```
+
+## Diagnostic small-batch scoring (0.1.3 candidate)
+
+Self-contained product-shaped pipeline for local diagnosis only. **Not** an
+official performance cohort. **Does not** write under `results/` or
+`results_phase_b/`. **Makes no speedup claim.**
+
+Protocol:
+[`docs/preregister-small-batch-scoring-diagnostic-0.1.3.md`](../docs/preregister-small-batch-scoring-diagnostic-0.1.3.md).
+
+Predeclared cells: batch **1 / 16 / 128**, features **32**, classes **8**,
+control-flow **`rounds=4`** (`for layer in range(rounds)`). Timing sample
+count is separate (`--timing-samples`, default 4) and must be positive.
+Correctness order: full logits → full probabilities (numeric tolerance) →
+exact labels.
+
+Lanes:
+
+- **`native_rextio`** (primary diagnostic) only when an already-built project
+  is supplied; wrappers are retained once; no rebuild inside timed samples;
+  ordinary CLI marks native unavailable unless `--built-project` is set.
+- **eager** and **`torch.inference_mode`** are context lanes.
+
+PyTorch default grad mode remains enabled; diagnostic inputs use
+`requires_grad=False`. Native helpers still use per-operation
+`no_grad_guard`; invocation-scope optimization is inactive pending a Core body
+hook (`docs/invocation-scope-proposal-0.1.3.md`).
+
+```bash
+# Contracts only
+.venv/bin/python -m pytest tests/test_small_batch_scoring_harness.py \
+  tests/test_analyzer_small_batch_scoring.py -q
+
+# Context-only diagnostic (native explicitly unavailable)
+.venv/bin/python -m benchmarks.bench_small_batch_scoring --smoke
+
+# Native diagnostic against a prebuilt project root
+.venv/bin/python -m benchmarks.bench_small_batch_scoring \
+  --built-project /path/to/built/project --smoke
+```

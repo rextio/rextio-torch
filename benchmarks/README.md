@@ -161,9 +161,10 @@ Lanes:
 - **eager** and **`torch.inference_mode`** are context lanes.
 
 PyTorch default grad mode remains enabled; diagnostic inputs use
-`requires_grad=False`. Native helpers still use per-operation
-`no_grad_guard`; invocation-scope optimization is inactive pending a Core body
-hook (`docs/invocation-scope-proposal-0.1.3.md`).
+`requires_grad=False`. Eligible API 1.7 native functions use one
+function-scope `no_grad_guard`; RXT075/legacy/type-only paths retain local
+per-operation guards
+(`docs/invocation-scope-proposal-0.1.3.md`).
 
 ```bash
 # Contracts only

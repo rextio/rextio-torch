@@ -165,7 +165,7 @@ def test_refuse_historical_phase_outputs(tmp_path: Path) -> None:
         bench.write_diagnostic_output({"ok": True}, bench.RESULTS_PHASE_B / "report.md")
 
 
-def test_build_report_is_diagnostic_only_and_scope_inactive() -> None:
+def test_build_report_is_diagnostic_only_and_scope_active() -> None:
     report = bench.build_report([])
     assert report["timing_class"] == "diagnostic"
     assert report["official_cohort"] is False
@@ -176,9 +176,9 @@ def test_build_report_is_diagnostic_only_and_scope_inactive() -> None:
     assert report["native_lane"]["available"] is False
     assert report["native_lane"]["measured"] is False
     assert "built-project" in report["native_lane"]["reason"]
-    assert report["core_function_scope"]["invocation_scope_optimization_active"] is False
-    assert report["core_function_scope"]["has_function_body_scope_hook"] is False
-    assert INVOCATION_SCOPE_OPTIMIZATION_ACTIVE is False
+    assert report["core_function_scope"]["invocation_scope_optimization_active"] is True
+    assert report["core_function_scope"]["has_function_body_scope_hook"] is True
+    assert INVOCATION_SCOPE_OPTIMIZATION_ACTIVE is True
     assert "per-operation" in report["production_no_grad_baseline"] or (
         "each rextio-torch tch helper" in report["production_no_grad_baseline"]
     )
@@ -528,7 +528,7 @@ def test_eager_pipeline_and_diagnostic_case_run() -> None:
     assert cell["timings"]["eager"]["timing_class"] == "diagnostic"
     assert cell["timings"]["eager"]["speedup_claim"] is None
     assert cell["timings"]["eager"]["timing_samples"] == 1
-    assert cell["invocation_scope_optimization_active"] is False
+    assert cell["invocation_scope_optimization_active"] is True
     assert cell["timings"]["native_rextio"]["measured"] is False
     if cell["timings"]["torch_inference_mode"].get("measured"):
         assert cell["timings"]["torch_inference_mode"]["role"] == "context"

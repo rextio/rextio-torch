@@ -45,7 +45,7 @@ def test_entry_point_factory_returns_plugin() -> None:
     obj = plugin()
     assert isinstance(obj, RextioTorchPlugin)
     assert obj.plugin_id == PLUGIN_ID
-    assert obj.api_version == REQUIRED_PLUGIN_API == "1.6"
+    assert obj.api_version == REQUIRED_PLUGIN_API == "1.7"
     assert __version__ == "0.1.3"
 
 
@@ -55,7 +55,8 @@ def test_core_loader_accepts_the_plugin() -> None:
     assert active.id == PLUGIN_ID
     assert active.rules_provided is True
     assert active.lowering_provided is True
-    assert active.api_version == "1.6"
+    assert active.api_version == "1.7"
+    assert active.function_scope_guard_declared is True
     assert active.packages == ("torch",)
     assert __version__ in active.name
     assert registry.coverages[0].coverage == COVERAGE
@@ -64,8 +65,8 @@ def test_core_loader_accepts_the_plugin() -> None:
     ]
 
 
-@pytest.mark.parametrize("host_api", ("1.6", "1.7"))
-def test_loader_negotiates_api_16_provider_without_artifact_capability(
+@pytest.mark.parametrize("host_api", ("1.7", "1.8"))
+def test_loader_negotiates_api_17_provider_without_artifact_capability(
     monkeypatch: pytest.MonkeyPatch, host_api: str
 ) -> None:
     """Core owns API compatibility; this provider remains host-extension-only."""
@@ -74,14 +75,15 @@ def test_loader_negotiates_api_16_provider_without_artifact_capability(
     monkeypatch.setattr(plugin_api, "PLUGIN_API_VERSION", host_api)
     registry = load_registry()
 
-    assert registry.active[0].api_version == "1.6"
+    assert registry.active[0].api_version == "1.7"
+    assert registry.active[0].function_scope_guard_declared is True
     assert getattr(registry.active[0], "artifact_capability_declared", False) is False
     assert not hasattr(plugin(), "artifact_capability")
 
 
 @pytest.mark.parametrize(
     "host_api",
-    ("1.2", "1.5", "2.0", "1", "1.6.0", "not-a-version"),
+    ("1.2", "1.5", "1.6", "2.0", "1", "1.7.0", "not-a-version"),
 )
 def test_provider_registration_rejects_incompatible_host_api(
     monkeypatch: pytest.MonkeyPatch, host_api: str
@@ -203,7 +205,7 @@ def test_public_alpha_release_candidate_metadata() -> None:
     assert "Programming Language :: Python :: 3.11" in project["classifiers"]
     assert "Programming Language :: Python :: 3.12" not in project["classifiers"]
     dependencies = project["dependencies"]
-    assert "rextio>=0.1.6,<0.2" in dependencies
+    assert "rextio>=0.1.7,<0.2" in dependencies
     assert "torch==2.11.0" in dependencies
     assert all("git+" not in dep for dep in dependencies)
     assert "rextio-core-next" not in " ".join(dependencies)

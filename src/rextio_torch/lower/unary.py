@@ -14,6 +14,7 @@ from rextio_torch.claim.unary import (
     UNARY_SQUARE_RULE,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import boundary_helpers, unary_call_name, unary_helper
 
 _RULES: dict[str, str] = {
@@ -97,9 +98,19 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             )
         input_name = ctx.receiver
 
+    scope_active = function_scope_guard_active(ctx)
     return LoweredExpr(
-        rust=f"{unary_call_name(operation)}(&{input_name})?",
-        helpers=(boundary_helpers(), unary_helper(operation)),
+        rust=(
+            f"{unary_call_name(operation, function_scope_guard_active=scope_active)}"
+            f"(&{input_name})?"
+        ),
+        helpers=(
+            boundary_helpers(),
+            unary_helper(
+                operation,
+                function_scope_guard_active=scope_active,
+            ),
+        ),
     )
 
 

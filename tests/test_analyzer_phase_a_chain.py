@@ -1,6 +1,6 @@
 """Analyzer integration: real-source Phase A linear→ReLU→mean chain.
 
-Uses Core API 1.6 ``analyze_project`` (same harness shape as
+Uses Core API 1.7 ``analyze_project`` (same harness shape as
 rextio-numpy/pandas analyzer integration tests). Does not hand-construct
 ``ClaimSite`` objects — claims must come from nested AST inference.
 """
@@ -75,7 +75,7 @@ def _function(analysis: ProjectAnalysis, qualname: str) -> FunctionAnalysis:
 def test_analyzer_discovers_nested_phase_a_claims_and_native_route(tmp_path: Path) -> None:
     root = _write_module(tmp_path, PHASE_A_SOURCE)
     registry = _registry()
-    assert registry.active[0].api_version == "1.6"
+    assert registry.active[0].api_version == "1.7"
     assert registry.active[0].lowering_provided is True
 
     analysis = analyze_project(

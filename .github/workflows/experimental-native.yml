@@ -15,6 +15,7 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   RUST_TOOLCHAIN: "1.93.1"
+  CORE_CANDIDATE_COMMIT: "b8b8ed11f6b7b7aae4c7ae5205d88529608e8e97"
 
 jobs:
   linux-aarch64-native:
@@ -58,7 +59,7 @@ jobs:
           # already consumed the separately pinned 82.0.1 build environment.
           .venv/bin/python -m pip install \
             "setuptools==81.0.0" \
-            "rextio==0.1.6" \
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
             "torch==2.11.0" "pytest==9.1.1"
           .venv/bin/python -m pip install --no-deps dist/*.whl
           .venv/bin/python -m pip check

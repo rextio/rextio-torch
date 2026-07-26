@@ -1,9 +1,10 @@
 """The rextio-torch plugin object and entry-point factory.
 
-Implements plugin API 1.6: describe/covers, device-aware annotation vocabulary,
+Implements plugin API 1.7: describe/covers, device-aware annotation vocabulary,
 claim/lower, and the exact ``tch =0.24.0`` crate pin with
-``python-extension``. This module
-never imports torch; user-facing types are also import-free.
+``python-extension``. API 1.7 adds one fail-closed function-scope
+``tch::no_grad_guard()`` for eligible native PyO3 functions. This module never
+imports torch; user-facing types are also import-free.
 
 Import-time contract: this module (and therefore the package root and
 :mod:`rextio_torch.types`) must load without analyzer/config/plugin modules
@@ -26,13 +27,15 @@ if TYPE_CHECKING:
         CrateDependency,
         LoweredExpr,
         LoweringContext,
+        PluginFunctionScopeContext,
+        PluginFunctionScopeGuard,
         PluginType,
         RuleRecord,
     )
     from rextio.plugins.models import RextioPlugin
 
 PLUGIN_ID = "rextio-torch"
-REQUIRED_PLUGIN_API = "1.6"
+REQUIRED_PLUGIN_API = "1.7"
 
 __all__ = ["PLUGIN_ID", "REQUIRED_PLUGIN_API", "RextioTorchPlugin", "plugin"]
 
@@ -49,18 +52,18 @@ def _require_compatible_host_api() -> None:
         len(parts) == 2
         and all(part.isdecimal() for part in parts)
         and int(parts[0]) == 1
-        and int(parts[1]) >= 6
+        and int(parts[1]) >= 7
     )
     if not compatible:
         raise RuntimeError(
-            "rextio-torch provider API 1.6 requires a compatible Rextio "
-            "plugin host API in major 1 with minor >= 6; this environment "
+            "rextio-torch provider API 1.7 requires a compatible Rextio "
+            "plugin host API in major 1 with minor >= 7; this environment "
             f"advertises PLUGIN_API_VERSION={PLUGIN_API_VERSION!r}"
         )
 
 
 class RextioTorchPlugin:
-    """Plugin API 1.6 provider for bounded CPU and CUDA build-only surfaces."""
+    """Plugin API 1.7 provider for bounded CPU and CUDA build-only surfaces."""
 
     plugin_id = PLUGIN_ID
     api_version = REQUIRED_PLUGIN_API
@@ -115,6 +118,26 @@ class RextioTorchPlugin:
         from rextio_torch.lower import lower as lower_site
 
         return lower_site(claimed, ctx)
+
+    def function_scope_guard(
+        self,
+        ctx: PluginFunctionScopeContext,
+    ) -> PluginFunctionScopeGuard | None:
+        """Install one no-grad scope only around boundary-free native execution."""
+        _require_compatible_host_api()
+        from rextio.plugins.api import (
+            LOWERING_BACKEND_PYO3,
+            PluginFunctionScopeGuard,
+        )
+
+        if (
+            ctx.backend != LOWERING_BACKEND_PYO3
+            or ctx.has_python_boundary_calls
+            or not ctx.used_rule_ids
+        ):
+            return None
+
+        return PluginFunctionScopeGuard(rust="tch::no_grad_guard()")
 
     def crate_dependencies(self) -> tuple[CrateDependency, ...]:
         """Return the exact tch pin and python-extension feature."""

@@ -34,7 +34,18 @@ VENV_PYTHON = PLUGIN_ROOT / ".venv" / "bin" / "python"
 
 KERNELS = """
 from rextio_torch.types import TensorF32Cpu1D, TensorF32Cpu2D
+import rextio
+import torch
 import torch.nn.functional as F
+
+OBSERVED_GRAD_MODES = []
+
+
+@rextio.exempt
+def observe_grad_enabled() -> bool:
+    enabled = torch.is_grad_enabled()
+    OBSERVED_GRAD_MODES.append(enabled)
+    return enabled
 
 
 def inference(
@@ -43,6 +54,24 @@ def inference(
     bias: TensorF32Cpu1D,
 ) -> TensorF32Cpu1D:
     return F.linear(x, weight, bias).relu().mean(dim=1, keepdim=False)
+
+
+def early_return_inference(
+    x: TensorF32Cpu2D,
+    first: bool,
+) -> TensorF32Cpu2D:
+    hidden = x.relu()
+    if first:
+        return hidden
+    return hidden.tanh()
+
+
+@rextio.native
+def callback_inference(x: TensorF32Cpu2D) -> TensorF32Cpu2D:
+    hidden = x.relu()
+    if observe_grad_enabled():
+        return hidden
+    return hidden.tanh()
 """
 
 
@@ -184,9 +213,34 @@ def test_phase_a_chain_real_cargo_certification(project: CertifiedProject) -> No
         encoding="utf-8"
     )
     assert "struct RxtTorchTensor" in rust
-    assert "__rxttorch_linear" in rust
-    assert "__rxttorch_relu" in rust
-    assert "__rxttorch_mean_dim1_keepdim_false" in rust
+    assert "__rxttorch_linear_function_scoped" in rust
+    assert "__rxttorch_relu_function_scoped" in rust
+    assert "__rxttorch_mean_dim1_keepdim_false_function_scoped" in rust
+    # The RXT075 callback function declines the whole-function guard and keeps
+    # distinct per-op guarded helpers in the same compiling Rust module.
+    assert "fn __rxttorch_relu(" in rust
+    assert "fn __rxttorch_tanh(" in rust
+    assert rust.count("let __rextio_plugin_scope_guard_") == 2
+    input_index = rust.index(
+        "let x = __rxttorch_extract_f32_cpu_2d(py, &x)?;"
+    )
+    guard_index = rust.index(
+        "let __rextio_plugin_scope_guard_",
+        input_index,
+    )
+    native_result_index = rust.index(
+        "let __rextio_plugin_native_result_",
+        guard_index,
+    )
+    drop_index = rust.index(
+        "std::mem::drop(__rextio_plugin_scope_guard_",
+        native_result_index,
+    )
+    output_index = rust.index(
+        "__rxttorch_materialize_tensor(py, __rextio_plugin_native_result_",
+        drop_index,
+    )
+    assert input_index < guard_index < native_result_index < drop_index < output_index
     assert "no_grad_guard" in rust
     assert "f_linear" in rust
     assert "f_relu" in rust
@@ -226,6 +280,31 @@ def test_phase_a_chain_real_cargo_certification(project: CertifiedProject) -> No
     assert torch.equal(x, x_snap)
     assert torch.equal(weight, w_snap)
     assert torch.equal(bias, b_snap)
+
+    # --- one function-scope guard restores ambient grad mode on early returns ---
+    assert torch.is_grad_enabled() is True
+    with _native_mode(project, "native"):
+        from torch_app.kernels import early_return_inference
+
+        early_first = early_return_inference(x_snap, True)
+        assert torch.is_grad_enabled() is True
+        early_second = early_return_inference(x_snap, False)
+    assert torch.is_grad_enabled() is True
+    assert early_first.requires_grad is False
+    assert early_second.requires_grad is False
+    assert torch.allclose(early_first, x_snap.relu())
+    assert torch.allclose(early_second, x_snap.relu().tanh())
+
+    # --- RXT075 callback never runs under the whole-function no-grad scope ---
+    with _native_mode(project, "native"):
+        from torch_app import kernels as callback_module
+
+        callback_module.OBSERVED_GRAD_MODES.clear()
+        callback_out = callback_module.callback_inference(x_snap)
+        assert callback_module.OBSERVED_GRAD_MODES == [True]
+    assert torch.is_grad_enabled() is True
+    assert callback_out.requires_grad is False
+    assert torch.allclose(callback_out, x_snap.relu())
 
     # --- requires_grad inputs still yield a no-grad native output ---
     # Eager fallback can attach an autograd graph when inputs request gradients;
@@ -288,6 +367,13 @@ def test_phase_a_chain_real_cargo_certification(project: CertifiedProject) -> No
         ) as rank_info:
             inference_boundary(x_rank1, w_ok, b_ok)
         assert str(rank_info.value) == "rextio-torch: expected rank-2 tensor, got rank 1"
+
+        # A tch error after the function guard was installed still restores
+        # the caller's ambient grad mode through RAII.
+        bad_weight = torch.randn(2, 4, dtype=torch.float32)
+        with pytest.raises(Exception):
+            inference_boundary(x_snap, bad_weight, b_ok)
+        assert torch.is_grad_enabled() is True
 
     # Valid weights/bias still intact after the rejected calls (no crash/mutation).
     assert torch.equal(w_ok, w_snap)

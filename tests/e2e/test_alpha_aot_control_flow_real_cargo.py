@@ -478,14 +478,15 @@ def test_alpha_aot_control_flow_real_cargo(project: CertifiedProject) -> None:
         encoding="utf-8"
     )
     assert "struct RxtTorchTensor" in rust
-    assert "__rxttorch_matmul" in rust
-    assert "__rxttorch_add" in rust
-    assert "__rxttorch_relu" in rust
-    assert "__rxttorch_sigmoid" in rust
-    assert "__rxttorch_tanh" in rust
-    assert "__rxttorch_mean_dim1_keepdim_false" in rust
-    assert "__rxttorch_sum_dim1_keepdim_false" in rust
-    assert "no_grad_guard" in rust
+    assert "__rxttorch_matmul_function_scoped" in rust
+    assert "__rxttorch_add_function_scoped" in rust
+    assert "__rxttorch_relu_function_scoped" in rust
+    assert "__rxttorch_sigmoid_function_scoped" in rust
+    assert "__rxttorch_tanh_function_scoped" in rust
+    assert "__rxttorch_mean_dim1_keepdim_false_function_scoped" in rust
+    assert "__rxttorch_sum_dim1_keepdim_false_function_scoped" in rust
+    assert "let __rextio_plugin_scope_guard_" in rust
+    assert "tch::no_grad_guard()" in rust
     # Python for/if must appear as Rust control flow, not only as tch helper calls.
     assert "for " in rust or "loop " in rust
     assert "if " in rust

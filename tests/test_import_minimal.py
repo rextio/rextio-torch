@@ -53,7 +53,7 @@ def test_types_and_root_import_without_torch_or_rextio_config(tmp_path: Path) ->
         provider = plugin()
         assert isinstance(provider, RextioTorchPlugin)
         assert provider.plugin_id == "rextio-torch"
-        assert provider.api_version == "1.6"
+        assert provider.api_version == "1.7"
 
         assert "torch" not in sys.modules
         print("ok")

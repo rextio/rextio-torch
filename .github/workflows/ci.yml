@@ -17,6 +17,7 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   RUST_TOOLCHAIN: "1.93.1"
+  CORE_CANDIDATE_COMMIT: "b8b8ed11f6b7b7aae4c7ae5205d88529608e8e97"
   CUDA_PROVIDER_COMMIT: "a5fb427e91710b65f54ee5b8e33706c45840cf9c"
 
 jobs:
@@ -37,7 +38,7 @@ jobs:
         run: |
           python -m pip install "pip==26.1"
           python -m pip install \
-            "rextio==0.1.6" \
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
             "pytest==9.1.1" \
             "ruff==0.15.22" \
             "mypy==2.3.0"
@@ -50,7 +51,7 @@ jobs:
         run: python -m pytest -q tests --ignore=tests/e2e
 
   core-compatibility:
-    name: Core compatibility (released 0.1.6)
+    name: Core compatibility (0.1.7 candidate)
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -68,7 +69,7 @@ jobs:
         run: |
           python -m pip install "pip==26.1"
           python -m pip install \
-            "rextio==0.1.6" \
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
             "pytest==9.1.1"
           python -m pip install --no-deps -e .
       - name: Exercise plugin registration compatibility
@@ -183,7 +184,7 @@ jobs:
           # already consumed the separately pinned 82.0.1 build environment.
           .venv/bin/python -m pip install \
             "setuptools==81.0.0" \
-            "rextio==0.1.6" \
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
             "torch==2.11.0" "pytest==9.1.1"
           .venv/bin/python -m pip install --no-deps dist/*.whl
           .venv/bin/python -m pip check
@@ -257,7 +258,7 @@ jobs:
           assert "Private :: Do Not Upload" not in project["classifiers"]
           assert "Development Status :: 3 - Alpha" in project["classifiers"]
           assert "torch==2.11.0" in project["dependencies"]
-          assert "rextio>=0.1.6,<0.2" in project["dependencies"]
+          assert "rextio>=0.1.7,<0.2" in project["dependencies"]
           PY
       - name: Build wheel and sdist
         run: |
@@ -276,7 +277,8 @@ jobs:
           audit_python=/tmp/rextio-torch-sdist-tests/bin/python
           "$audit_python" -m pip install "pip==26.1"
           "$audit_python" -m pip install \
-            "rextio==0.1.6" "pytest==9.1.1"
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
+            "pytest==9.1.1"
           extracted_root="$(find /tmp/rextio-torch-sdist-audit \
             -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -n "$extracted_root"
@@ -297,12 +299,12 @@ jobs:
           python -m venv /tmp/rextio-torch-wheel
           /tmp/rextio-torch-wheel/bin/python -m pip install "pip==26.1"
           /tmp/rextio-torch-wheel/bin/python -m pip install \
-            "rextio==0.1.6"
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}"
           /tmp/rextio-torch-wheel/bin/python -m pip install --no-deps dist/*.whl
           python -m venv /tmp/rextio-torch-sdist
           /tmp/rextio-torch-sdist/bin/python -m pip install "pip==26.1"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
-            "rextio==0.1.6"
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
             "setuptools==82.0.1" "wheel==0.47.0"
           /tmp/rextio-torch-sdist/bin/python -m pip install \
@@ -318,7 +320,7 @@ jobs:
           factory = next(
               ep for ep in entry_points(group="rextio.plugins") if ep.name == "rextio-torch"
           ).load()
-          assert factory().api_version == "1.6"
+          assert factory().api_version == "1.7"
           PY
           done
 
@@ -342,11 +344,11 @@ jobs:
         run: |
           rustup toolchain install "${RUST_TOOLCHAIN}" --profile minimal --no-self-update
           rustup default "${RUST_TOOLCHAIN}"
-      - name: Install released Core and frozen CUDA provider contracts
+      - name: Install exact Core candidate and frozen CUDA provider contracts
         run: |
           python -m pip install "pip==26.1"
           python -m pip install \
-            "rextio==0.1.6" \
+            "git+https://github.com/rextio/rextio.git@${CORE_CANDIDATE_COMMIT}" \
             "torch==2.11.0" "pytest==9.1.1"
           python -m pip install --no-deps \
             "git+https://github.com/rextio/rextio-device-cuda.git@${CUDA_PROVIDER_COMMIT}"
@@ -361,13 +363,13 @@ jobs:
           from rextio_torch.plugin import plugin
           import torch
 
-          assert PLUGIN_API_VERSION == "1.6"
+          assert PLUGIN_API_VERSION == "1.7"
           assert platform.machine() == "x86_64"
-          assert plugin().api_version == "1.6"
+          assert plugin().api_version == "1.7"
           assert torch.__version__.split("+")[0] == "2.11.0"
           assert torch.version.cuda is not None
           assert torch.cuda.is_available() is False
-          assert distribution("rextio").version == "0.1.6"
+          assert distribution("rextio").version == "0.1.7"
           direct = json.loads(
               distribution("rextio-device-cuda").read_text("direct_url.json")
           )

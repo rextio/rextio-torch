@@ -137,18 +137,19 @@ def test_small_batch_scoring_real_cargo(project: CertifiedProject) -> None:
     rust = (
         project.project_root / ".rextio" / "generated" / "rust" / "src" / "lib.rs"
     ).read_text(encoding="utf-8")
-    assert "no_grad_guard" in rust
+    assert "let __rextio_plugin_scope_guard_" in rust
+    assert "tch::no_grad_guard()" in rust
     assert "_rxttorch_invocation_no_grad" not in rust
-    assert INVOCATION_SCOPE_OPTIMIZATION_ACTIVE is False
+    assert INVOCATION_SCOPE_OPTIMIZATION_ACTIVE is True
     assert "for " in rust or "loop " in rust
     assert "if " in rust
-    assert "__rxttorch_sub" in rust
-    assert "__rxttorch_div" in rust
-    assert "__rxttorch_linear" in rust
-    assert "__rxttorch_relu" in rust
-    assert "__rxttorch_tanh" in rust
-    assert "__rxttorch_softmax_dim1" in rust
-    assert "__rxttorch_argmax_dim1_keepdim_false" in rust
+    assert "__rxttorch_sub_function_scoped" in rust
+    assert "__rxttorch_div_function_scoped" in rust
+    assert "__rxttorch_linear_function_scoped" in rust
+    assert "__rxttorch_relu_function_scoped" in rust
+    assert "__rxttorch_tanh_function_scoped" in rust
+    assert "__rxttorch_softmax_dim1_function_scoped" in rust
+    assert "__rxttorch_argmax_dim1_keepdim_false_function_scoped" in rust
 
     prior_mode_present = "REXTIO_NATIVE_MODE" in os.environ
     prior_mode = os.environ.get("REXTIO_NATIVE_MODE")

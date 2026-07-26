@@ -1,23 +1,14 @@
 """Core capability status for one RAII no-grad scope per native invocation.
 
-Plugin API 1.6 (Core ``rextio`` 0.1.6) exposes only expression-level
-:class:`~rextio.plugins.api.LoweredExpr` fields (``rust`` / ``uses`` /
-``helpers``) plus module-level type helpers. There is no deterministic
-function-body prelude or epilogue hook that plugins can use to install a
-single stack-scoped ``tch::no_grad_guard()`` around an entire generated
-native function.
+Plugin API 1.7 (Core ``rextio`` 0.1.7) lets rextio-torch request one
+stack-scoped ``tch::no_grad_guard()`` for an eligible generated PyO3 function.
+Core installs it after tensor input conversion, drops it before tensor output
+conversion, and relies on Rust RAII for early and error exits.
 
-Therefore production rextio-torch keeps the **per-operation**
-``tch::no_grad_guard()`` baseline in every fallible helper. That RAII
-guard is local to the helper call, drops on every Rust return path
-(including ``?``-mapped ``TchError``), and cannot leak grad mode across
-Python callbacks, exceptions, reentrancy, or nested generated calls.
-
-This module records that limitation explicitly and describes the Core
-extension that would enable a strictly plugin-local optimization with
-identical exception and reentrancy semantics. It does **not** activate
-any global, thread-local, tensor-lifetime, or hidden mutable-state
-workaround.
+Functions containing an in-process Python fallback call (RXT075), standalone
+backends, and type-only functions decline the whole-function guard. Their
+lowering context remains inactive and the legacy helpers keep their
+per-operation guards, so no no-grad state spans a Python callback.
 """
 
 from __future__ import annotations
@@ -25,29 +16,24 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-# Production path: per-op helpers own no_grad. This flag is the single
-# source of truth that the invocation-scope optimization is inactive.
-INVOCATION_SCOPE_OPTIMIZATION_ACTIVE: Final[bool] = False
+# Candidate production path: eligible native functions own one no-grad guard.
+INVOCATION_SCOPE_OPTIMIZATION_ACTIVE: Final[bool] = True
 
-# Closed set of LoweredExpr fields observed on Core plugin API 1.6.
+# LoweredExpr remains expression-only in Core plugin API 1.7.
 CORE_16_LOWERED_EXPR_FIELDS: Final[frozenset[str]] = frozenset(
     {"rust", "uses", "helpers"}
 )
+CORE_17_LOWERED_EXPR_FIELDS: Final[frozenset[str]] = CORE_16_LOWERED_EXPR_FIELDS
 
-# Hooks that would be required for a safe per-invocation scope. None of
-# these exist on RextioLoweringPlugin / RextioPluginV2 in API 1.6.
+# Compatibility name retained for the former proposal inspection surface.
 PROPOSED_FUNCTION_SCOPE_HOOK_NAMES: Final[tuple[str, ...]] = (
-    "function_body_support",
-    "function_prelude",
-    "function_epilogue",
-    "invocation_scope",
-    "native_function_scope",
+    "function_scope_guard",
 )
 
 PROPOSAL_ID: Final[str] = "rextio-torch/core-function-body-scope-v1"
-PROPOSAL_STATUS: Final[str] = "proposal-only"
-PROPOSAL_TARGET_PLUGIN_API: Final[str] = "1.7+"
-PROPOSAL_TARGET_CORE: Final[str] = "rextio>=0.1.7 (not available; do not assume)"
+PROPOSAL_STATUS: Final[str] = "implemented-candidate"
+PROPOSAL_TARGET_PLUGIN_API: Final[str] = "1.7"
+PROPOSAL_TARGET_CORE: Final[str] = "rextio>=0.1.7,<0.2"
 
 
 @dataclass(frozen=True)
@@ -87,10 +73,18 @@ class CoreFunctionScopeCapability:
 
 def _protocol_callable_names() -> frozenset[str]:
     """Return public callable names on the Core lowering protocol surface."""
-    from rextio.plugins.api import RextioLoweringPlugin, RextioPluginV2
+    from rextio.plugins.api import (
+        RextioFunctionScopeGuardPlugin,
+        RextioLoweringPlugin,
+        RextioPluginV2,
+    )
 
     names: set[str] = set()
-    for protocol in (RextioPluginV2, RextioLoweringPlugin):
+    for protocol in (
+        RextioPluginV2,
+        RextioLoweringPlugin,
+        RextioFunctionScopeGuardPlugin,
+    ):
         for name, value in vars(protocol).items():
             if name.startswith("_"):
                 continue
@@ -110,33 +104,37 @@ def inspect_core_function_scope_capability() -> CoreFunctionScopeCapability:
     """Inspect the live Core host for per-function scope hooks.
 
     Read-only and side-effect free aside from importing Core's plugin API.
-    Always reports the production optimization as inactive on API 1.6.
+    Reports active only when the live host exposes the reviewed API 1.7 hook.
     """
     from rextio.plugins.api import PLUGIN_API_VERSION
 
     fields = _lowered_expr_field_names()
     hooks = _protocol_callable_names()
-    # Module-level helpers/uses on LoweredExpr are not a body prelude.
-    has_scope_hook = any(name in hooks for name in PROPOSED_FUNCTION_SCOPE_HOOK_NAMES)
-    # rextio-torch never claims the optimization is live without an explicit,
-    # tested Core contract that preserves exception and reentrancy safety.
-    has_function_body_scope_hook = has_scope_hook
-    active = INVOCATION_SCOPE_OPTIMIZATION_ACTIVE
+    has_function_body_scope_hook = "function_scope_guard" in hooks
+    version_parts = str(PLUGIN_API_VERSION).split(".")
+    compatible = (
+        len(version_parts) == 2
+        and all(part.isdecimal() for part in version_parts)
+        and int(version_parts[0]) == 1
+        and int(version_parts[1]) >= 7
+    )
+    active = (
+        INVOCATION_SCOPE_OPTIMIZATION_ACTIVE
+        and compatible
+        and has_function_body_scope_hook
+    )
 
-    if has_scope_hook:
+    if active:
         limitation = (
-            "A function-scope-like name is present on the protocol, but "
-            "rextio-torch 0.1.3 does not activate invocation-scope no_grad "
-            "without a reviewed Core contract and identical exception/"
-            "reentrancy semantics to per-operation guards."
+            "Core plugin API 1.7 provides the reviewed function_scope_guard "
+            "contract. Eligible PyO3 functions use one no-grad RAII scope; "
+            "RXT075, standalone, and type-only functions retain guarded helpers."
         )
     else:
         limitation = (
-            "Core plugin API 1.6 provides only LoweredExpr "
-            "(rust/uses/helpers) and module-level type helpers; there is "
-            "no deterministic per-generated-function or per-invocation "
-            "Rust body prelude/epilogue hook. Production retains "
-            "per-operation tch::no_grad_guard() in every helper."
+            "The live Core host does not expose the compatible plugin API 1.7 "
+            "function_scope_guard contract; rextio-torch must not activate "
+            "guardless function-scoped helpers."
         )
 
     return CoreFunctionScopeCapability(
@@ -152,12 +150,7 @@ def inspect_core_function_scope_capability() -> CoreFunctionScopeCapability:
 
 
 def proposed_no_grad_function_body_support() -> FunctionBodySupportProposal:
-    """Return the illustrative RAII scope plugins would emit under the proposal.
-
-    This text is **not** injected into generated crates today. It exists so
-    tests and docs can pin the desired semantics without pretending Core
-    honors it.
-    """
+    """Return the historical prelude shape now represented by the API 1.7 hook."""
     return FunctionBodySupportProposal(
         rust_prelude=(
             # Stack-scoped RAII only. Drop restores prior grad mode on every
@@ -173,14 +166,16 @@ def proposed_no_grad_function_body_support() -> FunctionBodySupportProposal:
 def production_no_grad_baseline_summary() -> str:
     """Return a short, stable description of the active production baseline."""
     return (
-        "production baseline: each rextio-torch tch helper installs "
-        "let _guard = tch::no_grad_guard(); inside the helper body; "
+        "production baseline: eligible native PyO3 functions install one "
+        "tch::no_grad_guard(); RXT075/standalone/type-only paths retain "
+        "per-operation guarded helpers; "
         f"invocation-scope optimization active={INVOCATION_SCOPE_OPTIMIZATION_ACTIVE}"
     )
 
 
 __all__ = [
     "CORE_16_LOWERED_EXPR_FIELDS",
+    "CORE_17_LOWERED_EXPR_FIELDS",
     "INVOCATION_SCOPE_OPTIMIZATION_ACTIVE",
     "PROPOSED_FUNCTION_SCOPE_HOOK_NAMES",
     "PROPOSAL_ID",

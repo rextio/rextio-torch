@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
 from rextio_torch.claim.binops import (
@@ -28,6 +30,7 @@ from rextio_torch.claim.binops import (
     SUB_SAME_RANK_RULE,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import (
     ADD,
     DIV,
@@ -37,6 +40,7 @@ from rextio_torch.rust_snippets import (
     add_helper,
     boundary_helpers,
     div_helper,
+    function_scoped_call_name,
     matmul_helper,
     mul_helper,
     sub_helper,
@@ -74,13 +78,28 @@ _MATMUL_RESULT_TYPES: dict[tuple[str, str], str] = {
 }
 
 
+def _scope_variant(
+    ctx: LoweringContext,
+    base_call_name: str,
+    helper_factory: Callable[..., str],
+) -> tuple[str, str]:
+    scope_active = function_scope_guard_active(ctx)
+    return (
+        function_scoped_call_name(
+            base_call_name,
+            function_scope_guard_active=scope_active,
+        ),
+        helper_factory(function_scope_guard_active=scope_active),
+    )
+
+
 def _try_lower_functional_elementwise(
     claimed: ClaimSite,
     ctx: LoweringContext,
 ) -> LoweredExpr | None:
     if claimed.kind != "call" or claimed.target not in _FUNCTION_ELEMENTWISE:
         return None
-    expected_rule, call_name, helper_factory = _FUNCTION_ELEMENTWISE[claimed.target]
+    expected_rule, base_call_name, helper_factory = _FUNCTION_ELEMENTWISE[claimed.target]
     if claimed.rule_id != expected_rule:
         raise ValueError(
             "rextio-torch functional elementwise lower received mismatched rule_id: "
@@ -112,9 +131,10 @@ def _try_lower_functional_elementwise(
             "claim and lower"
         )
     left_name, right_name = ctx.operands
+    call_name, helper = _scope_variant(ctx, base_call_name, helper_factory)
     return LoweredExpr(
         rust=f"{call_name}(&{left_name}, &{right_name})?",
-        helpers=(boundary_helpers(), helper_factory()),
+        helpers=(boundary_helpers(), helper),
     )
 
 
@@ -155,9 +175,10 @@ def _try_lower_add(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
     else:
         raise ValueError(f"rextio-torch add lower unexpected rule_id: {claimed.rule_id!r}")
     a, b = ctx.operands
+    call_name, helper = _scope_variant(ctx, ADD, add_helper)
     return LoweredExpr(
-        rust=f"{ADD}(&{a}, &{b})?",
-        helpers=(boundary_helpers(), add_helper()),
+        rust=f"{call_name}(&{a}, &{b})?",
+        helpers=(boundary_helpers(), helper),
     )
 
 
@@ -205,9 +226,10 @@ def _try_lower_mul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
             f"rextio-torch multiply lower unexpected rule_id: {claimed.rule_id!r}"
         )
     a, b = ctx.operands
+    call_name, helper = _scope_variant(ctx, MUL, mul_helper)
     return LoweredExpr(
-        rust=f"{MUL}(&{a}, &{b})?",
-        helpers=(boundary_helpers(), mul_helper()),
+        rust=f"{call_name}(&{a}, &{b})?",
+        helpers=(boundary_helpers(), helper),
     )
 
 
@@ -255,9 +277,10 @@ def _try_lower_sub(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
             f"rextio-torch subtraction lower unexpected rule_id: {claimed.rule_id!r}"
         )
     left_name, right_name = ctx.operands
+    call_name, helper = _scope_variant(ctx, SUB, sub_helper)
     return LoweredExpr(
-        rust=f"{SUB}(&{left_name}, &{right_name})?",
-        helpers=(boundary_helpers(), sub_helper()),
+        rust=f"{call_name}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), helper),
     )
 
 
@@ -305,9 +328,10 @@ def _try_lower_div(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | No
             f"rextio-torch division lower unexpected rule_id: {claimed.rule_id!r}"
         )
     left_name, right_name = ctx.operands
+    call_name, helper = _scope_variant(ctx, DIV, div_helper)
     return LoweredExpr(
-        rust=f"{DIV}(&{left_name}, &{right_name})?",
-        helpers=(boundary_helpers(), div_helper()),
+        rust=f"{call_name}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), helper),
     )
 
 
@@ -415,9 +439,10 @@ def _try_lower_matmul(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr |
     else:
         return None
 
+    call_name, helper = _scope_variant(ctx, MATMUL, matmul_helper)
     return LoweredExpr(
-        rust=f"{MATMUL}(&{left_name}, &{right_name})?",
-        helpers=(boundary_helpers(), matmul_helper()),
+        rust=f"{call_name}(&{left_name}, &{right_name})?",
+        helpers=(boundary_helpers(), helper),
     )
 
 

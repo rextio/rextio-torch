@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
 from rextio_torch.claim.cuda import (
@@ -12,6 +14,7 @@ from rextio_torch.claim.cuda import (
     CUDA_RULES,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CUDA0_1D, TENSOR_F32_CUDA0_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.plugin_types import plugin_type
 from rextio_torch.rust_snippets import (
     ADD,
@@ -20,6 +23,7 @@ from rextio_torch.rust_snippets import (
     RELU,
     add_helper,
     boundary_helpers,
+    function_scoped_call_name,
     matmul_helper,
     mean_dim1_keepfalse_helper,
     relu_helper,
@@ -27,6 +31,21 @@ from rextio_torch.rust_snippets import (
 
 CUDA_PROVIDER_ID = "rextio-device-cuda"
 CUDA_CAPABILITY_ID = "cuda-libtorch-linux-x86_64"
+
+
+def _scope_variant(
+    ctx: LoweringContext,
+    base_call_name: str,
+    helper_factory: Callable[..., str],
+) -> tuple[str, str]:
+    scope_active = function_scope_guard_active(ctx)
+    return (
+        function_scoped_call_name(
+            base_call_name,
+            function_scope_guard_active=scope_active,
+        ),
+        helper_factory(function_scope_guard_active=scope_active),
+    )
 
 
 def _require_authorization(ctx: LoweringContext, result_type: str) -> None:
@@ -96,9 +115,10 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         ):
             raise ValueError("rextio-torch CUDA matmul metadata changed after claim")
         left, right = ctx.operands
+        call_name, helper = _scope_variant(ctx, MATMUL, matmul_helper)
         return LoweredExpr(
-            rust=f"{MATMUL}(&{left}, &{right})?",
-            helpers=(boundary_helpers(), matmul_helper()),
+            rust=f"{call_name}(&{left}, &{right})?",
+            helpers=(boundary_helpers(), helper),
         )
 
     if claimed.rule_id == CUDA_BIAS_ADD_RULE:
@@ -116,9 +136,10 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         ):
             raise ValueError("rextio-torch CUDA bias-add metadata changed after claim")
         matrix, bias = ctx.operands
+        call_name, helper = _scope_variant(ctx, ADD, add_helper)
         return LoweredExpr(
-            rust=f"{ADD}(&{matrix}, &{bias})?",
-            helpers=(boundary_helpers(), add_helper()),
+            rust=f"{call_name}(&{matrix}, &{bias})?",
+            helpers=(boundary_helpers(), helper),
         )
 
     if claimed.rule_id == CUDA_RELU_RULE:
@@ -135,9 +156,10 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             or ctx.receiver is None
         ):
             raise ValueError("rextio-torch CUDA ReLU metadata changed after claim")
+        call_name, helper = _scope_variant(ctx, RELU, relu_helper)
         return LoweredExpr(
-            rust=f"{RELU}(&{ctx.receiver})?",
-            helpers=(boundary_helpers(), relu_helper()),
+            rust=f"{call_name}(&{ctx.receiver})?",
+            helpers=(boundary_helpers(), helper),
         )
 
     if claimed.rule_id == CUDA_MEAN_DIM1_RULE:
@@ -159,9 +181,14 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             or ctx.receiver is None
         ):
             raise ValueError("rextio-torch CUDA mean metadata changed after claim")
+        call_name, helper = _scope_variant(
+            ctx,
+            MEAN_DIM1_KEEPFALSE,
+            mean_dim1_keepfalse_helper,
+        )
         return LoweredExpr(
-            rust=f"{MEAN_DIM1_KEEPFALSE}(&{ctx.receiver})?",
-            helpers=(boundary_helpers(), mean_dim1_keepfalse_helper()),
+            rust=f"{call_name}(&{ctx.receiver})?",
+            helpers=(boundary_helpers(), helper),
         )
 
     raise ValueError(f"unexpected rextio-torch CUDA rule: {claimed.rule_id!r}")

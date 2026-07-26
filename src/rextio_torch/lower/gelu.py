@@ -6,7 +6,13 @@ from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
 from rextio_torch.claim.gelu import GELU_NONE_RULE, GELU_TARGET, has_exact_none_option
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
-from rextio_torch.rust_snippets import GELU_NONE, boundary_helpers, gelu_none_helper
+from rextio_torch.lower.function_scope import function_scope_guard_active
+from rextio_torch.rust_snippets import (
+    GELU_NONE,
+    boundary_helpers,
+    function_scoped_call_name,
+    gelu_none_helper,
+)
 
 _RANK_TYPES: frozenset[str] = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
 
@@ -34,9 +40,17 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         or len(ctx.operands) != 1
     ):
         raise ValueError("rextio-torch received malformed exact GELU lower metadata")
+    scope_active = function_scope_guard_active(ctx)
+    call_name = function_scoped_call_name(
+        GELU_NONE,
+        function_scope_guard_active=scope_active,
+    )
     return LoweredExpr(
-        rust=f"{GELU_NONE}(&{ctx.operands[0]})?",
-        helpers=(boundary_helpers(), gelu_none_helper()),
+        rust=f"{call_name}(&{ctx.operands[0]})?",
+        helpers=(
+            boundary_helpers(),
+            gelu_none_helper(function_scope_guard_active=scope_active),
+        ),
     )
 
 

@@ -17,6 +17,7 @@ from rextio_torch.diagnostics import (
     TENSOR_F32_CPU_2D,
     TENSOR_I64_CPU_1D,
 )
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import (
     argmax_call_name,
     argmax_helper,
@@ -244,12 +245,28 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             f"rextio-torch classification lower missing static rule: {claimed.rule_id!r}"
         )
 
+    scope_active = function_scope_guard_active(ctx)
     if method == "softmax":
-        call_name = softmax_call_name(dim)
-        helper = softmax_helper(dim)
+        call_name = softmax_call_name(
+            dim,
+            function_scope_guard_active=scope_active,
+        )
+        helper = softmax_helper(
+            dim,
+            function_scope_guard_active=scope_active,
+        )
     else:
-        call_name = argmax_call_name(dim, keepdim)
-        helper = argmax_helper(dim, keepdim, expected_rank=1)
+        call_name = argmax_call_name(
+            dim,
+            keepdim,
+            function_scope_guard_active=scope_active,
+        )
+        helper = argmax_helper(
+            dim,
+            keepdim,
+            expected_rank=1,
+            function_scope_guard_active=scope_active,
+        )
     return LoweredExpr(
         # Positional dim remains compile-time metadata and is never forwarded
         # to the runtime tensor helper.

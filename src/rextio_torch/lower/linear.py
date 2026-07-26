@@ -6,10 +6,12 @@ from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
 from rextio_torch.claim.linear import LINEAR_NO_BIAS_RULE, LINEAR_RULE, LINEAR_TARGET
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import (
     LINEAR,
     LINEAR_NO_BIAS,
     boundary_helpers,
+    function_scoped_call_name,
     linear_helper,
     linear_no_bias_helper,
 )
@@ -79,9 +81,17 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
                 f"got {len(ctx.operands)}"
             )
         input_name, weight_name, bias_name = ctx.operands
+        scope_active = function_scope_guard_active(ctx)
+        call_name = function_scoped_call_name(
+            LINEAR,
+            function_scope_guard_active=scope_active,
+        )
         return LoweredExpr(
-            rust=f"{LINEAR}(&{input_name}, &{weight_name}, &{bias_name})?",
-            helpers=(boundary_helpers(), linear_helper()),
+            rust=f"{call_name}(&{input_name}, &{weight_name}, &{bias_name})?",
+            helpers=(
+                boundary_helpers(),
+                linear_helper(function_scope_guard_active=scope_active),
+            ),
         )
 
     if claimed.rule_id != LINEAR_NO_BIAS_RULE:
@@ -107,11 +117,19 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
         )
 
     input_name, weight_name = ctx.operands[:2]
+    scope_active = function_scope_guard_active(ctx)
+    call_name = function_scoped_call_name(
+        LINEAR_NO_BIAS,
+        function_scope_guard_active=scope_active,
+    )
     return LoweredExpr(
         # A positional literal None is compile-time option metadata only and is
         # deliberately not forwarded as a runtime tensor operand.
-        rust=f"{LINEAR_NO_BIAS}(&{input_name}, &{weight_name})?",
-        helpers=(boundary_helpers(), linear_no_bias_helper()),
+        rust=f"{call_name}(&{input_name}, &{weight_name})?",
+        helpers=(
+            boundary_helpers(),
+            linear_no_bias_helper(function_scope_guard_active=scope_active),
+        ),
     )
 
 

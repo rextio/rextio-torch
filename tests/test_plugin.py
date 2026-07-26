@@ -46,7 +46,7 @@ def test_entry_point_factory_returns_plugin() -> None:
     assert isinstance(obj, RextioTorchPlugin)
     assert obj.plugin_id == PLUGIN_ID
     assert obj.api_version == REQUIRED_PLUGIN_API == "1.6"
-    assert __version__ == "0.1.2"
+    assert __version__ == "0.1.3"
 
 
 def test_core_loader_accepts_the_plugin() -> None:

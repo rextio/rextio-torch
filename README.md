@@ -6,9 +6,9 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.2** (from `rextio_torch.__about__`) |
-| Release status | **Released 0.1.2 public Alpha** on **2026-07-26**; CPU reinforcement is released while CUDA E2 remains build-only and non-certifying |
-| Distribution | [`rextio-torch==0.1.2`](https://pypi.org/project/rextio-torch/0.1.2/) on PyPI |
+| Package version | **0.1.3** (unreleased candidate from `rextio_torch.__about__`) |
+| Release status | **0.1.3 unreleased candidate** on branch work; last PyPI public Alpha remains **0.1.2** (2026-07-26). CPU reinforcement stays released while CUDA E2 remains build-only and non-certifying |
+| Distribution | Candidate source tree only until publication; released wheel remains [`rextio-torch==0.1.2`](https://pypi.org/project/rextio-torch/0.1.2/) |
 | Plugin API | **1.6** (`REQUIRED_PLUGIN_API`) |
 | Product mode | Proven CPU inference plus a **Linux x86_64 build-only CUDA candidate**; no CUDA support claim |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -17,18 +17,20 @@ PyTorch inference code to Rust expressions backed by
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README documents the **0.1.2 compatibility,
-classification-head, bounded CPU-surface update, build-only CUDA E2 candidate,
-and opt-in real-NVIDIA execution-evidence candidate** to the
-0.1.0 public native-AOT Alpha support contract. Every
-form, rank, pin, and fail-closed behavior below is backed by current claim /
-lower / rules / rust_snippets sources and the focused or real-Cargo tests that
-exercise them. Unsupported sites must stay on the ordinary Python fallback or
-be explicitly rejected — **never falsely claimed**.
+This README documents the **0.1.3 unreleased candidate** on top of the
+**0.1.2** public Alpha support contract: Core invocation-scope limitation /
+proposal, diagnostic small-batch scoring pipeline, retained per-operation
+no-grad baseline, classification-head and bounded CPU surface, build-only CUDA
+E2 candidate, and opt-in real-NVIDIA execution-evidence candidate. Every form,
+rank, pin, and fail-closed behavior below is backed by current claim / lower /
+rules / rust_snippets sources and the focused or real-Cargo tests that exercise
+them. Unsupported sites must stay on the ordinary Python fallback or be
+explicitly rejected — **never falsely claimed**.
 
 Performance numbers under `benchmarks/results/` and
 `benchmarks/results_phase_b/` are **historical context only**. They are **not**
-a release gate for this Alpha cut.
+a release gate for this Alpha cut. The 0.1.3 small-batch scoring harness is
+**diagnostic only** (no official cohort, no speedup claim).
 
 ---
 
@@ -47,7 +49,7 @@ a release gate for this Alpha cut.
 | Version-check bypass | **Forbidden** | `LIBTORCH_BYPASS_VERSION_CHECK` is **not** an accepted build path (stripped in e2e env setup; never set). |
 | Device | **CPU proven; CUDA device 0 build-only** | CPU types retain their old checks. CUDA marker types require already-resident `cuda:0` values and never lower transfers. |
 | Dtype | **float32 only** | Boundary extract rejects non-float32 at runtime. |
-| Mode | **Inference / no-grad** | Every op helper wraps `tch::no_grad_guard()`; certified native outputs have `requires_grad is False` even when inputs request grad. |
+| Mode | **Inference / no-grad** | Every op helper wraps `tch::no_grad_guard()`; certified native outputs have `requires_grad is False` even when inputs request grad. Core API 1.6 has **no** per-invocation body scope hook, so a single RAII guard per generated native function is **not** active (`INVOCATION_SCOPE_OPTIMIZATION_ACTIVE=False`). |
 
 ### Why tch / libtorch / PyTorch / CPython must be one matched set
 
@@ -531,9 +533,42 @@ and explicit-`none` GELU are separately routed and compared.
 
 ---
 
+## 0.1.3 candidate: invocation scope and diagnostic scoring
+
+Core plugin API **1.6** was inspected read-only under `../rextio`: plugins may
+emit only expression `LoweredExpr` plus module helpers. There is **no**
+function-body prelude/epilogue for a single RAII no-grad scope per generated
+native invocation. Production therefore retains **per-operation**
+`tch::no_grad_guard()` helpers. The explicit Core proposal and live probe live
+in:
+
+- [`docs/invocation-scope-proposal-0.1.3.md`](docs/invocation-scope-proposal-0.1.3.md)
+- `rextio_torch.invocation_scope` (`INVOCATION_SCOPE_OPTIMIZATION_ACTIVE=False`)
+
+A self-contained **diagnostic** small-batch scoring pipeline (batches 1/16/128,
+features 32, classes 8, control-flow **`rounds=4`**) exercises normalize →
+linear → control-flow ReLU/tanh → classification linear → softmax → argmax,
+validating full logits and probabilities before exact labels. The primary
+diagnostic native lane consumes an **already-built** project (retained
+wrappers, no rebuild inside timed samples); ordinary CLI runs mark native
+unavailable unless `--built-project` is supplied. Eager and
+`torch.inference_mode` remain context lanes. Protocol:
+[`docs/preregister-small-batch-scoring-diagnostic-0.1.3.md`](docs/preregister-small-batch-scoring-diagnostic-0.1.3.md).
+Timings are labeled diagnostic only; historical Phase A/B results are untouched
+and no speedup is claimed.
+
+```bash
+.venv/bin/python -m pytest tests/test_invocation_scope_proposal.py \
+  tests/test_analyzer_small_batch_scoring.py \
+  tests/test_small_batch_scoring_harness.py -q
+.venv/bin/python -m benchmarks.bench_small_batch_scoring --smoke
+```
+
+---
+
 ## Install
 
-The public PyPI command installs the released **0.1.2 / plugin API 1.6
+The public PyPI command still installs the last published **0.1.2 / plugin API 1.6
 Alpha**. Its CPU surface is released; the included CUDA lane remains the
 explicitly build-only, non-certifying candidate documented below:
 
@@ -627,7 +662,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Package metadata identifies released version **0.1.2** as Development Status Alpha.
+- Package metadata identifies unreleased candidate version **0.1.3** as Development Status Alpha (last published PyPI cut remains 0.1.2).
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

@@ -5,23 +5,25 @@ Changelog and Semantic Versioning conventions.
 
 ## [0.1.3] - Unreleased candidate
 
-Integration baseline for the invocation-scope / small-batch scoring candidate.
-No tag or PyPI publication is implied.
+Integration baseline for the API 1.7 invocation-scope / small-batch scoring
+candidate. No tag or PyPI publication is implied.
 
-- Inspect Core plugin API **1.6** read-only and record that only expression
-  `LoweredExpr` (`rust` / `uses` / `helpers`) and module helpers exist: there
-  is **no** deterministic per-generated-function or per-invocation Rust body
-  prelude/epilogue hook. See `docs/invocation-scope-proposal-0.1.3.md` and
-  `rextio_torch.invocation_scope`.
-- Keep the production **per-operation** `tch::no_grad_guard()` baseline in
-  every fallible helper. Do not use globals, thread locals, tensor-lifetime
-  tricks, or other shared mutable state that could leak grad mode across
-  Python callbacks, exceptions, reentrancy, or nested generated calls.
-  `INVOCATION_SCOPE_OPTIMIZATION_ACTIVE` remains **false**; the candidate does
-  not pretend a single RAII scope per native invocation is active.
-- Publish an explicit, tested Core capability proposal for one stack-scoped
-  RAII no-grad prelude per generated native invocation (target framing API
-  1.7+), without modifying Core in this repository.
+- Adopt Core plugin API **1.7** and its reviewed
+  `function_scope_guard(ctx)` contract. Eligible PyO3 functions containing
+  Torch operation claims now install one stack-scoped
+  `tch::no_grad_guard()` after input conversion and drop it before output
+  conversion.
+- Add distinct `*_function_scoped` Rust helpers for the complete CPU and
+  build-only CUDA lower surface. They omit redundant per-operation guards only
+  when Core sets this provider's
+  `LoweringContext.function_scope_guard_active=True`; legacy/missing contexts
+  fail closed to the original guarded helper names and bodies.
+- Decline the whole-function guard for RXT075 Python callbacks, standalone
+  backends, and type-only functions. Real-Cargo evidence covers active and
+  inactive helpers in one generated module, ambient grad mode at callbacks,
+  `requires_grad=False` results, and guard restoration on early/error exits.
+- Raise the Core requirement to `rextio>=0.1.7,<0.2` and pin the unreleased
+  Core candidate merge commit in CI until Core 0.1.7 is formally published.
 - Add a self-contained **diagnostic** small-batch scoring pipeline (batch
   sizes 1 / 16 / 128, feature width 32, class count 8, control-flow
   **`rounds=4`** via `for layer in range(rounds)`): rank-2/rank-1 normalize by

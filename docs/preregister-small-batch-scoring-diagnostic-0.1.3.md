@@ -65,10 +65,11 @@ Notes:
 
 ## Invocation-scope / no-grad note
 
-Production native helpers still use **per-operation** `tch::no_grad_guard()`.
-Core API 1.6 has no function-body prelude hook; see
+With Core API 1.7, eligible native functions use one function-scope
+`tch::no_grad_guard()`. RXT075, legacy/no-hook, type-only, and standalone
+paths retain **per-operation** guards; see
 [invocation-scope-proposal-0.1.3.md](invocation-scope-proposal-0.1.3.md).
-This diagnostic must not claim a single RAII scope per invocation is active.
+This diagnostic still makes no speedup claim from the guard optimization.
 
 ## Outputs
 
@@ -96,6 +97,6 @@ This diagnostic must not claim a single RAII scope per invocation is active.
 
 - No official performance cohort and no recorded speedup gate.
 - No CUDA / MPS / training.
-- No claim that invocation-scope no_grad optimization is active.
+- No speedup claim attributable to invocation-scope no-grad optimization.
 - Historical Phase A/B JSON and reports remain untouched.
 - Absence of `--built-project` means native was **not** measured.

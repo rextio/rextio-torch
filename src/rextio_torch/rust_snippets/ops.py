@@ -2,6 +2,13 @@
 
 Every operation uses fallible tch APIs under ``no_grad`` and maps ``TchError``
 to a Python exception without panicking.
+
+Production baseline (0.1.3 candidate): each helper installs its own
+``tch::no_grad_guard()``. Core plugin API 1.6 has no per-generated-function
+body prelude/epilogue, so a single RAII scope per native invocation is
+**not** active. See ``rextio_torch.invocation_scope`` and
+``docs/invocation-scope-proposal-0.1.3.md``. Do not replace these guards with
+globals, thread locals, or other leaky shared state.
 """
 
 from __future__ import annotations

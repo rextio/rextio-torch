@@ -243,10 +243,10 @@ def _assert_orchestration(result: object, runner: FixedRunner) -> Path:
         '"torch.strided"',
         "tensor.is_sparse()",
         "tensor.is_mkldnn()",
-        "__rxttorch_matmul",
-        "__rxttorch_add",
-        "__rxttorch_relu",
-        "__rxttorch_mean_dim1_keepdim_false",
+        "__rxttorch_matmul_function_scoped",
+        "__rxttorch_add_function_scoped",
+        "__rxttorch_relu_function_scoped",
+        "__rxttorch_mean_dim1_keepdim_false_function_scoped",
     ):
         if token not in rust:
             raise RuntimeError(f"generated Rust omitted {token}")
@@ -258,10 +258,10 @@ def _assert_orchestration(result: object, runner: FixedRunner) -> Path:
         raise RuntimeError("generated Rust omitted the inference function")
     function_body = rust[function_start : function_start + 4_000]
     calls = (
-        "__rxttorch_matmul(",
-        "__rxttorch_add(",
-        "__rxttorch_relu(",
-        "__rxttorch_mean_dim1_keepdim_false(",
+        "__rxttorch_matmul_function_scoped(",
+        "__rxttorch_add_function_scoped(",
+        "__rxttorch_relu_function_scoped(",
+        "__rxttorch_mean_dim1_keepdim_false_function_scoped(",
     )
     positions = tuple(function_body.find(call) for call in calls)
     if any(position < 0 for position in positions) or positions != tuple(sorted(positions)):

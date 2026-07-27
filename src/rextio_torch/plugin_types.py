@@ -1,4 +1,4 @@
-"""Materialized torch tensor plugin types for Rextio plugin API 1.6."""
+"""Materialized torch tensor plugin types for Rextio plugin API 1.7."""
 
 from __future__ import annotations
 

@@ -242,7 +242,7 @@ def test_plugin_source_has_no_os_only_host_rejection() -> None:
 
 def test_crate_and_api_pins_remain_exact() -> None:
     """Native AOT pin contract is host-agnostic and must stay exact."""
-    assert REQUIRED_PLUGIN_API == "1.6"
+    assert REQUIRED_PLUGIN_API == "1.7"
     deps = plugin().crate_dependencies()
     assert len(deps) == 1
     dep = deps[0]

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from rextio.plugins.api import ClaimSite, LoweredExpr, LoweringContext
 
 from rextio_torch.claim.activations import (
@@ -18,11 +20,13 @@ from rextio_torch.claim.activations import (
     TANH_RULE_2D,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import (
     RELU,
     SIGMOID,
     TANH,
     boundary_helpers,
+    function_scoped_call_name,
     relu_helper,
     sigmoid_helper,
     tanh_helper,
@@ -41,10 +45,10 @@ _METHOD_BY_RULE: dict[str, str] = {
     FUNCTIONAL_RELU_RULE: "relu",
 }
 
-_HELPER_BY_METHOD: dict[str, tuple[str, str]] = {
-    "relu": (RELU, relu_helper()),
-    "sigmoid": (SIGMOID, sigmoid_helper()),
-    "tanh": (TANH, tanh_helper()),
+_HELPER_BY_METHOD: dict[str, tuple[str, Callable[..., str]]] = {
+    "relu": (RELU, relu_helper),
+    "sigmoid": (SIGMOID, sigmoid_helper),
+    "tanh": (TANH, tanh_helper),
 }
 
 _RANK_TYPES = frozenset({TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D})
@@ -132,7 +136,13 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
                 f"rextio-torch received malformed method {method} lower metadata"
             )
         input_name = ctx.receiver
-    call_name, helper = _HELPER_BY_METHOD[method]
+    base_call_name, helper_factory = _HELPER_BY_METHOD[method]
+    scope_active = function_scope_guard_active(ctx)
+    call_name = function_scoped_call_name(
+        base_call_name,
+        function_scope_guard_active=scope_active,
+    )
+    helper = helper_factory(function_scope_guard_active=scope_active)
     return LoweredExpr(
         rust=f"{call_name}(&{input_name})?",
         helpers=(boundary_helpers(), helper),

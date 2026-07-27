@@ -12,6 +12,7 @@ from rextio_torch.claim.reductions import (
     SUM_STATIC_RULE,
 )
 from rextio_torch.diagnostics import TENSOR_F32_CPU_1D, TENSOR_F32_CPU_2D
+from rextio_torch.lower.function_scope import function_scope_guard_active
 from rextio_torch.rust_snippets import (
     boundary_helpers,
     reduction_call_name,
@@ -193,8 +194,19 @@ def try_lower(claimed: ClaimSite, ctx: LoweringContext) -> LoweredExpr | None:
             f"rextio-torch reduction lower missing static rule: {claimed.rule_id!r}"
         )
 
-    call_name = reduction_call_name(method, dim, keepdim)
-    helper = reduction_helper(method, dim, keepdim)
+    scope_active = function_scope_guard_active(ctx)
+    call_name = reduction_call_name(
+        method,
+        dim,
+        keepdim,
+        function_scope_guard_active=scope_active,
+    )
+    helper = reduction_helper(
+        method,
+        dim,
+        keepdim,
+        function_scope_guard_active=scope_active,
+    )
     return LoweredExpr(
         # A positional dim is compile-time metadata only; it is deliberately
         # not forwarded as a runtime helper operand.

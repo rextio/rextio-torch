@@ -138,7 +138,7 @@ they are not an instruction to rerun benchmarks during the Alpha release:
 .venv/bin/python -m benchmarks.bench_phase_b
 ```
 
-## Diagnostic small-batch scoring (0.1.3 candidate)
+## Diagnostic small-batch scoring (0.1.3)
 
 Self-contained product-shaped pipeline for local diagnosis only. **Not** an
 official performance cohort. **Does not** write under `results/` or

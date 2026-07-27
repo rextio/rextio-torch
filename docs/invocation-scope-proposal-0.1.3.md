@@ -1,8 +1,9 @@
 # One RAII no-grad scope per eligible native invocation
 
-**Status:** implemented-candidate for rextio-torch **0.1.3**
+**Status:** implemented-candidate for rextio-torch **0.1.3** (product released;
+feature status string retained for the proposal contract)
 
-**Core contract:** Rextio **0.1.7 candidate**, plugin API **1.7**
+**Core contract:** Rextio **`>=0.1.7,<0.2`**, plugin API **1.7**
 
 ## Active contract
 
@@ -75,5 +76,7 @@ PyO3/tch host-extension integration.
 | `tests/e2e/test_phase_a_real_cargo.py` | one guard per eligible function, active/inactive helper coexistence and compilation, callback ambient grad mode, early return/error restoration, no-grad output |
 | Existing lower/unit suites | every claimed Torch operation preserves its prior validation and Rust operation |
 
-The Core 0.1.7 candidate is pinned by exact Git commit in CI until it is
-formally released. This candidate work does not publish or tag either project.
+Public product installs declare `rextio>=0.1.7,<0.2`. CI still pins Core by
+exact Git commit until CI Core installs switch to PyPI `rextio` 0.1.7. The
+rextio-torch **0.1.3** product release does not promote the CUDA E2 build-only
+lane (`support_claim=false`, `certification_ready=false`).

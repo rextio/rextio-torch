@@ -3,10 +3,13 @@
 All notable changes to `rextio-torch` are documented here following Keep a
 Changelog and Semantic Versioning conventions.
 
-## [0.1.3] - Unreleased candidate
+## [0.1.3] - 2026-07-27
 
-Integration baseline for the API 1.7 invocation-scope / small-batch scoring
-candidate. No tag or PyPI publication is implied.
+Public native-AOT Alpha product release on PyPI. The CPU surface below is
+released with Core **plugin API 1.7** / `rextio>=0.1.7,<0.2`. The CUDA E2 lane
+remains a **build-only, non-certifying** engineering candidate with
+`support_claim=false` and `certification_ready=false` — product publication
+does **not** promote CUDA.
 
 - Adopt Core plugin API **1.7** and its reviewed
   `function_scope_guard(ctx)` contract. Eligible PyO3 functions containing
@@ -22,8 +25,9 @@ candidate. No tag or PyPI publication is implied.
   backends, and type-only functions. Real-Cargo evidence covers active and
   inactive helpers in one generated module, ambient grad mode at callbacks,
   `requires_grad=False` results, and guard restoration on early/error exits.
-- Raise the Core requirement to `rextio>=0.1.7,<0.2` and pin the unreleased
-  Core candidate merge commit in CI until Core 0.1.7 is formally published.
+- Raise the Core requirement to `rextio>=0.1.7,<0.2`. Public product installs
+  use that released Core range; CI continues to pin the reviewed Core merge
+  commit until CI Core installs switch to PyPI `rextio` 0.1.7.
 - Add a self-contained **diagnostic** small-batch scoring pipeline (batch
   sizes 1 / 16 / 128, feature width 32, class count 8, control-flow
   **`rounds=4`** via `for layer in range(rounds)`): rank-2/rank-1 normalize by
@@ -39,9 +43,9 @@ candidate. No tag or PyPI publication is implied.
   historical results are not modified or deleted.
 - Add focused unit/analyzer/harness tests plus an opt-in real-Cargo vertical
   slice for the scoring pipeline (`tests/e2e/test_small_batch_scoring_real_cargo.py`).
-- Update package version to **0.1.3** candidate metadata, README/benchmark
-  docs, Linux smoke banner, and CI push/PR triggers to include the `0.1.3`
-  integration branch.
+- Ship package version **0.1.3** as Development Status Alpha; update
+  README/benchmark docs and Linux smoke banner for the product release while
+  keeping 0.1.2 CUDA/evidence material historical.
 
 ## [0.1.2] - 2026-07-26
 

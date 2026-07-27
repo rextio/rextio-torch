@@ -1,8 +1,8 @@
 """Opt-in real-Cargo vertical slice for the diagnostic scoring pipeline.
 
 Builds a dedicated certification project (not the Alpha mega-surface) so the
-0.1.3 candidate remains maintainable. Skips explicitly when cargo or the
-dedicated CPython 3.11 + torch 2.11 venv is unavailable.
+0.1.3 diagnostic scoring path remains maintainable. Skips explicitly when cargo
+or the dedicated CPython 3.11 + torch 2.11 venv is unavailable.
 
 Exercises the harness native diagnostic lane for all three predeclared cells
 via retained wrappers (no rebuild inside timed samples).

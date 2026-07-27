@@ -1,4 +1,4 @@
-"""Diagnostic small-batch scoring pipeline cases (0.1.3 candidate).
+"""Diagnostic small-batch scoring pipeline cases (0.1.3).
 
 Self-contained product-shaped source: rank-2/rank-1 normalize (sub, div),
 functional linear, scalar ``range`` + integer ``if`` routing through ReLU and

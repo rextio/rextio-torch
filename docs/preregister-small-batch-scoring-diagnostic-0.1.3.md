@@ -1,4 +1,4 @@
-# Diagnostic small-batch scoring pipeline (0.1.3 candidate)
+# Diagnostic small-batch scoring pipeline (0.1.3)
 
 **Status:** diagnostic only — **not** an official performance cohort
 

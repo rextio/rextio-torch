@@ -1,9 +1,12 @@
-# CUDA E2 build-only candidate in 0.1.2
+# CUDA E2 build-only candidate (0.1.2 surface; still non-promoted in 0.1.3)
 
-This document defines the entire CUDA scope shipped with 0.1.2. It remains an
-engineering candidate, not a CUDA support claim or certification. All
-provider reports remain `support_claim=false` and
-`certification_ready=false`.
+This document defines the entire CUDA scope introduced with **0.1.2** and still
+shipped as a **build-only** engineering candidate under the **0.1.3 product**
+release. Product release status and CUDA candidate status are separate:
+publishing `rextio-torch` 0.1.3 does **not** promote CUDA support or
+certification. All provider reports remain `support_claim=false` and
+`certification_ready=false`. Historical 0.1.2 Core/provider commit pins below
+remain the reviewed CUDA evidence inputs.
 
 ## Frozen environment
 

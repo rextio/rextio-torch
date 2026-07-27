@@ -1,4 +1,4 @@
-"""Diagnostic small-batch scoring harness (0.1.3 candidate).
+"""Diagnostic small-batch scoring harness (0.1.3).
 
 Validates full logits and probabilities with numeric tolerance before exact
 labels. Diagnostic lanes:
@@ -58,7 +58,7 @@ ROOT = _ROOT
 RESULTS_PHASE_A = ROOT / "benchmarks" / "results"
 RESULTS_PHASE_B = ROOT / "benchmarks" / "results_phase_b"
 HARNESS_KIND = "diagnostic-small-batch-scoring"
-HARNESS_VERSION = "0.1.3-candidate"
+HARNESS_VERSION = "0.1.3"
 NATIVE_UNAVAILABLE_REASON = (
     "native Rextio lane not measured: supply an already-built project via "
     "--built-project or load_native_scoring_lane(...); the ordinary CLI does "

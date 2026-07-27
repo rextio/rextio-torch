@@ -6,9 +6,9 @@ PyTorch inference code to Rust expressions backed by
 
 | Field | Value |
 | --- | --- |
-| Package version | **0.1.3** (unreleased candidate from `rextio_torch.__about__`) |
-| Release status | **0.1.3 unreleased candidate** on branch work; last PyPI public Alpha remains **0.1.2** (2026-07-26). CPU reinforcement stays released while CUDA E2 remains build-only and non-certifying |
-| Distribution | Candidate source tree only until publication; released wheel remains [`rextio-torch==0.1.2`](https://pypi.org/project/rextio-torch/0.1.2/) |
+| Package version | **0.1.3** (from `rextio_torch.__about__`) |
+| Release status | **0.1.3 public Alpha** on PyPI (**2026-07-27**). The product CPU surface is released; CUDA E2 remains a **build-only, non-certifying** engineering candidate (`support_claim=false`, `certification_ready=false`) and is **not** a CUDA support claim |
+| Distribution | [`rextio-torch==0.1.3`](https://pypi.org/project/rextio-torch/0.1.3/) |
 | Plugin API | **1.7** (`REQUIRED_PLUGIN_API`) |
 | Product mode | Proven CPU inference plus a **Linux x86_64 build-only CUDA candidate**; no CUDA support claim |
 | Certified host | **macOS arm64** (Apple Silicon), CPython **3.11**, torch **2.11.0** |
@@ -17,15 +17,17 @@ PyTorch inference code to Rust expressions backed by
 | Unsupported | Linux/macOS **i686** and **ARMv7** — no pinned runtime; impossible modern macOS targets |
 | Deferred | **Windows** — unverified; no support claim |
 
-This README documents the **0.1.3 unreleased candidate** on top of the
-**0.1.2** public Alpha support contract: Core API 1.7 function-scope no-grad
-integration, diagnostic small-batch scoring, classification-head and bounded
-CPU surface, build-only CUDA E2 candidate, and opt-in real-NVIDIA
-execution-evidence candidate. RXT075/legacy/type-only paths deliberately
-retain per-operation guards. Every form, rank, pin, and fail-closed behavior
-below is backed by current claim / lower / rules / rust_snippets sources and
-focused or real-Cargo tests. Unsupported sites must stay on the ordinary
-Python fallback or be explicitly rejected — **never falsely claimed**.
+This README documents the **0.1.3 public Alpha** product release: Core API 1.7
+function-scope no-grad integration, diagnostic small-batch scoring,
+classification-head and bounded CPU surface, the still build-only CUDA E2
+candidate (not product-promoted), and the opt-in real-NVIDIA
+execution-evidence candidate. Product release status and CUDA candidate status
+are deliberately separate — publishing `rextio-torch` does **not** promote CUDA.
+RXT075/legacy/type-only paths deliberately retain per-operation guards. Every
+form, rank, pin, and fail-closed behavior below is backed by current claim /
+lower / rules / rust_snippets sources and focused or real-Cargo tests.
+Unsupported sites must stay on the ordinary Python fallback or be explicitly
+rejected — **never falsely claimed**.
 
 Performance numbers under `benchmarks/results/` and
 `benchmarks/results_phase_b/` are **historical context only**. They are **not**
@@ -113,7 +115,8 @@ Use this only to exercise the pinned environment on Linux. It does **not**
 promote Linux to certified status.
 
 ```bash
-# CPython 3.11 venv with this candidate source and exact Core candidate
+# CPython 3.11 venv: product pins plus the CI Core commit pin (CI has not yet
+# switched to PyPI rextio 0.1.7 for Core installs at this documentation cut)
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install 'pip==26.1'
@@ -533,9 +536,9 @@ and explicit-`none` GELU are separately routed and compared.
 
 ---
 
-## 0.1.3 candidate: invocation scope and diagnostic scoring
+## 0.1.3: invocation scope and diagnostic scoring
 
-Core plugin API **1.7** now provides the reviewed optional
+Core plugin API **1.7** provides the reviewed optional
 `function_scope_guard` hook. Eligible PyO3 functions containing Torch op
 claims install one RAII `tch::no_grad_guard()` after input conversion and drop
 it before output conversion. Their lowerers select distinct
@@ -572,16 +575,25 @@ and no speedup is claimed solely from the scope optimization.
 
 ## Install
 
-The public PyPI command still installs the last published **0.1.2 / plugin API 1.6
-Alpha**. Its CPU surface is released; the included CUDA lane remains the
-explicitly build-only, non-certifying candidate documented below:
+The public PyPI command installs the **0.1.3 / plugin API 1.7** public Alpha
+product release. It depends on released **Rextio `>=0.1.7,<0.2`**. The product
+CPU surface is released; the included CUDA lane remains the explicitly
+build-only, non-certifying engineering candidate documented below
+(`support_claim=false`, `certification_ready=false` — not a CUDA support claim):
 
 ```bash
-python3.11 -m pip install 'rextio-torch==0.1.2'
+python3.11 -m pip install 'rextio>=0.1.7,<0.2' 'rextio-torch==0.1.3'
 ```
 
-The **0.1.3 / plugin API 1.7 candidate** requires the exact unreleased Core
-candidate used by CI:
+Or install the product wheel alone (resolver pulls the declared Core range):
+
+```bash
+python3.11 -m pip install 'rextio-torch==0.1.3'
+```
+
+**CI / maintainer Core commit pin (not the public install path).** Ordinary CI
+still installs Core from the reviewed merge commit until CI switches to PyPI
+`rextio` 0.1.7; do not treat that pin as the public product install:
 
 ```bash
 python3.11 -m pip install \
@@ -590,8 +602,11 @@ python3.11 -m pip install \
 python3.11 -m pip install --no-deps -e .
 ```
 
+### Historical 0.1.2 evidence (not the current product install)
+
 To reproduce the reviewed **0.1.2 / plugin API 1.6** source evidence exactly,
-install the pinned Core commit and this checkout without dependency resolution:
+install the historical Core commit and that era's checkout without dependency
+resolution:
 
 ```bash
 python3.11 -m pip install \
@@ -600,11 +615,11 @@ python3.11 -m pip install \
 python3.11 -m pip install --no-deps -e .
 ```
 
-The reviewed 0.1.2 evidence pins are Core
+The historical 0.1.2 evidence pins are Core
 `7f47f0ce8cea0b6dbeb7fd3c733f65eeaa6bb5e0` and CUDA provider
 `a5fb427e91710b65f54ee5b8e33706c45840cf9c`. The provider is not a mandatory
 package dependency; install it only for the maintainer CUDA orchestration/build
-gate:
+gate. That CUDA path remains build-only and non-certifying:
 
 ```bash
 python3.11 -m pip install --no-deps \
@@ -676,7 +691,7 @@ AOT surface is the product goal, not beating a speedup threshold.
   separate release records rather than inferred from repository metadata.
 - Do not use `LIBTORCH_BYPASS_VERSION_CHECK`.
 - Do not add a project-local `AGENTS.md` without owner direction.
-- Package metadata identifies unreleased candidate version **0.1.3** as Development Status Alpha (last published PyPI cut remains 0.1.2).
+- Package metadata identifies version **0.1.3** as Development Status Alpha. Product release does not promote the CUDA E2 build-only candidate.
 
 For the longer product definition and phase history, see the
 [0.1.0 implementation plan](docs/implementation-plan-0.1.0.md). Historical

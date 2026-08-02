@@ -1,7 +1,7 @@
 # rextio-torch
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/rextio/rextio-torch/main/assets/readme/rextio-icon.png" width="112" alt="Rextio project icon">
+  <img src="./assets/readme/rextio-icon.png" width="112" alt="Rextio project icon">
 </p>
 
 <p align="center"><strong>Bounded PyTorch inference lowering from Python to Rust-backed <code>tch</code> operations.</strong></p>
